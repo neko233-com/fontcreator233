@@ -1,15 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
+
+	"github.com/neko233-com/fontcreator233/internal/cli"
 )
 
 func main() {
-	if len(os.Args) == 2 && (os.Args[1] == "version" || os.Args[1] == "--version") {
-		fmt.Println("fontcreator233 development")
-		return
-	}
-	fmt.Fprintln(os.Stderr, "fontcreator233: CLI not wired yet")
-	os.Exit(2)
+	os.Exit(cli.Run(os.Args[1:], cli.IO{In: os.Stdin, Out: os.Stdout, Err: os.Stderr}))
 }
