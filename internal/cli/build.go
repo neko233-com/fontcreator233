@@ -7,6 +7,7 @@ import (
 
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
+	"github.com/neko233-com/fontcreator233/internal/ui"
 )
 
 func (a *app) cmdBuild(args []string) int {
@@ -46,7 +47,18 @@ func (a *app) cmdBuild(args []string) int {
 		AssetsDir:         *assetsDir,
 		SelfContainedHTML: *selfContained,
 	}
-	res, err := build.Build(context.Background(), r, opts, nil)
+	ctx := context.Background()
+	var res build.Result
+	buildFn := func(ctx context.Context, rep ui.Reporter) error {
+		var err error
+		res, err = build.Build(ctx, r, opts, rep)
+		return err
+	}
+	if a.interactive(common) {
+		err = ui.RunTUI(ctx, r.Meta.Family+" / "+r.Meta.Style, buildFn)
+	} else {
+		err = buildFn(ctx, ui.NewPlain(a.io.Err, common.quiet, common.json))
+	}
 	if err != nil {
 		return a.fail("build", 1, err)
 	}

@@ -86,6 +86,21 @@ func TestBuildDeterministic(t *testing.T) {
 	}
 }
 
+func TestParallelDeterminism(t *testing.T) {
+	r := sampleRecipe(t)
+	a, err := Build(context.Background(), r, Options{OutDir: t.TempDir(), Jobs: 1}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := Build(context.Background(), r, Options{OutDir: t.TempDir(), Jobs: 8}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.SHA256 != b.SHA256 {
+		t.Fatalf("jobs changed output: %s vs %s", a.SHA256, b.SHA256)
+	}
+}
+
 func TestBuildSpecimenOutput(t *testing.T) {
 	r := sampleRecipe(t)
 	r.Output.Specimen = true

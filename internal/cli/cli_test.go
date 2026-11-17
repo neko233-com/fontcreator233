@@ -202,6 +202,40 @@ func TestLibrary(t *testing.T) {
 	}
 }
 
+func TestBuildAll(t *testing.T) {
+	dir := t.TempDir()
+	for i, name := range []string{"One", "Two"} {
+		r := recipe.Default()
+		r.Meta.Family = "Parallel " + name
+		r.Meta.License = "OFL-1.1"
+		r.Coverage.Base.CJK = "sample"
+		r.Output.Formats = []string{"ttf"}
+		r.Output.Targets = []string{"universal"}
+		r.Output.Specimen = false
+		r.Output.Open = false
+		data, err := yaml.Marshal(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(dir, []string{"a.recipe.yaml", "b.recipe.yaml"}[i])
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	outDir := t.TempDir()
+	out, errText, code := run(t, "build-all", "--dir", dir, "--out", outDir, "--font-jobs", "2", "--json")
+	if code != 0 {
+		t.Fatalf("code=%d err=%s", code, errText)
+	}
+	var v map[string]any
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatal(err)
+	}
+	if len(v["results"].([]any)) != 2 {
+		t.Fatalf("results = %#v", v)
+	}
+}
+
 func TestUnknownCommandJSON(t *testing.T) {
 	out, _, code := run(t, "nope", "--json")
 	if code != 1 {

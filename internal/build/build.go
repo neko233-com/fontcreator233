@@ -11,12 +11,14 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/neko233-com/fontcreator233/internal/compose"
 	"github.com/neko233-com/fontcreator233/internal/derive"
 	"github.com/neko233-com/fontcreator233/internal/fontbuild"
 	"github.com/neko233-com/fontcreator233/internal/geom"
+	"github.com/neko233-com/fontcreator233/internal/parallel"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 	"github.com/neko233-com/fontcreator233/internal/skeleton"
 	"github.com/neko233-com/fontcreator233/internal/specimen"
@@ -83,12 +85,12 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		Targets:        map[string][]string{},
 	}
 	rep.Event(ui.Event{Kind: ui.EvPhase, Phase: "generate"})
-	gen, err := buildGenerated(ctx, r, params, rep)
+	gen, err := buildGenerated(ctx, r, params, o.Jobs, rep)
 	if err != nil {
 		return result, err
 	}
 	rep.Event(ui.Event{Kind: ui.EvPhase, Phase: "derive"})
-	derived, stats, deriveWarnings, err := buildDerived(ctx, r, params, rep)
+	derived, stats, deriveWarnings, err := buildDerived(ctx, r, params, o.Jobs, rep)
 	if err != nil {
 		return result, err
 	}
@@ -150,6 +152,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		glyphs = append(glyphs, g)
 	}
 	cfg := fontConfig(r, resolvedStyle, glyphs)
+	cfg.Jobs = o.Jobs
 	ttf, err := fontbuild.Build(cfg)
 	if err != nil {
 		return result, fmt.Errorf("compile font: %w", err)
@@ -239,32 +242,36 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	return result, nil
 }
 
-func buildGenerated(ctx context.Context, r *recipe.Recipe, p style.Params, rep ui.Reporter) (map[rune]fontbuild.Glyph, error) {
+func buildGenerated(ctx context.Context, r *recipe.Recipe, p style.Params, jobs int, rep ui.Reporter) (map[rune]fontbuild.Glyph, error) {
 	out := map[rune]fontbuild.Glyph{}
 	if len(r.Coverage.Generated) == 0 {
 		return out, nil
 	}
 	builder := skeleton.NewBuilder(p)
 	available := skeleton.Available()
-	for i, rn := range available {
-		if i%512 == 0 {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			default:
-			}
+	runes := make([]rune, 0, len(available))
+	for _, rn := range available {
+		if generatedEnabled(rn, r.Coverage.Generated) {
+			runes = append(runes, rn)
 		}
-		if !generatedEnabled(rn, r.Coverage.Generated) {
-			continue
-		}
+	}
+	glyphs, err := parallel.Map(ctx, runes, jobs, func(_ context.Context, _ int, rn rune) (fontbuild.Glyph, error) {
 		path, adv, ok, err := builder.Glyph(rn)
 		if err != nil {
-			return nil, err
+			return fontbuild.Glyph{}, err
 		}
 		if !ok {
-			continue
+			return fontbuild.Glyph{}, nil
 		}
-		out[rn] = fontbuild.Glyph{Rune: rn, Advance: int(math.Round(adv)), Path: path}
+		return fontbuild.Glyph{Rune: rn, Advance: int(math.Round(adv)), Path: path}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	for i, rn := range runes {
+		if len(glyphs[i].Path) > 0 || rn == 0x20 {
+			out[rn] = glyphs[i]
+		}
 	}
 	composed, err := compose.Build(builder)
 	if err != nil {
@@ -280,7 +287,7 @@ func buildGenerated(ctx context.Context, r *recipe.Recipe, p style.Params, rep u
 	return out, nil
 }
 
-func buildDerived(ctx context.Context, r *recipe.Recipe, p style.Params, rep ui.Reporter) (map[rune]fontbuild.Glyph, map[string]CoverageStat, []string, error) {
+func buildDerived(ctx context.Context, r *recipe.Recipe, p style.Params, jobs int, rep ui.Reporter) (map[rune]fontbuild.Glyph, map[string]CoverageStat, []string, error) {
 	out := map[rune]fontbuild.Glyph{}
 	stats := map[string]CoverageStat{}
 	requested := baseRequested(r.Coverage.Base)
@@ -299,36 +306,42 @@ func buildDerived(ctx context.Context, r *recipe.Recipe, p style.Params, rep ui.
 		embolden = 32
 	}
 	ds := derive.Style{WidthScale: p.WidthScale, SlantTan: p.SlantTan, Embolden: embolden}
-	for i, rn := range requested {
-		if i%256 == 0 {
-			select {
-			case <-ctx.Done():
-				return nil, nil, nil, ctx.Err()
-			default:
-			}
-			rep.Event(ui.Event{Kind: ui.EvProgress, Phase: "derive", Current: i, Total: len(requested)})
+	type derivedResult struct {
+		path   geom.Path
+		adv    int
+		ok     bool
+		script string
+	}
+	var processed atomic.Int64
+	results, err := parallel.Map(ctx, requested, jobs, func(_ context.Context, i int, rn rune) (derivedResult, error) {
+		if n := processed.Add(1); n%256 == 0 {
+			rep.Event(ui.Event{Kind: ui.EvProgress, Phase: "derive", Current: int(n), Total: len(requested)})
 		}
-		script := unicodes.ScriptOf(rn)
-		st := stats[script]
-		st.Requested++
 		path, adv, ok, err := set.Glyph(rn)
 		if err != nil {
-			return nil, nil, nil, err
+			return derivedResult{}, err
 		}
 		if !ok {
-			st.Missing++
-			stats[script] = st
-			continue
+			return derivedResult{script: unicodes.ScriptOf(rn)}, nil
 		}
 		styled, styledAdv := derive.ApplyStyle(path, adv, ds)
-		if len(styled) == 0 {
+		return derivedResult{path: styled, adv: styledAdv, ok: len(styled) > 0, script: unicodes.ScriptOf(rn)}, nil
+	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	for i, rn := range requested {
+		res := results[i]
+		st := stats[res.script]
+		st.Requested++
+		if !res.ok {
 			st.Missing++
-			stats[script] = st
+			stats[res.script] = st
 			continue
 		}
 		st.Found++
-		stats[script] = st
-		out[rn] = fontbuild.Glyph{Rune: rn, Advance: styledAdv, Path: styled}
+		stats[res.script] = st
+		out[rn] = fontbuild.Glyph{Rune: rn, Advance: res.adv, Path: res.path}
 	}
 	var warnings []string
 	keys := make([]string, 0, len(stats))
@@ -560,6 +573,7 @@ func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, gl
 		}
 		styleName := fmt.Sprintf("%s CJK %02d", resolvedStyle, idx)
 		cfg := fontConfig(r, styleName, list)
+		cfg.Jobs = o.Jobs
 		data, err := fontbuild.Build(cfg)
 		if err != nil {
 			return nil, err

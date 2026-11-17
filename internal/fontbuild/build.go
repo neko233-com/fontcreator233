@@ -3,6 +3,7 @@
 package fontbuild
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"math"
@@ -12,6 +13,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/neko233-com/fontcreator233/internal/geom"
+	"github.com/neko233-com/fontcreator233/internal/parallel"
 )
 
 // Glyph is one output glyph. Glyphs[0] should be .notdef; Build prepends one
@@ -46,6 +48,7 @@ type Config struct {
 	ItalicAngle float64
 	FixedPitch  bool
 	Created     time.Time
+	Jobs        int
 	Glyphs      []Glyph
 }
 
@@ -68,16 +71,27 @@ func Build(cfg Config) ([]byte, error) {
 		return nil, err
 	}
 	glyphs := cfg.Glyphs
+	type encResult struct {
+		data []byte
+		box  glyphBox
+	}
+	results, err := parallel.Map(context.Background(), glyphs, cfg.Jobs, func(_ context.Context, i int, g Glyph) (encResult, error) {
+		data, box, err := encodeGlyph(g)
+		if err != nil {
+			return encResult{}, fmt.Errorf("glyph %d (%U): %w", i, g.Rune, err)
+		}
+		return encResult{data: data, box: box}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	encoded := make([][]byte, len(glyphs))
 	boxes := make([]glyphBox, len(glyphs))
 	var maxPoints, maxContours, maxAdvance int
 	var fontBox glyphBox
 	fontBox.empty = true
 	for i, g := range glyphs {
-		data, box, err := encodeGlyph(g)
-		if err != nil {
-			return nil, fmt.Errorf("glyph %d (%U): %w", i, g.Rune, err)
-		}
+		box := results[i].box
 		if g.Advance < 0 || g.Advance > 65535 {
 			return nil, fmt.Errorf("glyph %U advance %d out of range", g.Rune, g.Advance)
 		}
@@ -85,7 +99,7 @@ func Build(cfg Config) ([]byte, error) {
 		if !box.empty {
 			box.lsb = int(box.xMin)
 		}
-		encoded[i] = data
+		encoded[i] = results[i].data
 		boxes[i] = box
 		if box.advance > maxAdvance {
 			maxAdvance = box.advance

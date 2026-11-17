@@ -3,7 +3,10 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 type stringList []string
@@ -66,6 +69,14 @@ func parseFlexible(fs *flag.FlagSet, args []string, valueFlags map[string]bool) 
 		pos = append(pos, arg)
 	}
 	return fs.Parse(append(flags, pos...))
+}
+
+func (a *app) interactive(common commonFlags) bool {
+	if common.json || common.plain || common.noTUI || common.quiet || isCI() {
+		return false
+	}
+	f, ok := a.io.Err.(*os.File)
+	return ok && term.IsTerminal(int(f.Fd()))
 }
 
 func hasJSON(args []string) bool {
