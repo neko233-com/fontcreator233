@@ -118,8 +118,11 @@ func Build(ctx context.Context, o Options) (map[string][]string, error) {
 			}
 			result["unity"] = paths
 		case "unreal":
-			// Implemented by unreal.go in the next task.
-			result[target] = nil
+			paths, err := buildUnreal(o, manifest)
+			if err != nil {
+				return nil, err
+			}
+			result["unreal"] = paths
 		}
 		select {
 		case <-ctx.Done():

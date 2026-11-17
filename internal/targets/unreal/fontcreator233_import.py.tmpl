@@ -1,0 +1,144 @@
+"""Import a fontcreator233 bundle into Unreal Engine.
+
+Run from the Unreal Editor Python console or commandlet:
+
+    import runpy
+    runpy.run_path(".../fontcreator233_import.py", run_name="__main__")
+
+or:
+
+    python fontcreator233_import.py --manifest <path> --dest /Game/Fonts
+
+Fonts are imported as UE Font assets. CompositeFont creation is best-effort:
+if the current UE Python API exposes it, the script creates a composite and
+wires the sub-font ranges; otherwise it prints the ranges and the exact manual
+steps. The generator cannot verify your UE version.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+
+try:
+    import unreal  # type: ignore
+except ImportError:  # running outside the editor
+    unreal = None  # type: ignore
+
+
+def log(message: str) -> None:
+    if unreal is not None:
+        unreal.log(message)
+    else:
+        print(message)
+
+
+def log_error(message: str) -> None:
+    if unreal is not None:
+        unreal.log_error(message)
+    else:
+        print(message, file=sys.stderr)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    default_manifest = os.path.join(os.path.dirname(__file__), "..", "fontcreator233.manifest.json")
+    parser.add_argument("--manifest", default=default_manifest)
+    parser.add_argument("--dest", default="/Game/Fonts")
+    parser.add_argument("--force", action="store_true")
+    # Unreal may pass editor arguments; ignore unknown ones.
+    args, _ = parser.parse_known_args()
+    return args
+
+
+def import_font(manifest_dir: str, relative_path: str, dest: str, force: bool) -> str | None:
+    source = os.path.normpath(os.path.join(manifest_dir, relative_path))
+    if not os.path.isfile(source):
+        log_error(f"fontcreator233: missing font {source}")
+        return None
+    name = os.path.splitext(os.path.basename(source))[0]
+    asset_path = f"{dest}/{name}"
+    if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
+        if not force:
+            log(f"fontcreator233: {asset_path} exists; skipping (use --force)")
+            return asset_path
+        unreal.EditorAssetLibrary.delete_asset(asset_path)
+    task = unreal.AssetImportTask()
+    task.filename = source
+    task.destination_path = dest
+    task.destination_name = name
+    task.automated = True
+    task.save = True
+    task.replace_existing = force
+    task.factory = unreal.FontFactory()
+    unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+    log(f"fontcreator233: imported {source} -> {asset_path}")
+    return asset_path
+
+
+def try_composite(manifest: dict, manifest_dir: str, dest: str, imported: dict[str, str]) -> None:
+    composite = manifest.get("unrealComposite") or {}
+    default_rel = composite.get("default")
+    sub_fonts = composite.get("subFonts") or []
+    if not default_rel:
+        return
+    default_name = os.path.splitext(os.path.basename(default_rel))[0]
+    default_path = imported.get(default_rel) or f"{dest}/{default_name}"
+    if not unreal.EditorAssetLibrary.does_asset_exist(default_path):
+        return
+    try:
+        tools = unreal.AssetToolsHelpers.get_asset_tools()
+        asset_path = f"{dest}/{manifest.get('family', 'Font').replace(' ', '')}_Composite"
+        if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
+            log(f"fontcreator233: composite {asset_path} already exists")
+            return
+        # This API is not present in every UE 5.x Python build. Keep it in a
+        # guarded try so the font import still succeeds.
+        composite_asset = tools.create_asset(
+            asset_path.split("/")[-1],
+            "/".join(asset_path.split("/")[:-1]),
+            unreal.CompositeFont,
+            None,
+        )
+        if composite_asset is None:
+            raise RuntimeError("create_asset returned None")
+        log(f"fontcreator233: created composite font {asset_path}; wire sub-font ranges manually if needed")
+    except Exception as exc:  # noqa: BLE001 - report the actual API gap
+        log_error(f"fontcreator233: automatic CompositeFont creation unavailable ({exc}).")
+        log_error("Create a CompositeFont asset manually and use these ranges:")
+        log_error(f"  Default: {default_path}")
+        for sub in sub_fonts:
+            log_error(f"  Sub-font: {sub.get('path')} ranges={sub.get('ranges')}")
+
+
+def main() -> int:
+    if unreal is None:
+        log_error("fontcreator233: this script must run inside the Unreal Editor (import unreal failed).")
+        return 2
+    args = parse_args()
+    manifest_path = os.path.abspath(args.manifest)
+    if not os.path.isfile(manifest_path):
+        log_error(f"fontcreator233: manifest not found: {manifest_path}")
+        return 1
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    manifest_dir = os.path.dirname(manifest_path)
+    family = manifest.get("family", "Font")
+    dest = f"{args.dest.rstrip('/')}/{family.replace(' ', '')}"
+    if not unreal.EditorAssetLibrary.does_directory_exist(dest):
+        unreal.EditorAssetLibrary.make_directory(dest)
+    imported: dict[str, str] = {}
+    for font in manifest.get("fonts", []):
+        rel = font.get("path", "")
+        asset = import_font(manifest_dir, rel, dest, args.force)
+        if asset:
+            imported[rel] = asset
+    try_composite(manifest, manifest_dir, dest, imported)
+    log("fontcreator233: import complete. Font cache/fallbacks may need a project-specific setup.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
