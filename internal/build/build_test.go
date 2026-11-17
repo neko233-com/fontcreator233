@@ -86,6 +86,26 @@ func TestBuildDeterministic(t *testing.T) {
 	}
 }
 
+func TestBuildSpecimenOutput(t *testing.T) {
+	r := sampleRecipe(t)
+	r.Output.Specimen = true
+	r.Output.Open = false
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.SpecimenPath == "" {
+		t.Fatal("missing specimen path")
+	}
+	raw, err := readFile(res.SpecimenPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "@font-face") || !strings.Contains(string(raw), "Build Test") {
+		t.Fatal("specimen HTML incomplete")
+	}
+}
+
 func TestItalicStyleResolution(t *testing.T) {
 	r := sampleRecipe(t)
 	r.Meta.Style = "Noir"

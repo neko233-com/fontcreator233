@@ -19,6 +19,7 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/geom"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 	"github.com/neko233-com/fontcreator233/internal/skeleton"
+	"github.com/neko233-com/fontcreator233/internal/specimen"
 	"github.com/neko233-com/fontcreator233/internal/style"
 	"github.com/neko233-com/fontcreator233/internal/ui"
 	"github.com/neko233-com/fontcreator233/internal/unicodes"
@@ -187,8 +188,40 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			result.Split = split
 		}
 	}
-	if r.Output.Specimen {
-		warnings = append(warnings, "specimen generation is not wired yet")
+	if r.Output.Specimen && result.FontPath != "" {
+		glyphInfo := make([]specimen.GlyphInfo, 0, len(merged))
+		for _, rn := range keys {
+			glyphInfo = append(glyphInfo, specimen.GlyphInfo{Rune: rn, Script: unicodes.ScriptOf(rn)})
+		}
+		recipeName := ""
+		if r.SourcePath != "" {
+			recipeName = filepath.Base(r.SourcePath)
+		}
+		html, err := specimen.Build(specimen.Options{
+			OutDir:        o.OutDir,
+			FontPath:      result.FontPath,
+			FontFile:      filepath.Base(result.FontPath),
+			AssetsDir:     o.AssetsDir,
+			SelfContained: o.SelfContainedHTML,
+			Open:          r.Output.Open && !o.NoOpen,
+			Data: specimen.Data{
+				Family:      r.Meta.Family,
+				Style:       resolvedStyle,
+				Description: r.Meta.Description,
+				Version:     r.Meta.Version,
+				SHA256:      result.SHA256,
+				RecipeName:  recipeName,
+				Accent:      r.Meta.Accent,
+				SampleText:  r.Meta.SampleText,
+				Glyphs:      glyphInfo,
+				Coverage:    result.Coverage,
+			},
+		})
+		if err != nil {
+			warnings = append(warnings, "specimen: "+err.Error())
+		} else {
+			result.SpecimenPath = html
+		}
 	}
 	if !onlyUniversal(r.Output.Targets) {
 		warnings = append(warnings, "platform target generation is not wired yet")
