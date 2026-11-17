@@ -6,6 +6,7 @@
 /tmp/
 /.fontcreator233/
 /.superpowers/
+/.base-font-sources/
 *.bundle.zip
 
 # Generated fonts and web artifacts outside the embedded base
