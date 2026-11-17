@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
+	"github.com/neko233-com/fontcreator233/internal/style"
 	"github.com/neko233-com/fontcreator233/internal/ui"
+	"github.com/neko233-com/fontcreator233/internal/workspace"
 )
 
 func (a *app) cmdBuild(args []string) int {
@@ -20,6 +23,8 @@ func (a *app) cmdBuild(args []string) int {
 	jobs := fs.Int("jobs", 0, "worker count (default CPU count)")
 	assetsDir := fs.String("assets-dir", "", "shared web assets directory")
 	selfContained := fs.Bool("self-contained-html", false, "inline font/CSS/JS into the HTML")
+	noAutoClean := fs.Bool("no-auto-clean", false, "disable automatic workspace cleanup")
+	force := fs.Bool("force", false, "overwrite untracked/modified output files")
 	values := map[string]bool{"out": true, "target": true, "split-cjk": true, "jobs": true, "assets-dir": true}
 	if err := parseFlexible(fs, args, values); err != nil {
 		a.json = common.json
@@ -37,13 +42,29 @@ func (a *app) cmdBuild(args []string) int {
 	if len(useTargets) == 0 {
 		useTargets = r.Output.Targets
 	}
+	ws, err := workspace.Open(*out, workspace.Options{NoAutoClean: *noAutoClean, KeepHistory: 100, Force: *force})
+	if err != nil {
+		return a.fail("build", 1, err)
+	}
+	styleName := style.ResolveStyle(r)
+	stage, err := ws.Begin(workspace.BuildMeta{
+		Recipe:  fs.Arg(0),
+		Family:  r.Meta.Family,
+		Style:   styleName,
+		Targets: useTargets,
+	})
+	if err != nil {
+		return a.fail("build", 1, err)
+	}
+	defer ws.Abort(stage)
 	opts := build.Options{
-		OutDir:            *out,
+		OutDir:            stage.Root,
 		Targets:           useTargets,
 		SplitCJK:          *split,
 		Jobs:              *jobs,
 		NoOpen:            common.noOpen || isCI(),
 		NoTUI:             common.noTUI,
+		NoAutoClean:       *noAutoClean,
 		AssetsDir:         *assetsDir,
 		SelfContainedHTML: *selfContained,
 	}
@@ -62,6 +83,10 @@ func (a *app) cmdBuild(args []string) int {
 	if err != nil {
 		return a.fail("build", 1, err)
 	}
+	if _, err := ws.Commit(stage); err != nil {
+		return a.fail("build", 1, err)
+	}
+	rewriteResultPaths(&res, stage.Root, ws.Dir)
 	if a.json {
 		extra := map[string]any{
 			"font":           res.FontPath,
@@ -97,6 +122,31 @@ func (a *app) cmdBuild(args []string) int {
 		}
 	}
 	return 0
+}
+
+func rewriteResultPaths(res *build.Result, stageDir, outDir string) {
+	rewrite := func(p string) string {
+		if p == "" {
+			return ""
+		}
+		rel, err := filepath.Rel(stageDir, p)
+		if err != nil {
+			return p
+		}
+		return filepath.Join(outDir, rel)
+	}
+	res.FontPath = rewrite(res.FontPath)
+	res.WOFFPath = rewrite(res.WOFFPath)
+	res.SpecimenPath = rewrite(res.SpecimenPath)
+	for i := range res.Split {
+		res.Split[i] = rewrite(res.Split[i])
+	}
+	for target, paths := range res.Targets {
+		for i := range paths {
+			paths[i] = rewrite(paths[i])
+		}
+		res.Targets[target] = paths
+	}
 }
 
 func isCI() bool {

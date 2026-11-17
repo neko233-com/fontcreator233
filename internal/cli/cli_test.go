@@ -202,6 +202,51 @@ func TestLibrary(t *testing.T) {
 	}
 }
 
+func TestBuildWorkspaceAndClean(t *testing.T) {
+	path := sampleRecipeFile(t)
+	outDir := t.TempDir()
+	if _, errText, code := run(t, "build", path, "--out", outDir, "--no-open", "--json"); code != 0 {
+		t.Fatalf("build code=%d err=%s", code, errText)
+	}
+	out, _, code := run(t, "status", "--out", outDir, "--json")
+	if code != 0 {
+		t.Fatalf("status code=%d", code)
+	}
+	var st map[string]any
+	if err := json.Unmarshal([]byte(out), &st); err != nil {
+		t.Fatal(err)
+	}
+	ws := st["workspace"].(map[string]any)
+	if ws["files"].(float64) < 2 {
+		t.Fatalf("status = %#v", ws)
+	}
+	if _, _, code := run(t, "clean", "--out", outDir, "--all", "--json"); code != 1 {
+		t.Fatalf("clean without --yes code=%d", code)
+	}
+	out, _, code = run(t, "clean", "--out", outDir, "--dry-run", "--json")
+	if code != 0 {
+		t.Fatalf("dry run code=%d", code)
+	}
+	var dry map[string]any
+	if err := json.Unmarshal([]byte(out), &dry); err != nil {
+		t.Fatal(err)
+	}
+	if len(dry["result"].(map[string]any)["deleted"].([]any)) == 0 {
+		t.Fatalf("dry run = %#v", dry)
+	}
+	out, _, code = run(t, "clean", "--out", outDir, "--all", "--yes", "--json")
+	if code != 0 {
+		t.Fatalf("clean code=%d", code)
+	}
+	var cleaned map[string]any
+	if err := json.Unmarshal([]byte(out), &cleaned); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "assets")); !os.IsNotExist(err) {
+		t.Fatalf("assets still exist: %v", err)
+	}
+}
+
 func TestBuildAll(t *testing.T) {
 	dir := t.TempDir()
 	for i, name := range []string{"One", "Two"} {
