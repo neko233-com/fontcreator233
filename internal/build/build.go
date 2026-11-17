@@ -23,6 +23,7 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/skeleton"
 	"github.com/neko233-com/fontcreator233/internal/specimen"
 	"github.com/neko233-com/fontcreator233/internal/style"
+	"github.com/neko233-com/fontcreator233/internal/targets"
 	"github.com/neko233-com/fontcreator233/internal/ui"
 	"github.com/neko233-com/fontcreator233/internal/unicodes"
 )
@@ -47,6 +48,13 @@ type CoverageStat struct {
 	Missing   int
 }
 
+// SplitFont describes one split subset.
+type SplitFont struct {
+	Path  string
+	Style string
+	Runes []rune
+}
+
 // Result is the outcome of a build.
 type Result struct {
 	Family         string
@@ -64,6 +72,8 @@ type Result struct {
 	Duration       time.Duration
 	Targets        map[string][]string
 	Split          []string
+	GlyphRunes     []rune
+	SplitFonts     []SplitFont
 }
 
 // Build compiles one recipe. The workspace layer wraps this in a staging
@@ -151,6 +161,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		g.Name = glyphName(rune)
 		glyphs = append(glyphs, g)
 	}
+	result.GlyphRunes = append([]rune(nil), keys...)
 	cfg := fontConfig(r, resolvedStyle, glyphs)
 	cfg.Jobs = o.Jobs
 	ttf, err := fontbuild.Build(cfg)
@@ -184,11 +195,12 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			result.WOFFPath = woffPath
 		}
 		if o.SplitCJK > 0 {
-			split, err := buildSplits(ctx, r, resolvedStyle, glyphs, merged, derived, o, stem)
+			split, infos, err := buildSplits(ctx, r, resolvedStyle, glyphs, merged, derived, o, stem)
 			if err != nil {
 				return result, err
 			}
 			result.Split = split
+			result.SplitFonts = infos
 		}
 	}
 	if r.Output.Specimen && result.FontPath != "" {
@@ -226,8 +238,48 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			result.SpecimenPath = html
 		}
 	}
-	if !onlyUniversal(r.Output.Targets) {
-		warnings = append(warnings, "platform target generation is not wired yet")
+	if result.FontPath != "" {
+		inputs := []targets.FontInput{{
+			Path:    result.FontPath,
+			WOFF:    result.WOFFPath,
+			SHA256:  result.SHA256,
+			Primary: true,
+			Style:   resolvedStyle,
+			Runes:   result.GlyphRunes,
+		}}
+		for _, sf := range result.SplitFonts {
+			woff := strings.TrimSuffix(sf.Path, ".ttf") + ".woff"
+			if _, err := os.Stat(woff); err != nil {
+				woff = ""
+			}
+			inputs = append(inputs, targets.FontInput{
+				Path:   sf.Path,
+				WOFF:   woff,
+				Style:  sf.Style,
+				Runes:  sf.Runes,
+				SHA256: hashFileSHA(sf.Path),
+			})
+		}
+		targetList := o.Targets
+		if len(targetList) == 0 {
+			targetList = r.Output.Targets
+		}
+		targetPaths, err := targets.Build(ctx, targets.Options{
+			OutDir:         o.OutDir,
+			Family:         r.Meta.Family,
+			Style:          resolvedStyle,
+			RequestedStyle: r.Meta.Style,
+			License:        r.Meta.License,
+			Weight:         r.Style.Weight,
+			Targets:        targetList,
+			Fonts:          inputs,
+			SpecimenPath:   result.SpecimenPath,
+			TMP:            r.Output.TMP,
+		})
+		if err != nil {
+			return result, fmt.Errorf("targets: %w", err)
+		}
+		result.Targets = targetPaths
 	}
 	if hasBaseGlyphs(derived) && r.Style.Weight != 400 {
 		warnings = append(warnings, "CJK/Hangul weight is synthetic (base outlines are emboldened, not redrawn)")
@@ -487,13 +539,12 @@ func hasFormat(r *recipe.Recipe, f string) bool {
 	return false
 }
 
-func onlyUniversal(targets []string) bool {
-	for _, t := range targets {
-		if t != "universal" {
-			return false
-		}
+func hashFileSHA(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
 	}
-	return true
+	return hashHex(data)
 }
 
 func hasBaseGlyphs(m map[rune]fontbuild.Glyph) bool {
@@ -542,7 +593,7 @@ func fontStem(family, style string) string {
 	return f + "-" + s
 }
 
-func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph, merged map[rune]fontbuild.Glyph, derived map[rune]fontbuild.Glyph, o Options, stem string) ([]string, error) {
+func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph, merged map[rune]fontbuild.Glyph, derived map[rune]fontbuild.Glyph, o Options, stem string) ([]string, []SplitFont, error) {
 	var splitRunes []rune
 	for rn := range derived {
 		if rn >= 0x2E80 {
@@ -551,9 +602,10 @@ func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, gl
 	}
 	sort.Slice(splitRunes, func(i, j int) bool { return splitRunes[i] < splitRunes[j] })
 	if len(splitRunes) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	var paths []string
+	var infos []SplitFont
 	for start, idx := 0, 1; start < len(splitRunes); start, idx = start+o.SplitCJK, idx+1 {
 		end := start + o.SplitCJK
 		if end > len(splitRunes) {
@@ -576,22 +628,23 @@ func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, gl
 		cfg.Jobs = o.Jobs
 		data, err := fontbuild.Build(cfg)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		path := filepath.Join(o.OutDir, fmt.Sprintf("%s-CJK-%02d.ttf", stem, idx))
 		if err := os.WriteFile(path, data, 0o644); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		paths = append(paths, path)
+		infos = append(infos, SplitFont{Path: path, Style: styleName, Runes: append([]rune(nil), splitRunes[start:end]...)})
 		if hasFormat(r, "woff") {
 			woff, err := fontbuild.BuildWOFF(data)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if err := os.WriteFile(filepath.Join(o.OutDir, fmt.Sprintf("%s-CJK-%02d.woff", stem, idx)), woff, 0o644); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
-	return paths, nil
+	return paths, infos, nil
 }
