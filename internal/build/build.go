@@ -269,6 +269,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			Family:         r.Meta.Family,
 			Style:          resolvedStyle,
 			RequestedStyle: r.Meta.Style,
+			Version:        r.Meta.Version,
 			License:        r.Meta.License,
 			Weight:         r.Style.Weight,
 			Targets:        targetList,

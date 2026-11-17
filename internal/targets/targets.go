@@ -34,6 +34,7 @@ type Options struct {
 	Family         string
 	Style          string
 	RequestedStyle string
+	Version        string
 	License        string
 	Weight         int
 	Targets        []string
@@ -110,8 +111,14 @@ func Build(ctx context.Context, o Options) (map[string][]string, error) {
 				return nil, err
 			}
 			result["system"] = paths
-		case "unity", "unreal":
-			// Implemented by unity.go/unreal.go in later tasks.
+		case "unity":
+			paths, err := buildUnity(o, manifest)
+			if err != nil {
+				return nil, err
+			}
+			result["unity"] = paths
+		case "unreal":
+			// Implemented by unreal.go in the next task.
 			result[target] = nil
 		}
 		select {

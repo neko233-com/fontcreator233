@@ -1,0 +1,330 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using TMPro;
+using UnityEditor;
+using UnityEngine;
+
+namespace FontCreator233
+{
+    [Serializable]
+    public class ManifestFont
+    {
+        public string path;
+        public string woff;
+        public string sha256;
+        public bool primary;
+        public string[] scripts;
+    }
+
+    [Serializable]
+    public class ManifestTMP
+    {
+        public string population;
+        public int samplingPointSize;
+        public int padding;
+        public int atlasWidth;
+        public int atlasHeight;
+        public bool multiAtlas;
+        public string renderMode;
+        public string[] staticCharsets;
+    }
+
+    [Serializable]
+    public class Manifest
+    {
+        public string schema;
+        public string family;
+        public string style;
+        public string license;
+        public string licenseFile;
+        public ManifestFont[] fonts;
+        public string[] fallbacks;
+        public string[] charsets;
+        public ManifestTMP unityTMP;
+    }
+
+    /// <summary>
+    /// Creates TextMeshPro font assets from a fontcreator233 generated package.
+    /// This is an editor convenience: the generator never runs Unity.
+    /// </summary>
+    public static class FontCreator233TMPImporter
+    {
+        private const string PackageName = "__PACKAGE_NAME__";
+        private const string GeneratedRoot = "Assets/FontCreator233Generated";
+
+        [MenuItem("Tools/Fontcreator233/Create TMP Font Assets")]
+        public static void CreateDynamic()
+        {
+            Create(false);
+        }
+
+        [MenuItem("Tools/Fontcreator233/Create Static TMP Font Assets")]
+        public static void CreateStatic()
+        {
+            Create(true);
+        }
+
+        [MenuItem("Tools/Fontcreator233/Wire Fallback Chain")]
+        public static void WireFallbacks()
+        {
+            string manifestPath = FindManifest();
+            if (manifestPath == null)
+            {
+                Debug.LogError("fontcreator233: fontcreator233.manifest.json not found.");
+                return;
+            }
+            Manifest manifest = Load(manifestPath);
+            string dir = GeneratedRoot + "/" + SafeName(manifest.family) + "/" + SafeName(manifest.style);
+            string[] guids = AssetDatabase.FindAssets("t:TMP_FontAsset", new[] { dir });
+            List<TMP_FontAsset> assets = guids
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(AssetDatabase.LoadAssetAtPath<TMP_FontAsset>)
+                .Where(x => x != null)
+                .OrderBy(x => x.name)
+                .ToList();
+            if (assets.Count == 0)
+            {
+                Debug.LogError("fontcreator233: no TMP assets found in " + dir);
+                return;
+            }
+            TMP_FontAsset primary = assets[0];
+            primary.fallbackFontAssetTable = assets.Skip(1).ToList();
+            EditorUtility.SetDirty(primary);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"fontcreator233: wired {assets.Count} TMP assets under {dir}.");
+        }
+
+        [MenuItem("Tools/Fontcreator233/Set as Default Font")]
+        public static void SetDefaultFont()
+        {
+            string manifestPath = FindManifest();
+            if (manifestPath == null)
+            {
+                Debug.LogError("fontcreator233: fontcreator233.manifest.json not found.");
+                return;
+            }
+            Manifest manifest = Load(manifestPath);
+            string dir = GeneratedRoot + "/" + SafeName(manifest.family) + "/" + SafeName(manifest.style);
+            ManifestFont primaryFont = manifest.fonts.FirstOrDefault(f => f.primary) ?? manifest.fonts.FirstOrDefault();
+            if (primaryFont == null)
+            {
+                Debug.LogError("fontcreator233: manifest has no fonts.");
+                return;
+            }
+            string assetPath = dir + "/" + Path.GetFileNameWithoutExtension(primaryFont.path) + ".asset";
+            TMP_FontAsset asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
+            if (asset == null)
+            {
+                Debug.LogError("fontcreator233: create the TMP font assets first.");
+                return;
+            }
+            if (!EditorUtility.DisplayDialog(
+                    "Set default TMP font",
+                    $"Set {manifest.family} {manifest.style} as TMP_Settings.defaultFontAsset?",
+                    "Set", "Cancel"))
+            {
+                return;
+            }
+            TMP_Settings.defaultFontAsset = asset;
+            AssetDatabase.SaveAssets();
+            Debug.Log("fontcreator233: set default TMP font to " + asset.name);
+        }
+
+        private static void Create(bool staticMode)
+        {
+            string manifestPath = FindManifest();
+            if (manifestPath == null)
+            {
+                Debug.LogError("fontcreator233: fontcreator233.manifest.json not found. Install the generated Unity package first.");
+                return;
+            }
+            Manifest manifest = Load(manifestPath);
+            if (manifest.unityTMP == null || manifest.fonts == null || manifest.fonts.Length == 0)
+            {
+                Debug.LogError("fontcreator233: manifest is missing fonts or unityTMP settings.");
+                return;
+            }
+            string packageRoot = Path.GetDirectoryName(manifestPath).Replace("\\", "/");
+            string dir = GeneratedRoot + "/" + SafeName(manifest.family) + "/" + SafeName(manifest.style);
+            Directory.CreateDirectory(dir);
+            AssetDatabase.Refresh();
+
+            List<TMP_FontAsset> created = new List<TMP_FontAsset>();
+            foreach (ManifestFont fontEntry in manifest.fonts)
+            {
+                Font font = LoadFont(packageRoot, fontEntry.path);
+                if (font == null)
+                {
+                    Debug.LogError($"fontcreator233: font asset not found for {fontEntry.path}");
+                    continue;
+                }
+                string assetPath = dir + "/" + Path.GetFileNameWithoutExtension(fontEntry.path) + ".asset";
+                // Recreate only inside our generated folder; this keeps the menu
+                // idempotent without touching user assets.
+                if (AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath) != null)
+                {
+                    AssetDatabase.DeleteAsset(assetPath);
+                }
+                TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(
+                    font,
+                    manifest.unityTMP.samplingPointSize,
+                    manifest.unityTMP.padding,
+                    ParseRenderMode(manifest.unityTMP.renderMode),
+                    manifest.unityTMP.atlasWidth,
+                    manifest.unityTMP.atlasHeight,
+                    AtlasPopulationMode.Dynamic,
+                    manifest.unityTMP.multiAtlas);
+                if (fontAsset == null)
+                {
+                    Debug.LogError("fontcreator233: TMP_FontAsset.CreateFontAsset returned null for " + fontEntry.path);
+                    continue;
+                }
+                fontAsset.name = Path.GetFileNameWithoutExtension(fontEntry.path);
+                if (staticMode)
+                {
+                    string[] charsets = manifest.unityTMP.staticCharsets ?? manifest.charsets ?? new string[0];
+                    foreach (string charset in charsets)
+                    {
+                        string charsetPath = packageRoot + "/" + charset;
+                        if (!File.Exists(Path.GetFullPath(charsetPath)))
+                        {
+                            continue;
+                        }
+                        string characters = File.ReadAllText(charsetPath);
+                        string missing;
+                        fontAsset.TryAddCharacters(characters, out missing);
+                        if (!string.IsNullOrEmpty(missing))
+                        {
+                            Debug.LogWarning($"fontcreator233: {fontAsset.name} atlas is missing {missing.Length} requested glyphs; enable multi-atlas or split CJK.");
+                        }
+                    }
+                    fontAsset.atlasPopulationMode = AtlasPopulationMode.Static;
+                }
+                AssetDatabase.CreateAsset(fontAsset, assetPath);
+                SaveSubAssets(fontAsset);
+                created.Add(fontAsset);
+            }
+
+            if (created.Count > 0)
+            {
+                TMP_FontAsset primary = created[0];
+                primary.fallbackFontAssetTable = created.Skip(1).ToList();
+                foreach (TMP_FontAsset asset in created)
+                {
+                    EditorUtility.SetDirty(asset);
+                }
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                CheckCharacters(primary);
+                Debug.Log($"fontcreator233: created {created.Count} TMP assets in {dir} ({(staticMode ? "static" : "dynamic")}).");
+            }
+        }
+
+        private static void CheckCharacters(TMP_FontAsset primary)
+        {
+            const string sample = "Aa0éΩЖ中あ한€→";
+            List<string> missing = new List<string>();
+            foreach (char c in sample)
+            {
+                if (!primary.HasCharacter(c))
+                {
+                    missing.Add(c.ToString());
+                }
+            }
+            if (missing.Count > 0)
+            {
+                Debug.LogWarning("fontcreator233: primary TMP asset is missing sample glyphs: " + string.Join(" ", missing));
+            }
+        }
+
+        private static void SaveSubAssets(TMP_FontAsset fontAsset)
+        {
+            if (fontAsset.atlasTextures != null)
+            {
+                for (int i = 0; i < fontAsset.atlasTextures.Length; i++)
+                {
+                    Texture2D texture = fontAsset.atlasTextures[i];
+                    if (texture == null || !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(texture)))
+                    {
+                        continue;
+                    }
+                    texture.name = fontAsset.name + " Atlas " + i;
+                    AssetDatabase.AddObjectToAsset(texture, fontAsset);
+                }
+            }
+            if (fontAsset.material != null && string.IsNullOrEmpty(AssetDatabase.GetAssetPath(fontAsset.material)))
+            {
+                fontAsset.material.name = fontAsset.name + " Material";
+                AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
+            }
+        }
+
+        private static Font LoadFont(string packageRoot, string relPath)
+        {
+            string path = packageRoot + "/" + relPath;
+            Font font = AssetDatabase.LoadAssetAtPath<Font>(path);
+            if (font == null)
+            {
+                font = AssetDatabase.LoadAssetAtPath<Font>(relPath);
+            }
+            return font;
+        }
+
+        private static GlyphRenderMode ParseRenderMode(string mode)
+        {
+            switch ((mode ?? "SDFAA").ToUpperInvariant())
+            {
+                case "SDF8": return GlyphRenderMode.SDF8;
+                case "SDF16": return GlyphRenderMode.SDF16;
+                case "SDF32": return GlyphRenderMode.SDF32;
+                default: return GlyphRenderMode.SDFAA;
+            }
+        }
+
+        private static string SafeName(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return "Unnamed";
+            }
+            char[] invalid = Path.GetInvalidFileNameChars();
+            return new string(value.Select(c => invalid.Contains(c) ? '_' : c).ToArray());
+        }
+
+        private static string FindManifest()
+        {
+            string[] candidates =
+            {
+                "Packages/" + PackageName + "/fontcreator233.manifest.json",
+                "Assets/" + PackageName + "/fontcreator233.manifest.json",
+                "Assets/FontCreator233Generated/" + PackageName + "/fontcreator233.manifest.json",
+            };
+            foreach (string candidate in candidates)
+            {
+                if (File.Exists(Path.GetFullPath(candidate)))
+                {
+                    return candidate;
+                }
+            }
+            foreach (string guid in AssetDatabase.FindAssets("fontcreator233.manifest t:TextAsset"))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.Contains(PackageName) || path.Contains("FontCreator233"))
+                {
+                    return path;
+                }
+            }
+            return null;
+        }
+
+        private static Manifest Load(string path)
+        {
+            string json = File.ReadAllText(Path.GetFullPath(path));
+            return JsonUtility.FromJson<Manifest>(json);
+        }
+    }
+}
+#endif
