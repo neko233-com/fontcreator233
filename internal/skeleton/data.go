@@ -8,9 +8,30 @@ import (
 
 var glyphs = map[rune]*Def{}
 
+func init() {
+	// Order matters: scripts reuse Latin definitions and marks must exist
+	// before composition runs.
+	initLatin()
+	initGreek()
+	initCyrillic()
+	initMarks()
+}
+
 func add(def Def) {
 	d := def
 	glyphs[d.Rune] = &d
+}
+
+func reuse(target, base rune, advance float64, zone Zone) {
+	src := glyphs[base]
+	if src == nil {
+		panic(fmt.Sprintf("reuse source %U missing for %U", base, target))
+	}
+	d := *src
+	d.Rune = target
+	d.Advance = advance
+	d.Zone = zone
+	add(d)
 }
 
 func addVariant(base rune, key string, def Def) {

@@ -1,6 +1,6 @@
 package skeleton
 
-func init() {
+func initLatin() {
 	// Uppercase.
 	add(Def{Rune: 'A', Advance: 667, Zone: ZoneUpper, Strokes: []Stroke{
 		sw(1, "M 60 0 L 333 700"),
@@ -157,6 +157,9 @@ func init() {
 	add(Def{Rune: 'j', Advance: 278, Zone: ZoneLower, Strokes: []Stroke{
 		sw(1, "M 160 500 L 160 -80 C 160 -190 100 -220 40 -200"),
 	}, Dots: []Dot{dot(160, 640, 28)}})
+	add(Def{Rune: 0x0131, Advance: 278, Zone: ZoneLower, Strokes: []Stroke{
+		vstem(139, 0, 500),
+	}})
 	add(Def{Rune: 'k', Advance: 556, Zone: ZoneLower, Strokes: []Stroke{
 		vstem(100, 0, 740),
 		sw(1, "M 100 300 L 430 500"),
