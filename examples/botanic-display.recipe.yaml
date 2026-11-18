@@ -1,0 +1,60 @@
+# Art Nouveau display face: flared terminals, organic jitter, seed-locked.
+# Build: fontcreator build examples/botanic-display.recipe.yaml --target all
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Botanic Display
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Art Nouveau display type with flared terminals and a deterministic hand-drawn seed."
+  license: OFL-1.1
+  accent: "#2F8F6B"
+  sampleText: "Botanic Display 花园字体 — 0123"
+
+metrics:
+  ascender: 805
+  descender: -205
+  xHeight: 0.51
+  capHeight: 0.735
+  lineGap: 0
+
+style:
+  skeleton: geometric
+  weight: 560
+  width: 108
+  slant: 0
+  contrast: 0.62
+  terminal: flare
+  serif: none
+  serifSize: 0
+  overshoot: 0.016
+  roughness: 0.18
+  jitterRotation: 0.4
+  seed: 233
+
+coverage:
+  generated: [latin, greek, cyrillic]
+  base:
+    cjk: common
+    kana: true
+    hangul: true
+    symbols: true
+
+glyphs:
+  overrides: ""
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, unreal]
+  specimen: true
+  open: false
+  splitCJK: 0
+  tmp:
+    population: dynamic
+    samplingPointSize: 90
+    padding: 9
+    atlasWidth: 1024
+    atlasHeight: 1024
+    multiAtlas: true
+    renderMode: SDFAA

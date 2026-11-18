@@ -1,0 +1,60 @@
+# Geometric sans / neon poster reference.
+# Build: fontcreator build examples/aurora-grotesk.recipe.yaml --target all
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Aurora Grotesk
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Wide geometric sans with round terminals, built from a neon poster reference."
+  license: OFL-1.1
+  accent: "#5B8CFF"
+  sampleText: "Aurora Grotesk 字体创造器 0123 — Hamburgefonstiv"
+
+metrics:
+  ascender: 810
+  descender: -210
+  xHeight: 0.52
+  capHeight: 0.72
+  lineGap: 0
+
+style:
+  skeleton: geometric
+  weight: 620
+  width: 104
+  slant: 0
+  contrast: 0.06
+  terminal: round
+  serif: none
+  serifSize: 0
+  overshoot: 0.014
+  roughness: 0
+  jitterRotation: 0
+  seed: 233
+
+coverage:
+  generated: [latin, greek, cyrillic]
+  base:
+    cjk: common
+    kana: true
+    hangul: true
+    symbols: true
+
+glyphs:
+  overrides: ""
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, unreal]
+  specimen: true
+  open: false
+  splitCJK: 0
+  tmp:
+    population: dynamic
+    samplingPointSize: 90
+    padding: 9
+    atlasWidth: 1024
+    atlasHeight: 1024
+    multiAtlas: true
+    renderMode: SDFAA

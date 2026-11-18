@@ -1,0 +1,60 @@
+# High-contrast editorial serif with hairline serifs and an 8° italic.
+# Build: fontcreator build examples/noir-didone.recipe.yaml --target all
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Noir Didone
+  style: Noir
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Editorial Didone with hairline serifs, narrow caps, and an 8° italic."
+  license: OFL-1.1
+  accent: "#C4553D"
+  sampleText: "Noir Didone — Éditorial 字体 0123"
+
+metrics:
+  ascender: 800
+  descender: -220
+  xHeight: 0.47
+  capHeight: 0.71
+  lineGap: 0
+
+style:
+  skeleton: serif
+  weight: 500
+  width: 94
+  slant: 8
+  contrast: 0.86
+  terminal: angled
+  serif: hairline
+  serifSize: 0.60
+  overshoot: 0.014
+  roughness: 0
+  jitterRotation: 0
+  seed: 17
+
+coverage:
+  generated: [latin, greek, cyrillic]
+  base:
+    cjk: common
+    kana: true
+    hangul: true
+    symbols: true
+
+glyphs:
+  overrides: ""
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, unreal]
+  specimen: true
+  open: false
+  splitCJK: 0
+  tmp:
+    population: dynamic
+    samplingPointSize: 90
+    padding: 9
+    atlasWidth: 1024
+    atlasHeight: 1024
+    multiAtlas: true
+    renderMode: SDFAA
