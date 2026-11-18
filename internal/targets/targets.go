@@ -64,9 +64,12 @@ func Build(ctx context.Context, o Options) (map[string][]string, error) {
 	if err := integration.WriteJSON(manifestPath, manifest); err != nil {
 		return nil, err
 	}
-	oflPath := filepath.Join(o.OutDir, "OFL.txt")
-	if err := os.WriteFile(oflPath, assets.OFL, 0o644); err != nil {
-		return nil, err
+	oflPath := ""
+	if o.License == "OFL-1.1" {
+		oflPath = filepath.Join(o.OutDir, "OFL.txt")
+		if err := os.WriteFile(oflPath, assets.OFL, 0o644); err != nil {
+			return nil, err
+		}
 	}
 	var allRunes []rune
 	for _, f := range o.Fonts {
@@ -93,7 +96,10 @@ func Build(ctx context.Context, o Options) (map[string][]string, error) {
 	if o.SpecimenPath != "" {
 		universal = append(universal, o.SpecimenPath)
 	}
-	universal = append(universal, manifestPath, oflPath)
+	universal = append(universal, manifestPath)
+	if oflPath != "" {
+		universal = append(universal, oflPath)
+	}
 	result["universal"] = universal
 
 	for _, target := range selected {
@@ -169,7 +175,6 @@ func buildManifest(o Options) (*integration.Manifest, error) {
 		Style:          o.Style,
 		RequestedStyle: o.RequestedStyle,
 		License:        o.License,
-		LicenseFile:    "OFL.txt",
 		UnityTMP: integration.TMP{
 			Population:        o.TMP.Population,
 			SamplingPointSize: o.TMP.SamplingPointSize,

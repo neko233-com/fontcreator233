@@ -18,6 +18,7 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/derive"
 	"github.com/neko233-com/fontcreator233/internal/fontbuild"
 	"github.com/neko233-com/fontcreator233/internal/geom"
+	"github.com/neko233-com/fontcreator233/internal/library"
 	"github.com/neko233-com/fontcreator233/internal/parallel"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 	"github.com/neko233-com/fontcreator233/internal/skeleton"
@@ -118,10 +119,6 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	}
 	result.CoverageReport = stats
 
-	if r.Glyphs.Overrides != "" {
-		return result, fmt.Errorf("glyphs.overrides is not implemented yet")
-	}
-
 	merged := make(map[rune]fontbuild.Glyph, len(gen)+len(derived)+1)
 	for k, v := range gen {
 		merged[k] = v
@@ -131,6 +128,22 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			continue
 		}
 		merged[k] = v
+	}
+	if r.Glyphs.Overrides != "" {
+		dir := r.Glyphs.Overrides
+		if !filepath.IsAbs(dir) && r.SourcePath != "" {
+			dir = filepath.Join(filepath.Dir(r.SourcePath), dir)
+		}
+		overrides, err := library.LoadDir(dir)
+		if err != nil {
+			return result, fmt.Errorf("glyphs.overrides: %w", err)
+		}
+		for rn, ov := range overrides {
+			merged[rn] = fontbuild.Glyph{Rune: rn, Advance: ov.Advance, Path: ov.Path}
+		}
+		if len(overrides) > 0 {
+			warnings = append(warnings, fmt.Sprintf("applied %d SVG glyph overrides", len(overrides)))
+		}
 	}
 	if _, ok := merged[0x20]; !ok {
 		merged[0x20] = fontbuild.Glyph{Rune: 0x20, Advance: 250}

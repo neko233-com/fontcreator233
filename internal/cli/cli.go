@@ -75,7 +75,11 @@ func Run(args []string, io IO) int {
 		return a.cmdClean(rest)
 	case "status":
 		return a.cmdStatus(rest)
-	case "import", "export", "mcp":
+	case "import":
+		return a.cmdImport(rest)
+	case "export":
+		return a.cmdExport(rest)
+	case "mcp":
 		return a.fail(cmd, 1, fmt.Errorf("%s is not wired yet in this build", cmd))
 	default:
 		return a.fail(cmd, 1, fmt.Errorf("unknown command %q", cmd))

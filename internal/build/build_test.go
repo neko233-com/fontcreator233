@@ -86,6 +86,43 @@ func TestBuildDeterministic(t *testing.T) {
 	}
 }
 
+func TestSVGOverride(t *testing.T) {
+	r := sampleRecipe(t)
+	dir := t.TempDir()
+	ovDir := filepath.Join(dir, "glyphs")
+	if err := os.MkdirAll(ovDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	svg := `<svg xmlns="http://www.w3.org/2000/svg" data-advance="700"><path d="M 100 0 L 200 0 L 200 100 L 100 100 Z"/></svg>`
+	if err := os.WriteFile(filepath.Join(ovDir, "U+0041.svg"), []byte(svg), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r.Glyphs.Overrides = ovDir
+	res, err := Build(context.Background(), r, Options{OutDir: filepath.Join(dir, "dist")}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := readFile(res.FontPath)
+	f, err := sfnt.Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf sfnt.Buffer
+	gid, _ := f.GlyphIndex(&buf, 'A')
+	adv, _ := f.GlyphAdvance(&buf, gid, 1000, 0)
+	if adv != 700 {
+		t.Fatalf("advance = %d, want 700", adv)
+	}
+	segs, err := f.LoadGlyph(&buf, gid, 1000, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bounds := segs.Bounds()
+	if bounds.Max.X-bounds.Min.X > 200*64 {
+		t.Fatalf("override not applied: %#v", bounds)
+	}
+}
+
 func TestParallelDeterminism(t *testing.T) {
 	r := sampleRecipe(t)
 	a, err := Build(context.Background(), r, Options{OutDir: t.TempDir(), Jobs: 1}, nil)

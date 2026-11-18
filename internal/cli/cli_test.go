@@ -202,6 +202,68 @@ func TestLibrary(t *testing.T) {
 	}
 }
 
+func TestImportExportCLI(t *testing.T) {
+	recipePath := sampleRecipeFile(t)
+	outDir := t.TempDir()
+	out, errText, code := run(t, "build", recipePath, "--out", outDir, "--no-open", "--json")
+	if code != 0 {
+		t.Fatalf("build code=%d err=%s", code, errText)
+	}
+	var built map[string]any
+	if err := json.Unmarshal([]byte(out), &built); err != nil {
+		t.Fatal(err)
+	}
+	font := built["font"].(string)
+
+	impDir := t.TempDir()
+	out, _, code = run(t, "import", "font", font, "--out", impDir, "--extract-glyphs", "--unicodes", "0041-0042", "--json")
+	if code != 0 {
+		t.Fatalf("import code=%d", code)
+	}
+	var imported map[string]any
+	if err := json.Unmarshal([]byte(out), &imported); err != nil {
+		t.Fatal(err)
+	}
+	profile := imported["profile"].(map[string]any)
+	if _, err := recipe.Load(profile["recipePath"].(string)); err != nil {
+		t.Fatalf("imported recipe: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(impDir, "glyphs", "U+0041.svg")); err != nil {
+		t.Fatal(err)
+	}
+
+	glyphDir := t.TempDir()
+	out, _, code = run(t, "export", "glyphs", font, "--dir", glyphDir, "--unicodes", "0041-0043", "--json")
+	if code != 0 {
+		t.Fatalf("export glyphs code=%d", code)
+	}
+	var glyphRes map[string]any
+	if err := json.Unmarshal([]byte(out), &glyphRes); err != nil {
+		t.Fatal(err)
+	}
+	if glyphRes["count"].(float64) != 3 {
+		t.Fatalf("glyphs = %#v", glyphRes)
+	}
+
+	zipPath := filepath.Join(t.TempDir(), "cli.bundle.zip")
+	out, _, code = run(t, "export", "bundle", recipePath, "--out", zipPath, "--target", "universal", "--json")
+	if code != 0 {
+		t.Fatalf("export bundle code=%d", code)
+	}
+	bundleOut := t.TempDir()
+	out, _, code = run(t, "import", "bundle", zipPath, "--out", bundleOut, "--json")
+	if code != 0 {
+		t.Fatalf("import bundle code=%d", code)
+	}
+	var bundleRes map[string]any
+	if err := json.Unmarshal([]byte(out), &bundleRes); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(bundleOut, "recipe.yaml")); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBuildWorkspaceAndClean(t *testing.T) {
 	path := sampleRecipeFile(t)
 	outDir := t.TempDir()
