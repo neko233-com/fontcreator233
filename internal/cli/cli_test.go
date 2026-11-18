@@ -202,6 +202,39 @@ func TestLibrary(t *testing.T) {
 	}
 }
 
+func TestLearnCLI(t *testing.T) {
+	path := sampleRecipeFile(t)
+	buildDir := t.TempDir()
+	out, errText, code := run(t, "build", path, "--out", buildDir, "--no-open", "--json")
+	if code != 0 {
+		t.Fatalf("build code=%d err=%s", code, errText)
+	}
+	var built map[string]any
+	if err := json.Unmarshal([]byte(out), &built); err != nil {
+		t.Fatal(err)
+	}
+	font := built["font"].(string)
+	outDir := t.TempDir()
+	out, errText, code = run(t, "learn", font, "--out", outDir, "--json")
+	if code != 0 {
+		t.Fatalf("learn code=%d err=%s", code, errText)
+	}
+	var learned map[string]any
+	if err := json.Unmarshal([]byte(out), &learned); err != nil {
+		t.Fatal(err)
+	}
+	report := learned["report"].(map[string]any)
+	features := report["features"].([]any)
+	if len(features) < 2 {
+		t.Fatalf("features = %#v", features)
+	}
+	for _, rel := range []string{"font-report.json", "font-report.md", "recipe.yaml"} {
+		if _, err := os.Stat(filepath.Join(outDir, rel)); err != nil {
+			t.Fatalf("missing %s: %v", rel, err)
+		}
+	}
+}
+
 func TestImportExportCLI(t *testing.T) {
 	recipePath := sampleRecipeFile(t)
 	outDir := t.TempDir()

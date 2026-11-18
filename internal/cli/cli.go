@@ -73,6 +73,8 @@ func Run(args []string, io IO) int {
 		return a.cmdBuildAll(rest)
 	case "inspect":
 		return a.cmdInspect(rest)
+	case "learn":
+		return a.cmdLearn(rest)
 	case "specimen":
 		return a.cmdSpecimen(rest)
 	case "library":
@@ -103,6 +105,7 @@ Commands:
   build-all --dir <dir>     build several recipes in parallel
   validate <recipe>         validate a recipe
   inspect <font>            inspect a TTF/OTF
+  learn <font>              deep-report a font and write a starter recipe
   specimen <font>           regenerate the HTML specimen
   init                      write a starter recipe
   describe                  print the agent contract

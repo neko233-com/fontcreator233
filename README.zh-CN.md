@@ -48,6 +48,7 @@ fontcreator validate work/font.recipe.yaml --json
 fontcreator build work/font.recipe.yaml --out dist --target all --json --no-open
 fontcreator specimen dist/MyTypeface-Regular.ttf --open
 fontcreator inspect dist/MyTypeface-Regular.ttf --json
+fontcreator learn path/to/reference.ttf --out work/learned --json
 ```
 
 参考图 → 风格参数的映射表见 [`AGENTS.md`](AGENTS.md)、[`agent-skill/fontcreator233/SKILL.md`](agent-skill/fontcreator233/SKILL.md) 和 [`docs/agent-workflow.md`](docs/agent-workflow.md)。
@@ -65,7 +66,15 @@ fontcreator inspect dist/MyTypeface-Regular.ttf --json
 }
 ```
 
-工具：`fontcreator_describe`、`fontcreator_validate`、`fontcreator_build`、`fontcreator_inspect`、`fontcreator_specimen`、`fontcreator_library_list`、`fontcreator_status`。
+工具：`fontcreator_describe`、`fontcreator_validate`、`fontcreator_build`、`fontcreator_inspect`、`fontcreator_learn`、`fontcreator_specimen`、`fontcreator_library_list`、`fontcreator_status`。
+
+### 学习已有字体
+
+```bash
+fontcreator learn path/to/reference.ttf --out work/learned --json
+```
+
+会解析 name、metrics、cmap、GSUB/GPOS 特性标签、lookup 类型、legacy kern pair、可变轴、彩色表和抽样字形统计，输出 `font-report.json`、`font-report.md`、`profile.json` 和起始 `recipe.yaml`。生成的 recipe 只是起点，不复制原字体；skeleton、contrast、serif、terminal 仍需结合参考图判断。
 
 ## 三套示例字体
 
@@ -97,6 +106,8 @@ fontcreator build examples/botanic-display.recipe.yaml --target all --no-open
 
 不支持：阿拉伯文、希伯来文、印度系文字、泰文、竖排、复杂 shaping。
 
+生成的 OpenType 特性仅覆盖 `liga`（fi/fl/ff/ffi/ffl）和 `kern` 字距；不生成 contextual substitution、stylistic sets、mark positioning、cursive attachment 等高级 GSUB/GPOS。`learn` 可以解析并报告其他字体中的这些特性。
+
 ## 产物
 
 ```text
@@ -121,7 +132,9 @@ dist/
 
 ## 好看、离线的样张
 
-Vercel/Geist 风格：巨大的生成字体 `Aa`、可编辑 type tester（字号/行距/字距）、scale 瀑布、多语言卡片、应用/字幕/海报预览、可搜索/筛选的虚拟化字形网格。
+Vercel/Geist 风格：巨大的生成字体 `Aa`、可编辑 type tester（字号/行距/字距）、OpenType 特性开关（liga/kern）、scale 瀑布、多语言卡片、应用/字幕/海报预览、可搜索/筛选的虚拟化字形网格。
+
+![OpenType 特性面板](docs/assets/opentype-dark.png)
 
 - Geist Sans/Mono（OFL）做 UI。
 - TanStack Virtual（MIT）打包为经典脚本，`file://` 直接可开。
@@ -137,6 +150,7 @@ fontcreator build <recipe> [--target all] [--split-cjk N] [--jobs N] [--json]
 fontcreator build-all --dir examples [--font-jobs N]
 fontcreator validate <recipe> --json
 fontcreator inspect <font> --json
+fontcreator learn <font> --out work/learned --json
 fontcreator specimen <font> --open
 fontcreator describe --json | --markdown
 fontcreator library list|export

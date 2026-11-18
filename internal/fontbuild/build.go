@@ -23,6 +23,20 @@ type Glyph struct {
 	Name    string
 	Advance int
 	Path    geom.Path
+	NoCmap  bool
+}
+
+// KernPair is one GPOS/kern pair adjustment.
+type KernPair struct {
+	Left  string
+	Right string
+	Value int16
+}
+
+// Ligature maps a component sequence to one glyph.
+type Ligature struct {
+	Components []string
+	Glyph      string
 }
 
 // Config is the complete font metadata and glyph set.
@@ -50,6 +64,8 @@ type Config struct {
 	Created     time.Time
 	Jobs        int
 	Glyphs      []Glyph
+	Kerning     []KernPair
+	Ligatures   []Ligature
 }
 
 type glyphBox struct {
@@ -161,6 +177,25 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 		{"name", buildName(cfg)},
 		{"post", buildPost(cfg)},
 	}
+	if len(cfg.Kerning) > 0 {
+		if kern, err := buildKernTable(glyphs, cfg.Kerning); err != nil {
+			return nil, err
+		} else if len(kern) > 0 {
+			tables = append(tables, table{"kern", kern})
+		}
+		if gpos, err := buildGPOSTable(glyphs, cfg.Kerning); err != nil {
+			return nil, err
+		} else if len(gpos) > 0 {
+			tables = append(tables, table{"GPOS", gpos})
+		}
+	}
+	if len(cfg.Ligatures) > 0 {
+		if gsub, err := buildGSUBTable(glyphs, cfg.Ligatures); err != nil {
+			return nil, err
+		} else if len(gsub) > 0 {
+			tables = append(tables, table{"GSUB", gsub})
+		}
+	}
 	sort.Slice(tables, func(i, j int) bool { return tables[i].tag < tables[j].tag })
 	out, headOffset, err := assemble(tables)
 	if err != nil {
@@ -207,6 +242,11 @@ func normalizeConfig(cfg Config) Config {
 	if cfg.WidthClass == 0 {
 		cfg.WidthClass = 5
 	}
+	for i := range cfg.Glyphs {
+		if cfg.Glyphs[i].Name == "" {
+			cfg.Glyphs[i].Name = fmt.Sprintf("gid%05d", i)
+		}
+	}
 	return cfg
 }
 
@@ -227,11 +267,21 @@ func validateConfig(cfg Config) error {
 		return fmt.Errorf("width class %d out of range", cfg.WidthClass)
 	}
 	seen := map[rune]bool{}
-	for _, g := range cfg.Glyphs {
-		if g.Rune != 0 && seen[g.Rune] {
+	names := map[string]bool{}
+	for i, g := range cfg.Glyphs {
+		if g.Name == "" {
+			g.Name = fmt.Sprintf("gid%05d", i)
+		}
+		if names[g.Name] {
+			return fmt.Errorf("duplicate glyph name %q", g.Name)
+		}
+		names[g.Name] = true
+		if !g.NoCmap && g.Rune != 0 && seen[g.Rune] {
 			return fmt.Errorf("duplicate rune %U", g.Rune)
 		}
-		seen[g.Rune] = true
+		if !g.NoCmap {
+			seen[g.Rune] = true
+		}
 	}
 	return nil
 }

@@ -25,6 +25,7 @@ fontcreator validate work/font.recipe.yaml --json
 fontcreator build work/font.recipe.yaml --out dist --target all --json --no-open
 fontcreator specimen dist/MyTypeface-Regular.ttf --open
 fontcreator inspect dist/MyTypeface-Regular.ttf --json
+fontcreator learn path/to/reference.ttf --out work/learned --json
 fontcreator status --out dist --json
 ```
 
@@ -51,8 +52,8 @@ your parameter changes, not noise.
 - Exit codes: 0 success, 1 recipe/user error, 2 internal, 130 canceled.
 - `fontcreator mcp` runs a stdio MCP server with:
   `fontcreator_describe`, `fontcreator_validate`, `fontcreator_build`,
-  `fontcreator_inspect`, `fontcreator_specimen`, `fontcreator_library_list`,
-  `fontcreator_status`.
+  `fontcreator_inspect`, `fontcreator_learn`, `fontcreator_specimen`,
+  `fontcreator_library_list`, `fontcreator_status`.
 - TUI is for humans; use `--json`, `--plain`, or `--no-tui` in automation.
 - Builds are byte-identical within the same tool version, OS/arch, and Go
   version. `--jobs 1` and `--jobs 8` match on the same platform.

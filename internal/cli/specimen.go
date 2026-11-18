@@ -41,6 +41,14 @@ func (a *app) cmdSpecimen(args []string) int {
 	if dir == "" {
 		dir = filepath.Dir(fontPath)
 	}
+	hasTable := func(tag string) bool {
+		for _, t := range info.Tables {
+			if t == tag {
+				return true
+			}
+		}
+		return false
+	}
 	path, err := specimen.Build(specimen.Options{
 		OutDir:        dir,
 		FontPath:      fontPath,
@@ -49,15 +57,17 @@ func (a *app) cmdSpecimen(args []string) int {
 		SelfContained: *selfContained,
 		Open:          !common.noOpen && !isCI() && !a.json,
 		Data: specimen.Data{
-			Family:      info.Family,
-			Style:       info.Style,
-			Description: "",
-			Version:     info.Version,
-			SHA256:      info.SHA256,
-			Accent:      "#5B8CFF",
-			SampleText:  "Hamburgefonstiv 字体创造器 0123",
-			Glyphs:      glyphs,
-			Coverage:    info.Coverage,
+			Family:       info.Family,
+			Style:        info.Style,
+			Description:  "",
+			Version:      info.Version,
+			SHA256:       info.SHA256,
+			Accent:       "#5B8CFF",
+			SampleText:   "Hamburgefonstiv 字体创造器 0123",
+			Glyphs:       glyphs,
+			Coverage:     info.Coverage,
+			HasKerning:   hasTable("GPOS") || hasTable("kern"),
+			HasLigatures: hasTable("GSUB"),
 		},
 	})
 	if err != nil {

@@ -49,6 +49,42 @@ func TestBuildContextCanceled(t *testing.T) {
 	}
 }
 
+func TestOpenTypeLayoutTables(t *testing.T) {
+	cfg := testConfig()
+	for i := range cfg.Glyphs {
+		if cfg.Glyphs[i].Rune == 'A' {
+			cfg.Glyphs[i].Name = "uni0041"
+		}
+	}
+	cfg.Glyphs = append(cfg.Glyphs,
+		Glyph{Name: "uni0056", Rune: 'V', Advance: 600, Path: geom.RectPath(20, 0, 580, 700)},
+		Glyph{Name: "uni0066", Rune: 'f', Advance: 300, Path: geom.RectPath(20, 0, 250, 700)},
+		Glyph{Name: "uni0069", Rune: 'i', Advance: 260, Path: geom.RectPath(40, 0, 180, 700)},
+	)
+	cfg.Kerning = []KernPair{{Left: "uni0041", Right: "uni0056", Value: -80}}
+	cfg.Ligatures = []Ligature{{Components: []string{"uni0066", "uni0069"}, Glyph: "f_i"}}
+	cfg.Glyphs = append(cfg.Glyphs, Glyph{Name: "f_i", NoCmap: true, Advance: 560, Path: geom.RectPath(20, 0, 500, 700)})
+	data, err := Build(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tags := map[string]bool{}
+	if len(data) >= 12 {
+		n := int(binary.BigEndian.Uint16(data[4:]))
+		for i := 0; i < n; i++ {
+			tags[string(data[12+i*16:12+i*16+4])] = true
+		}
+	}
+	for _, tag := range []string{"GSUB", "GPOS", "kern"} {
+		if !tags[tag] {
+			t.Fatalf("missing %s (tables: %v)", tag, tags)
+		}
+	}
+	if _, err := sfnt.Parse(data); err != nil {
+		t.Fatalf("parse with layout tables: %v", err)
+	}
+}
+
 func TestBuildTTF(t *testing.T) {
 	cfg := testConfig()
 	data, err := Build(cfg)

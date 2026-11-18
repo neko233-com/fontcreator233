@@ -46,13 +46,19 @@ dist/
 
 Duplicate family/style stems are rejected before building.
 
-## validate / inspect / specimen
+## validate / inspect / learn / specimen
 
 ```bash
 fontcreator validate recipe.yaml --json
 fontcreator inspect dist/Font-Regular.ttf --json
+fontcreator learn path/to/reference.ttf --out work/learned --json
 fontcreator specimen dist/Font-Regular.ttf --out dist --open
 ```
+
+`learn` writes a deep report (`font-report.json`, `font-report.md`), a profile,
+and a starter `recipe.yaml`. It reports name records, metrics, cmap records,
+coverage, GSUB/GPOS features and lookup types, legacy kern pairs, variable axes,
+color tables, and sampled glyph statistics.
 
 ## init / describe / schema
 
@@ -114,6 +120,7 @@ Newline-delimited JSON-RPC 2.0 over stdio. Tools:
 - `fontcreator_validate`
 - `fontcreator_build`
 - `fontcreator_inspect`
+- `fontcreator_learn`
 - `fontcreator_specimen`
 - `fontcreator_library_list`
 - `fontcreator_status`

@@ -85,7 +85,7 @@ func TestMCPProtocolAndTools(t *testing.T) {
 		t.Fatalf("initialize = %#v", res[1])
 	}
 	tools := res[2]["result"].(map[string]any)["tools"].([]any)
-	if len(tools) != 7 {
+	if len(tools) != 8 {
 		t.Fatalf("tools = %d", len(tools))
 	}
 	desc := content(t, res[3])

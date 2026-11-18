@@ -9,6 +9,8 @@ Vercel/Geist visual language and works directly from `file://` with no network.
 - Hero with a giant `Aa` drawn by the generated font, metadata, and CTAs.
 - Ticker across Latin, CJK, Greek, Cyrillic, and Hangul.
 - Type tester: editable headline with size, leading, and tracking controls.
+- OpenType playground: `liga` and `kern` toggles, live `font-feature-settings`,
+  and feature-table metadata.
 - Scale waterfall from caption to poster.
 - Global coverage cards for Latin, Greek, Russian, Chinese, Japanese, Korean,
   and symbols.

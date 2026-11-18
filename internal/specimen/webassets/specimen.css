@@ -379,6 +379,36 @@ button { cursor: pointer; }
 .control input[type=range] { width: 100%; accent-color: var(--accent); }
 .control output { color: var(--ink); min-width: 46px; text-align: right; font-size: 11px; }
 
+.feature-meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: -4px 0 20px; color: var(--muted); font-size: 11px; }
+.feature-meta b { color: var(--ink); font-family: "Geist Mono", monospace; font-size: 10px; letter-spacing: .05em; }
+.feature-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 18px; }
+.feature-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+}
+.feature-toggle input { accent-color: var(--accent); }
+.feature-toggle code { color: var(--muted); font-family: "Geist Mono", monospace; font-size: 9px; }
+.feature-sep { color: var(--faint); }
+.feature-note { color: var(--faint); font-size: 11px; }
+.feature-demo {
+  padding: 22px 0 24px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: clamp(58px, 9vw, 126px);
+  line-height: .86;
+  letter-spacing: -.055em;
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+.feature-demo .feature-pair { display: block; margin-top: 18px; color: var(--muted); font-size: .34em; letter-spacing: -.03em; }
+.feature-code { margin-top: 18px; }
+
 .scale-list { border-top: 1px solid var(--line); }
 .scale-row {
   display: grid;

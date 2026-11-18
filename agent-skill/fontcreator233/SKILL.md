@@ -13,6 +13,10 @@ offline backend that turns a recipe into a real font.
 1. Read the reference image yourself. Write a short style brief: weight,
    contrast, serif, width, terminals, slant, mood, motion.
 2. Call `fontcreator describe --json` to read the current contract and schema.
+   If the user supplied an existing TTF/OTF as a reference, run
+   `fontcreator learn path/to/reference.ttf --out work/learned --json` and read
+   its metrics, features, kerning, axes, and starter recipe. Treat it as data,
+   not as permission to copy a proprietary font.
 3. Run `fontcreator init --dir work --template geometric|serif|display`.
 4. Edit `work/font.recipe.yaml`. Use the mapping below. Keep `seed` fixed
    while iterating.
@@ -69,6 +73,8 @@ Always use the agent's own vision. Do not ask the CLI to analyze an image.
 - Override glyphs with `glyphs.overrides: glyphs` and files named
   `U+4E2D.svg`. Coordinates are font units, Y up, baseline 0,
   `viewBox="0 -250 1000 1250"`, with `data-advance="600"`.
+- `fontcreator learn <font> --out work/learned --json` for name records,
+  metrics, cmap coverage, GSUB/GPOS features, kerning, axes, and a starter recipe.
 - `fontcreator import font <font> --out work/import --extract-glyphs`
 - `fontcreator export bundle` / `import bundle` for shareable zip bundles.
 - `fontcreator export glyphs <font> --dir out --unicodes 0041-007A`

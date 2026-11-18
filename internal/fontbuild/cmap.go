@@ -23,7 +23,7 @@ type group12 struct {
 func buildCmap(glyphs []Glyph) ([]byte, error) {
 	pairs := make([]cmapPair, 0, len(glyphs))
 	for i, g := range glyphs {
-		if g.Rune <= 0 || g.Rune > 0x10FFFF {
+		if g.NoCmap || g.Rune <= 0 || g.Rune > 0x10FFFF {
 			continue
 		}
 		pairs = append(pairs, cmapPair{r: uint32(g.Rune), gid: uint16(i)})

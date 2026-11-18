@@ -102,8 +102,21 @@ and [`docs/agent-workflow.md`](docs/agent-workflow.md).
 ```
 
 Tools: `fontcreator_describe`, `fontcreator_validate`, `fontcreator_build`,
-`fontcreator_inspect`, `fontcreator_specimen`, `fontcreator_library_list`,
-`fontcreator_status`.
+`fontcreator_inspect`, `fontcreator_learn`, `fontcreator_specimen`,
+`fontcreator_library_list`, `fontcreator_status`.
+
+### Learn from an existing font
+
+```bash
+fontcreator learn path/to/reference.ttf --out work/learned --json
+```
+
+`learn` reads name records, metrics, cmap coverage, GSUB/GPOS feature tags,
+lookup types, legacy kern pairs, variable axes, color tables, and sampled glyph
+stats. It writes `font-report.json`, `font-report.md`, `profile.json`, and a
+starter `recipe.yaml`. The generated recipe is a starting point, not a copy of
+the source: inspect the original with your own vision before choosing skeleton,
+contrast, serif, and terminals.
 
 ## Three example styles
 
@@ -265,9 +278,12 @@ not generated; run `woff2_compress` externally if you need it.
 ## Beautiful, offline specimen
 
 The HTML is a Vercel/Geist-inspired review surface: a giant generated `Aa`,
-editable type tester with size/leading/tracking, scale waterfall, multilingual
-coverage cards, an app/caption/poster preview, and a virtualized glyph grid with
-search and script filters.
+editable type tester with size/leading/tracking, an OpenType feature playground
+(liga + kern), scale waterfall, multilingual coverage cards, an
+app/caption/poster preview, and a virtualized glyph grid with search and script
+filters.
+
+![OpenType feature playground](docs/assets/opentype-dark.png)
 
 Everything is local:
 
@@ -286,6 +302,7 @@ fontcreator build <recipe> [--target all] [--split-cjk N] [--jobs N] [--json]
 fontcreator build-all --dir examples [--font-jobs N]
 fontcreator validate <recipe> --json
 fontcreator inspect <font> --json
+fontcreator learn <font> --out work/learned --json
 fontcreator specimen <font> --open
 fontcreator describe --json | --markdown
 fontcreator schema
@@ -336,6 +353,9 @@ Optional cross-checks use fontTools and `fc-scan` in CI.
 
 - No Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
 - No variable-font output, color fonts, emoji, or WOFF2 encoding.
+- Generated OpenType support is limited to `liga` and `kern`; no contextual
+  substitutions, stylistic sets, mark positioning, cursive attachment, or
+  advanced GPOS/GSUB features. `learn` can report those features in other fonts.
 - CJK/Hangul style transfer is geometric + synthetic bold, not a full redraw.
 - Unity/Unreal packages are generated; validate them in your Editor.
 - Builds are byte-identical within one tool version, OS/arch, and Go version.

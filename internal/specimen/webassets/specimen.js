@@ -218,6 +218,18 @@
     controlValue("tester-tracking", function (v) { return (Number(v) / 100).toFixed(2) + "em"; });
   }
 
+  function applyFeatures() {
+    var demo = document.getElementById("feature-demo");
+    var code = document.getElementById("feature-code");
+    var liga = document.getElementById("feature-liga");
+    var kern = document.getElementById("feature-kern");
+    if (!demo) return;
+    var l = liga && liga.checked ? 1 : 0;
+    var k = kern && kern.checked ? 1 : 0;
+    demo.style.fontFeatureSettings = '"liga" ' + l + ', "kern" ' + k;
+    if (code) code.textContent = 'font-feature-settings: "liga" ' + l + ', "kern" ' + k + ';';
+  }
+
   function wire() {
     if (document.body.dataset.accent) {
       document.documentElement.style.setProperty("--accent", document.body.dataset.accent);
@@ -274,6 +286,11 @@
     }
     if (search) search.addEventListener("input", applyFilter);
     if (scriptSelect) scriptSelect.addEventListener("change", applyFilter);
+    ["feature-liga", "feature-kern"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("change", applyFeatures);
+    });
+    applyFeatures();
     rebuildVirtualizer();
     window.__fontcreatorBoot = true;
   }

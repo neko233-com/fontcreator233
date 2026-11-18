@@ -12,6 +12,8 @@ import (
 
 	"github.com/neko233-com/fontcreator233/internal/agentschema"
 	"github.com/neko233-com/fontcreator233/internal/build"
+	"github.com/neko233-com/fontcreator233/internal/fontlearn"
+	"github.com/neko233-com/fontcreator233/internal/importexport"
 	"github.com/neko233-com/fontcreator233/internal/inspect"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 	"github.com/neko233-com/fontcreator233/internal/skeleton"
@@ -116,6 +118,7 @@ func toolDefinitions() []map[string]any {
 		{"name": "fontcreator_validate", "description": "Validate a recipe without building.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"recipe": map[string]any{"type": "string"}, "filename": map[string]any{"type": "string"}}, "required": []string{"recipe"}}},
 		{"name": "fontcreator_build", "description": "Build a recipe into fonts, specimen, and platform packages.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"recipe": map[string]any{"type": "string"}, "filename": map[string]any{"type": "string"}, "outDir": map[string]any{"type": "string"}, "targets": map[string]any{"type": "array", "items": map[string]any{"type": "string"}}, "splitCJK": map[string]any{"type": "integer"}, "jobs": map[string]any{"type": "integer"}, "open": map[string]any{"type": "boolean"}}, "required": []string{"recipe", "outDir"}}},
 		{"name": "fontcreator_inspect", "description": "Inspect a compiled TTF/OTF.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"fontPath": map[string]any{"type": "string"}}, "required": []string{"fontPath"}}},
+		{"name": "fontcreator_learn", "description": "Deep-report an external TTF/OTF (features, metrics, names, kerning, axes) and write a starter recipe.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"fontPath": map[string]any{"type": "string"}, "outDir": map[string]any{"type": "string"}, "force": map[string]any{"type": "boolean"}}, "required": []string{"fontPath", "outDir"}}},
 		{"name": "fontcreator_specimen", "description": "Regenerate the offline HTML specimen for a font.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"fontPath": map[string]any{"type": "string"}, "outDir": map[string]any{"type": "string"}, "open": map[string]any{"type": "boolean"}}, "required": []string{"fontPath"}}},
 		{"name": "fontcreator_library_list", "description": "List the built-in skeleton glyph library.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}}},
 		{"name": "fontcreator_status", "description": "Report workspace managed files, staging, and reclaimable space.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"outDir": map[string]any{"type": "string"}}, "required": []string{"outDir"}}},
@@ -207,6 +210,40 @@ func (s *Server) callTool(ctx context.Context, name string, args json.RawMessage
 			data, err = os.ReadFile(a.FontPath)
 			if err == nil {
 				payload, err = inspect.Inspect(data)
+			}
+		}
+	case "fontcreator_learn":
+		var a struct {
+			FontPath string `json:"fontPath"`
+			OutDir   string `json:"outDir"`
+			Force    bool   `json:"force"`
+		}
+		if err = json.Unmarshal(args, &a); err == nil {
+			if a.OutDir == "" {
+				err = fmt.Errorf("outDir is required")
+			}
+			var data []byte
+			if err == nil {
+				data, err = os.ReadFile(a.FontPath)
+			}
+			var report fontlearn.Report
+			if err == nil {
+				report, err = fontlearn.Analyze(filepath.Base(a.FontPath), data)
+			}
+			if err == nil {
+				var profile importexport.Profile
+				profile, err = importexport.ImportFont(a.FontPath, a.OutDir, false, nil, a.Force)
+				if err == nil {
+					report.Warnings = append(report.Warnings, profile.Warnings...)
+					raw, _ := json.MarshalIndent(report, "", "  ")
+					jsonPath := filepath.Join(a.OutDir, "font-report.json")
+					if err = os.WriteFile(jsonPath, append(raw, '\n'), 0o644); err == nil {
+						mdPath := filepath.Join(a.OutDir, "font-report.md")
+						if err = os.WriteFile(mdPath, []byte(report.Markdown()), 0o644); err == nil {
+							payload = map[string]any{"report": report, "json": jsonPath, "markdown": mdPath, "profile": profile, "recipe": profile.RecipePath}
+						}
+					}
+				}
 			}
 		}
 	case "fontcreator_specimen":

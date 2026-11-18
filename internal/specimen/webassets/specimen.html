@@ -24,6 +24,7 @@
   </a>
   <nav class="nav-links" aria-label="Sections">
     <a href="#tester">Tester</a>
+    <a href="#features">OpenType</a>
     <a href="#scale">Scale</a>
     <a href="#coverage">Coverage</a>
     <a href="#apps">Apps</a>
@@ -103,10 +104,40 @@
     </div>
   </section>
 
+  <section id="features" class="panel features">
+    <div class="panel-head">
+      <div>
+        <span class="eyebrow">02 — OPENTYPE</span>
+        <h2>Details you can switch on.</h2>
+      </div>
+      <span class="hint">real GSUB + GPOS + kern tables</span>
+    </div>
+    <div class="feature-meta">
+      {{if .Data.HasLigatures}}<span><b>liga</b> fi · fl · ffi · ffl</span>{{else}}<span><b>liga</b> not present</span>{{end}}
+      {{if .Data.HasKerning}}<span><b>kern</b> {{if .Data.KernPairs}}{{.Data.KernPairs}} pairs{{else}}present{{end}}</span><span><b>GPOS</b> pair positioning</span><span><b>kern</b> legacy fallback</span>{{else}}<span><b>kern</b> not present</span>{{end}}
+    </div>
+    <div class="feature-controls">
+      <label class="feature-toggle">
+        <input id="feature-liga" type="checkbox" checked>
+        <span>Ligatures</span>
+        <code>liga</code>
+      </label>
+      <label class="feature-toggle">
+        <input id="feature-kern" type="checkbox" checked>
+        <span>Kerning</span>
+        <code>kern</code>
+      </label>
+      <span class="feature-sep">/</span>
+      <span class="feature-note">Toggle and watch the outline reflow.</span>
+    </div>
+    <div id="feature-demo" class="feature-demo specimen-font">fi fl ffi ffl<br><span class="feature-pair">AVATAR · To Wa · Type</span></div>
+    <pre id="feature-code" class="code feature-code">font-feature-settings: "liga" 1, "kern" 1;</pre>
+  </section>
+
   <section id="scale" class="panel scale">
     <div class="panel-head">
       <div>
-        <span class="eyebrow">02 — SCALE</span>
+        <span class="eyebrow">03 — SCALE</span>
         <h2>One voice, every size.</h2>
       </div>
       <span class="hint">rendered with the generated font</span>
@@ -124,7 +155,7 @@
   <section id="coverage" class="panel coverage">
     <div class="panel-head">
       <div>
-        <span class="eyebrow">03 — GLOBAL COVERAGE</span>
+        <span class="eyebrow">04 — GLOBAL COVERAGE</span>
         <h2>Built for more than English.</h2>
       </div>
       <div class="coverage-chips">
@@ -173,7 +204,7 @@
   <section id="apps" class="panel apps">
     <div class="panel-head">
       <div>
-        <span class="eyebrow">04 — IN YOUR APPS</span>
+        <span class="eyebrow">05 — IN YOUR APPS</span>
         <h2>One font. Every timeline.</h2>
       </div>
       <span class="hint">install once at the system level</span>
@@ -261,7 +292,7 @@
   <section id="glyphs" class="panel glyphs">
     <div class="panel-head glyph-head">
       <div>
-        <span class="eyebrow">05 — GLYPH LIBRARY</span>
+        <span class="eyebrow">06 — GLYPH LIBRARY</span>
         <h2>Every character, in reach.</h2>
       </div>
       <span id="glyph-count" class="hint mono"></span>

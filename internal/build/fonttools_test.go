@@ -25,6 +25,15 @@ from fontTools.ttLib import TTFont
 f = TTFont(sys.argv[1])
 for name in f.getGlyphOrder():
     f["glyf"][name]
+if "GSUB" not in f or [r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord] != ["liga"]:
+    raise SystemExit("GSUB liga missing")
+if "GPOS" not in f or [r.FeatureTag for r in f["GPOS"].table.FeatureList.FeatureRecord] != ["kern"]:
+    raise SystemExit("GPOS kern missing")
+if "kern" not in f or not f["kern"].kernTables[0].kernTable:
+    raise SystemExit("legacy kern missing")
+lookup = f["GSUB"].table.LookupList.Lookup[0]
+if lookup.LookupType != 4 or "f" not in lookup.SubTable[0].ligatures:
+    raise SystemExit("liga lookup missing")
 print("ok", len(f.getGlyphOrder()), len(f.getBestCmap()))
 `
 	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()

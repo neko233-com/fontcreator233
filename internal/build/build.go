@@ -184,6 +184,9 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		glyphs = append(glyphs, g)
 	}
 	result.GlyphRunes = append([]rune(nil), keys...)
+	extraGlyphs, ligatures := makeLigatures(merged)
+	glyphs = append(glyphs, extraGlyphs...)
+	kerning := makeKerning(merged, r.Style.Weight)
 	usedBase := len(derived) > 0
 	splitSet := map[rune]bool{}
 	for rn := range derived {
@@ -197,6 +200,8 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	derived = nil
 	merged = nil
 	cfg := fontConfig(r, resolvedStyle, glyphs)
+	cfg.Ligatures = ligatures
+	cfg.Kerning = kerning
 	if usedBase {
 		designer := strings.TrimSpace(r.Meta.Designer)
 		if designer == "" {
@@ -236,7 +241,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			result.WOFFPath = woffPath
 		}
 		if o.SplitCJK > 0 {
-			split, infos, err := buildSplits(ctx, r, resolvedStyle, glyphs, splitSet, o, stem)
+			split, infos, err := buildSplits(ctx, r, resolvedStyle, glyphs, splitSet, ligatures, kerning, o, stem)
 			if err != nil {
 				return result, err
 			}
@@ -264,16 +269,19 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			// path; opening a stage file would leave a dead tab.
 			Open: false,
 			Data: specimen.Data{
-				Family:      r.Meta.Family,
-				Style:       resolvedStyle,
-				Description: r.Meta.Description,
-				Version:     r.Meta.Version,
-				SHA256:      result.SHA256,
-				RecipeName:  recipeName,
-				Accent:      r.Meta.Accent,
-				SampleText:  r.Meta.SampleText,
-				Glyphs:      glyphInfo,
-				Coverage:    result.Coverage,
+				Family:       r.Meta.Family,
+				Style:        resolvedStyle,
+				Description:  r.Meta.Description,
+				Version:      r.Meta.Version,
+				SHA256:       result.SHA256,
+				RecipeName:   recipeName,
+				Accent:       r.Meta.Accent,
+				SampleText:   r.Meta.SampleText,
+				Glyphs:       glyphInfo,
+				Coverage:     result.Coverage,
+				HasKerning:   len(kerning) > 0,
+				HasLigatures: len(ligatures) > 0,
+				KernPairs:    len(kerning),
 			},
 		})
 		if err != nil {
@@ -642,6 +650,81 @@ func notdefPath() geom.Path {
 	return append(outer, inner...)
 }
 
+func makeLigatures(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbuild.Ligature) {
+	specs := []struct {
+		name  string
+		runes []rune
+	}{
+		{"f_f_i", []rune{'f', 'f', 'i'}},
+		{"f_f_l", []rune{'f', 'f', 'l'}},
+		{"f_f", []rune{'f', 'f'}},
+		{"f_i", []rune{'f', 'i'}},
+		{"f_l", []rune{'f', 'l'}},
+	}
+	var out []fontbuild.Glyph
+	var ligs []fontbuild.Ligature
+	for _, spec := range specs {
+		var path geom.Path
+		advance := 0
+		ok := true
+		for _, rn := range spec.runes {
+			g, exists := glyphs[rn]
+			if !exists || len(g.Path) == 0 {
+				ok = false
+				break
+			}
+			path = append(path, g.Path.Transformed(geom.Translate(float64(advance), 0))...)
+			advance += g.Advance
+		}
+		if !ok || advance <= 0 {
+			continue
+		}
+		out = append(out, fontbuild.Glyph{Name: spec.name, NoCmap: true, Advance: advance, Path: path})
+		components := make([]string, len(spec.runes))
+		for i, rn := range spec.runes {
+			components[i] = glyphName(rn)
+		}
+		ligs = append(ligs, fontbuild.Ligature{Components: components, Glyph: spec.name})
+	}
+	return out, ligs
+}
+
+func makeKerning(glyphs map[rune]fontbuild.Glyph, weight int) []fontbuild.KernPair {
+	type pair struct {
+		left, right rune
+		value       int16
+	}
+	pairs := []pair{
+		{'A', 'V', -80}, {'A', 'W', -70}, {'A', 'Y', -90}, {'A', 'T', -60},
+		{'F', 'A', -70}, {'L', 'T', -70}, {'L', 'V', -70}, {'L', 'W', -60},
+		{'L', 'Y', -80}, {'P', 'A', -60}, {'T', 'A', -80}, {'T', 'o', -50},
+		{'T', 'e', -45}, {'V', 'a', -50}, {'V', 'o', -50}, {'W', 'a', -40},
+		{'W', 'o', -40}, {'Y', 'a', -60}, {'Y', 'o', -60}, {'F', 'i', -30},
+		{'F', 'l', -30}, {'P', 'e', -40}, {'P', 'o', -40},
+	}
+	scale := float64(weight) / 400
+	if scale < 0.65 {
+		scale = 0.65
+	}
+	if scale > 1.5 {
+		scale = 1.5
+	}
+	var out []fontbuild.KernPair
+	for _, p := range pairs {
+		if _, ok := glyphs[p.left]; !ok {
+			continue
+		}
+		if _, ok := glyphs[p.right]; !ok {
+			continue
+		}
+		out = append(out, fontbuild.KernPair{
+			Left: glyphName(p.left), Right: glyphName(p.right),
+			Value: int16(math.Round(float64(p.value) * scale)),
+		})
+	}
+	return out
+}
+
 func glyphName(r rune) string {
 	if r <= 0xFFFF {
 		return fmt.Sprintf("uni%04X", r)
@@ -700,7 +783,7 @@ func isWindowsReserved(name string) bool {
 	return false
 }
 
-func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph, splitSet map[rune]bool, o Options, stem string) ([]string, []SplitFont, error) {
+func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph, splitSet map[rune]bool, ligatures []fontbuild.Ligature, kerning []fontbuild.KernPair, o Options, stem string) ([]string, []SplitFont, error) {
 	splitRunes := make([]rune, 0, len(splitSet))
 	for rn := range splitSet {
 		splitRunes = append(splitRunes, rn)
@@ -730,6 +813,8 @@ func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, gl
 		}
 		styleName := fmt.Sprintf("%s CJK %02d", resolvedStyle, idx)
 		cfg := fontConfig(r, styleName, list)
+		cfg.Ligatures = ligatures
+		cfg.Kerning = kerning
 		cfg.Jobs = o.Jobs
 		data, err := fontbuild.BuildContext(ctx, cfg)
 		if err != nil {

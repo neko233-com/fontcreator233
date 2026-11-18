@@ -5,7 +5,7 @@ func buildOS2(cfg Config, glyphs []Glyph, fontBox glyphBox) []byte {
 	putU16(b, 0, 4)
 	avg, n := 0, 0
 	for _, g := range glyphs {
-		if g.Rune == 0 {
+		if g.Rune == 0 || g.NoCmap {
 			continue
 		}
 		avg += g.Advance
@@ -52,7 +52,7 @@ func buildOS2(cfg Config, glyphs []Glyph, fontBox glyphBox) []byte {
 
 	first, last := -1, -1
 	for _, g := range glyphs {
-		if g.Rune <= 0 || g.Rune > 0x10FFFF {
+		if g.NoCmap || g.Rune <= 0 || g.Rune > 0x10FFFF {
 			continue
 		}
 		if g.Rune <= 0xFFFF {
@@ -105,6 +105,9 @@ func unicodeRangeBits(glyphs []Glyph) [4]uint32 {
 		}
 	}
 	for _, g := range glyphs {
+		if g.NoCmap {
+			continue
+		}
 		r := g.Rune
 		switch {
 		case r <= 0x007F:
@@ -178,6 +181,9 @@ func codePageRange(glyphs []Glyph) uint32 {
 	var bits uint32
 	set := func(bit int) { bits |= 1 << uint(bit) }
 	for _, g := range glyphs {
+		if g.NoCmap {
+			continue
+		}
 		r := g.Rune
 		switch {
 		case r <= 0x00FF:

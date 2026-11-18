@@ -24,6 +24,7 @@ func Describe() map[string]any {
 			{"name": "build-all", "summary": "Build several recipes in parallel."},
 			{"name": "validate", "summary": "Validate a recipe without building."},
 			{"name": "inspect", "summary": "Inspect a compiled TTF/OTF."},
+			{"name": "learn", "summary": "Deep-report an external TTF/OTF and write a starter recipe."},
 			{"name": "specimen", "summary": "Regenerate an offline HTML specimen for an existing font."},
 			{"name": "init", "summary": "Write a starter recipe (geometric|serif|display)."},
 			{"name": "describe", "summary": "Print this contract as JSON or Markdown."},

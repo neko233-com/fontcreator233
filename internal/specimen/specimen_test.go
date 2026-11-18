@@ -61,6 +61,7 @@ func TestBuildSpecimen(t *testing.T) {
 		"TestFont-Regular.glyphs.js", "data-accent=\"#5B8CFF\"",
 		`id="asset-error"`, "__fontcreatorBoot",
 		"IN YOUR APPS", "剪映 / CapCut", "CAPTION PREVIEW", "Download TTF",
+		"OPENTYPE", "feature-liga", "font-feature-settings",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)

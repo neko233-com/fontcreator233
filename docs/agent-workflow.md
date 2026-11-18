@@ -91,7 +91,21 @@ style:
   seed: 233
 ```
 
-## 4. Build and review loop
+## 4. Learn from a reference font
+
+When the user supplies an existing TTF/OTF instead of only an image:
+
+```bash
+fontcreator learn reference.ttf --out work/learned --json
+```
+
+Read `font-report.md` for name records, vertical metrics, cmap coverage,
+GSUB/GPOS feature tags and lookup types, legacy kern pairs, variable axes, color
+tables, and sampled glyph statistics. The generated `recipe.yaml` is a starting
+point. Do not redistribute or copy a proprietary font; use the report to
+understand proportions and features, then make new outlines.
+
+## 5. Build and review loop
 
 ```bash
 fontcreator validate work/font.recipe.yaml --json
@@ -108,7 +122,7 @@ fontcreator inspect dist/<font>.ttf --json
 - Keep the previous build; workspace state cleans only files it generated and
   verifies by SHA-256.
 
-## 5. Shipping
+## 6. Shipping
 
 - Unity TMP: install the generated `unity/` package, run
   `Tools/Fontcreator233/Create TMP Font Assets`, then use the fallback menu for
@@ -118,7 +132,7 @@ fontcreator inspect dist/<font>.ttf --json
 - Web: use `web/font.css`; split fonts already carry `unicode-range`.
 - System: follow `system/INSTALL.md`.
 
-## 6. Limits to state honestly
+## 7. Limits to state honestly
 
 The font does not support Arabic, Hebrew, Indic scripts, Thai, vertical layout,
 complex shaping, or GPOS mark attachment. CJK/Hangul outlines come from the
