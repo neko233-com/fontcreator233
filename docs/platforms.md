@@ -12,9 +12,10 @@ Generated fonts include OpenType features for Latin text: `liga`
 (`fi`/`fl`/`ff`/`ffi`/`ffl`), `kern` pair positioning in both GPOS and a legacy
 `kern` table, `case` punctuation, `frac` fractions, `tnum` tabular figures,
 `ss01` alternate `a`, `smcp` small caps, `onum` oldstyle figures, `zero` slashed
-zero, `sups`/`subs` figures, and basic top-center `mark` anchors. Imported fonts
-may expose richer GSUB/GPOS data, which `learn` reports without re-emitting it.
-See [`opentype.md`](opentype.md) for the full feature matrix and limits.
+zero, `sups`/`subs` figures, `ccmp` base+mark composition, basic top-center
+`mark` anchors, and `mkmk` stacked marks. Imported fonts may expose richer
+GSUB/GPOS data, which `learn` reports without re-emitting it. See
+[`opentype.md`](opentype.md) for the full feature matrix and limits.
 
 ## App guides
 

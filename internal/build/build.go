@@ -191,8 +191,10 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	glyphs = append(glyphs, featureGlyphs...)
 	glyphs = append(glyphs, fractionGlyphs...)
 	ligatures = append(ligatures, fractionLigatures...)
+	ligatures = append(ligatures, makeComposedLigatures(merged)...)
 	kerning := makeKerning(merged, r.Style.Weight)
 	usedBase := len(derived) > 0
+	hasMkmk := hasCombiningMarks(merged)
 	splitSet := map[rune]bool{}
 	for rn := range derived {
 		if rn >= 0x2E80 {
@@ -296,6 +298,8 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 				HasZero:      hasSubstitutionFeature(substitutions, "zero"),
 				HasSups:      hasSubstitutionFeature(substitutions, "sups"),
 				HasSubs:      hasSubstitutionFeature(substitutions, "subs"),
+				HasCcmp:      hasLigatureFeature(ligatures, "ccmp"),
+				HasMkmk:      hasMkmk,
 				KernPairs:    len(kerning),
 			},
 		})
@@ -678,6 +682,16 @@ func hasLigatureFeature(ligatures []fontbuild.Ligature, feature string) bool {
 	return false
 }
 
+func hasCombiningMarks(glyphs map[rune]fontbuild.Glyph) bool {
+	count := 0
+	for rn, g := range glyphs {
+		if rn >= 0x0300 && rn <= 0x036F && len(g.Path) > 0 {
+			count++
+		}
+	}
+	return count >= 2
+}
+
 func hasSubstitutionFeature(subs []fontbuild.Substitution, feature string) bool {
 	for _, s := range subs {
 		if s.Feature == feature {
@@ -724,6 +738,47 @@ func makeLigatures(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbu
 		ligs = append(ligs, fontbuild.Ligature{Components: components, Glyph: spec.name})
 	}
 	return out, ligs
+}
+
+// makeComposedLigatures maps base + combining mark sequences to precomposed
+// glyphs with a `ccmp` ligature when both the sequence and the target exist.
+func makeComposedLigatures(glyphs map[rune]fontbuild.Glyph) []fontbuild.Ligature {
+	type compose struct{ base, mark, composed rune }
+	pairs := []compose{
+		{'a', 0x0300, 0x00E0}, {'a', 0x0301, 0x00E1}, {'a', 0x0302, 0x00E2}, {'a', 0x0303, 0x00E3}, {'a', 0x0308, 0x00E4}, {'a', 0x030A, 0x00E5},
+		{'A', 0x0300, 0x00C0}, {'A', 0x0301, 0x00C1}, {'A', 0x0302, 0x00C2}, {'A', 0x0303, 0x00C3}, {'A', 0x0308, 0x00C4}, {'A', 0x030A, 0x00C5},
+		{'e', 0x0300, 0x00E8}, {'e', 0x0301, 0x00E9}, {'e', 0x0302, 0x00EA}, {'e', 0x0308, 0x00EB},
+		{'E', 0x0300, 0x00C8}, {'E', 0x0301, 0x00C9}, {'E', 0x0302, 0x00CA}, {'E', 0x0308, 0x00CB},
+		{'i', 0x0300, 0x00EC}, {'i', 0x0301, 0x00ED}, {'i', 0x0302, 0x00EE}, {'i', 0x0308, 0x00EF},
+		{'I', 0x0300, 0x00CC}, {'I', 0x0301, 0x00CD}, {'I', 0x0302, 0x00CE}, {'I', 0x0308, 0x00CF},
+		{'o', 0x0300, 0x00F2}, {'o', 0x0301, 0x00F3}, {'o', 0x0302, 0x00F4}, {'o', 0x0303, 0x00F5}, {'o', 0x0308, 0x00F6},
+		{'O', 0x0300, 0x00D2}, {'O', 0x0301, 0x00D3}, {'O', 0x0302, 0x00D4}, {'O', 0x0303, 0x00D5}, {'O', 0x0308, 0x00D6},
+		{'u', 0x0300, 0x00F9}, {'u', 0x0301, 0x00FA}, {'u', 0x0302, 0x00FB}, {'u', 0x0308, 0x00FC},
+		{'U', 0x0300, 0x00D9}, {'U', 0x0301, 0x00DA}, {'U', 0x0302, 0x00DB}, {'U', 0x0308, 0x00DC},
+		{'n', 0x0303, 0x00F1}, {'N', 0x0303, 0x00D1},
+		{'c', 0x0327, 0x00E7}, {'C', 0x0327, 0x00C7},
+		{'y', 0x0301, 0x00FD}, {'y', 0x0308, 0x00FF}, {'Y', 0x0308, 0x0178},
+		{'s', 0x030C, 0x0161}, {'S', 0x030C, 0x0160},
+		{'z', 0x030C, 0x017E}, {'Z', 0x030C, 0x017D},
+		{'r', 0x030C, 0x0159}, {'R', 0x030C, 0x0158},
+		{'l', 0x0301, 0x013A}, {'L', 0x0301, 0x0139},
+		{'g', 0x0306, 0x011F}, {'G', 0x0306, 0x011E},
+	}
+	var out []fontbuild.Ligature
+	for _, p := range pairs {
+		base, okB := glyphs[p.base]
+		mark, okM := glyphs[p.mark]
+		composed, okC := glyphs[p.composed]
+		if !okB || !okM || !okC || len(base.Path) == 0 || len(mark.Path) == 0 || len(composed.Path) == 0 {
+			continue
+		}
+		out = append(out, fontbuild.Ligature{
+			Feature:    "ccmp",
+			Components: []string{glyphName(p.base), glyphName(p.mark)},
+			Glyph:      glyphName(p.composed),
+		})
+	}
+	return out
 }
 
 func makeSubstitutions(glyphs map[rune]fontbuild.Glyph, capHeight, xHeight int) ([]fontbuild.Glyph, []fontbuild.Substitution) {

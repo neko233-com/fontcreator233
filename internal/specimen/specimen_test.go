@@ -48,6 +48,8 @@ func testOptions(t *testing.T) Options {
 			HasZero:      true,
 			HasSups:      true,
 			HasSubs:      true,
+			HasCcmp:      true,
+			HasMkmk:      true,
 			KernPairs:    23,
 		},
 		SelfContained: false,
@@ -75,6 +77,7 @@ func TestBuildSpecimen(t *testing.T) {
 		"IN YOUR APPS", "剪映 / CapCut", "CAPTION PREVIEW", "Download TTF",
 		"OPENTYPE", "feature-liga", "feature-frac", "feature-case", "feature-tnum", "feature-ss01",
 		"font-feature-settings", "smcp", "onum", "zero", "sups", "subs", "feature-grid",
+		"ccmp", "mkmk",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)

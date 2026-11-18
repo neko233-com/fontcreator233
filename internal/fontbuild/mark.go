@@ -79,6 +79,66 @@ func buildMarkBaseSubtable(glyphs []Glyph, capHeight, xHeight int) []byte {
 	return out
 }
 
+// buildMarkMarkSubtable creates a GPOS MarkMarkPos subtable so a second
+// combining mark stacks on top of the first. Anchors are deliberately simple:
+// mark-to-mark uses the top of mark 1 and the origin of mark 2.
+func buildMarkMarkSubtable(glyphs []Glyph) []byte {
+	var marks []uint16
+	for i, g := range glyphs {
+		if g.Rune >= 0x0300 && g.Rune <= 0x036F && len(g.Path) > 0 {
+			marks = append(marks, uint16(i))
+		}
+	}
+	if len(marks) < 2 {
+		return nil
+	}
+	sort.Slice(marks, func(i, j int) bool { return marks[i] < marks[j] })
+	coverage := buildCoverage(marks)
+
+	mark1Header := 2 + 4*len(marks)
+	mark1 := make([]byte, mark1Header)
+	putU16(mark1, 0, uint16(len(marks)))
+	anchors := make([]byte, 0, 6*len(marks))
+	for i, gid := range marks {
+		b := glyphs[gid].Path.Bounds()
+		putU16(mark1, 2+4*i, 0) // mark class
+		putU16(mark1, 4+4*i, uint16(mark1Header+6*i))
+		// HarfBuzz subtracts the mark-1 anchor from the already-positioned
+		// mark-1 origin, so a negative Y places mark 2 above mark 1.
+		anchors = append(anchors, makeAnchor(0, -int16(b.MaxY))...)
+	}
+	mark1 = append(mark1, anchors...)
+
+	mark2Header := 2 + 2*len(marks)
+	mark2 := make([]byte, mark2Header)
+	putU16(mark2, 0, uint16(len(marks)))
+	anchors = anchors[:0]
+	for i := range marks {
+		putU16(mark2, 2+2*i, uint16(mark2Header+6*i))
+		anchors = append(anchors, makeAnchor(0, 0)...)
+	}
+	mark2 = append(mark2, anchors...)
+
+	header := 12
+	total := header + 2*len(coverage) + len(mark1) + len(mark2)
+	out := make([]byte, total)
+	putU16(out, 0, 1)
+	putU16(out, 2, uint16(header))
+	putU16(out, 4, uint16(header+len(coverage)))
+	putU16(out, 6, 1) // mark class count
+	putU16(out, 8, uint16(header+2*len(coverage)))
+	putU16(out, 10, uint16(header+2*len(coverage)+len(mark1)))
+	off := header
+	copy(out[off:], coverage)
+	off += len(coverage)
+	copy(out[off:], coverage)
+	off += len(coverage)
+	copy(out[off:], mark1)
+	off += len(mark1)
+	copy(out[off:], mark2)
+	return out
+}
+
 func makeAnchor(x, y int16) []byte {
 	b := make([]byte, 6)
 	putU16(b, 0, 1)

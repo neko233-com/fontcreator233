@@ -354,6 +354,9 @@ func buildGPOSTable(glyphs []Glyph, pairs []KernPair, capHeight, xHeight int) ([
 	if marks := buildMarkBaseSubtable(glyphs, capHeight, xHeight); len(marks) > 0 {
 		features = append(features, layoutFeatureSpec{Tag: "mark", LookupType: 4, Subtable: marks})
 	}
+	if stack := buildMarkMarkSubtable(glyphs); len(stack) > 0 {
+		features = append(features, layoutFeatureSpec{Tag: "mkmk", LookupType: 6, Subtable: stack})
+	}
 	if len(features) == 0 {
 		return nil, nil
 	}

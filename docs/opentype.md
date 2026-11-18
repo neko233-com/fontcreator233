@@ -1,15 +1,15 @@
 # OpenType features
 
 fontcreator233 writes real OpenType layout tables into every generated TTF/WOFF.
-The specimen exposes the features live; HarfBuzz and fontTools verify them in
-tests.
+The specimen exposes the features live; fontTools asserts the tables in tests and
+HarfBuzz shaping was used for manual verification.
 
 ## Generated tables
 
 | Table | Purpose |
 |---|---|
 | `GSUB` | Ligatures and one-for-one substitutions |
-| `GPOS` | Pair kerning and mark-to-base attachment |
+| `GPOS` | Pair kerning, mark-to-base, and mark-to-mark attachment |
 | `GDEF` | Glyph classes for marks and alternates |
 | `kern` | Legacy pair kerning for older software |
 
@@ -28,7 +28,9 @@ tests.
 | `zero` | GSUB 1 | `0` | Slashed zero |
 | `sups` | GSUB 1 | `x2` | Superscript figures |
 | `subs` | GSUB 1 | `H2O` | Subscript figures |
+| `ccmp` | GSUB 4 | `a` + `◌́` | Composes base+mark to an existing precomposed glyph |
 | `mark` | GPOS 4 | `q́` | Top-center mark-to-base anchors |
+| `mkmk` | GPOS 6 | `q́̄` | Stacks a second combining mark above the first |
 
 Example:
 
@@ -43,7 +45,8 @@ font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;
 - `scripts/validate-fonts.py` loads every glyph and the required core tables;
   the Go test is the one that asserts layout tables.
 - HarfBuzz shaping was run manually for `1/2`, `(A)`, `0123`, `fi`, `a`, `abc`,
-  `0123456789`, `0`, `123` (sup/sub), and `q́`.
+  `0123456789`, `0`, `123` (sup/sub), `q́`, `a` + `◌́` (`ccmp`), and
+  `q́̄` (`mkmk`).
 - `fontcreator learn <font> --json` reports the same tags and lookup types in
   external fonts, including variable axes and color tables when present.
 
@@ -52,8 +55,9 @@ font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;
 Generated fonts are static and Latin-focused. They do **not** include:
 
 - variable axes (`fvar`/`gvar`/`HVAR`) or color layers (`COLR`/`CPAL`/`SVG `);
-- contextual substitutions (`calt`, `cswh`, complex `ccmp`);
-- mark-to-mark attachment (`mkmk`) or cursive attachment;
+- contextual substitutions (`calt`, `cswh`) beyond the `ccmp` composition
+  ligatures above;
+- cursive attachment;
 - Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
 
 `fontcreator learn` still reports those structures when it finds them in an

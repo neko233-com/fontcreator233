@@ -27,11 +27,24 @@ for name in f.getGlyphOrder():
     f["glyf"][name]
 if "GSUB" not in f or "liga" not in [r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord]:
     raise SystemExit("GSUB liga missing")
-if not {"case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs"}.issubset({r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord}):
+if not {"case", "ccmp", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs"}.issubset({r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord}):
     raise SystemExit("GSUB feature set incomplete")
 gpos_tags = [r.FeatureTag for r in f["GPOS"].table.FeatureList.FeatureRecord] if "GPOS" in f else []
-if "kern" not in gpos_tags or "mark" not in gpos_tags:
-    raise SystemExit(f"GPOS kern/mark missing: {gpos_tags}")
+if "kern" not in gpos_tags or "mark" not in gpos_tags or "mkmk" not in gpos_tags:
+    raise SystemExit(f"GPOS kern/mark/mkmk missing: {gpos_tags}")
+if not any(l.LookupType == 6 for l in f["GPOS"].table.LookupList.Lookup):
+    raise SystemExit("mkmk lookup missing")
+ccmp = False
+for lookup in f["GSUB"].table.LookupList.Lookup:
+    if lookup.LookupType != 4:
+        continue
+    for st in lookup.SubTable:
+        for first, ligs in st.ligatures.items():
+            for lig in ligs:
+                if first == "a" and lig.Component == ["acutecomb"]:
+                    ccmp = True
+if not ccmp:
+    raise SystemExit("ccmp a+acute lookup missing")
 if "kern" not in f or not f["kern"].kernTables[0].kernTable:
     raise SystemExit("legacy kern missing")
 if "GDEF" not in f:

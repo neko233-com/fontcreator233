@@ -72,7 +72,7 @@ func Describe() map[string]any {
 			"note":     "Counts are actual cmap coverage, not a promise of every Unicode block.",
 		},
 		"opentype": map[string]any{
-			"generated": []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "mark"},
+			"generated": []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "ccmp", "mark", "mkmk"},
 			"tables":    []string{"GSUB", "GPOS", "GDEF", "kern"},
 			"note":      "Generated features are deterministic and Latin-focused. `learn` reports richer GSUB/GPOS in external fonts without re-emitting them.",
 		},

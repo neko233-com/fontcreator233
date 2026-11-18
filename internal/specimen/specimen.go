@@ -41,6 +41,8 @@ type Data struct {
 	HasZero      bool
 	HasSups      bool
 	HasSubs      bool
+	HasCcmp      bool
+	HasMkmk      bool
 	KernPairs    int
 }
 
