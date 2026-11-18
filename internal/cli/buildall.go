@@ -26,7 +26,7 @@ func (a *app) cmdBuildAll(args []string) int {
 	jobs := fs.Int("jobs", 0, "worker count per font")
 	var targets stringList
 	fs.Var(&targets, "target", "universal|web|system|unity|unreal|all")
-	split := fs.Int("split-cjk", 0, "split CJK/Hangul chunks")
+	split := fs.Int("split-cjk", -1, "split CJK/Hangul chunks (overrides recipe)")
 	assetsDir := fs.String("assets-dir", "", "shared web assets directory")
 	selfContained := fs.Bool("self-contained-html", false, "inline web assets")
 	open := fs.Bool("open", false, "open specimens after building")
@@ -92,10 +92,14 @@ func (a *app) cmdBuildAll(args []string) int {
 		if len(useTargets) == 0 {
 			useTargets = r.Output.Targets
 		}
+		splitCJK := r.Output.SplitCJK
+		if *split >= 0 {
+			splitCJK = *split
+		}
 		return build.Build(ctx, r, build.Options{
 			OutDir:            stage.Root,
 			Targets:           useTargets,
-			SplitCJK:          *split,
+			SplitCJK:          splitCJK,
 			Jobs:              perFont,
 			NoOpen:            !*open || isCI(),
 			AssetsDir:         *assetsDir,

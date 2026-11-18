@@ -19,7 +19,7 @@ func (a *app) cmdBuild(args []string) int {
 	out := fs.String("out", "dist", "output directory")
 	var targets stringList
 	fs.Var(&targets, "target", "universal|web|system|unity|unreal|all (repeatable)")
-	split := fs.Int("split-cjk", 0, "split CJK/Hangul into chunks of N codepoints")
+	split := fs.Int("split-cjk", -1, "split CJK/Hangul into chunks of N codepoints (overrides recipe)")
 	jobs := fs.Int("jobs", 0, "worker count (default CPU count)")
 	assetsDir := fs.String("assets-dir", "", "shared web assets directory")
 	selfContained := fs.Bool("self-contained-html", false, "inline font/CSS/JS into the HTML")
@@ -46,6 +46,10 @@ func (a *app) cmdBuild(args []string) int {
 	if err != nil {
 		return a.fail("build", 1, err)
 	}
+	splitValue := r.Output.SplitCJK
+	if *split >= 0 {
+		splitValue = *split
+	}
 	styleName := style.ResolveStyle(r)
 	stage, err := ws.Begin(workspace.BuildMeta{
 		Recipe:  fs.Arg(0),
@@ -60,7 +64,7 @@ func (a *app) cmdBuild(args []string) int {
 	opts := build.Options{
 		OutDir:            stage.Root,
 		Targets:           useTargets,
-		SplitCJK:          *split,
+		SplitCJK:          splitValue,
 		Jobs:              *jobs,
 		NoOpen:            common.noOpen || isCI(),
 		NoTUI:             common.noTUI,

@@ -72,7 +72,7 @@ func buildHhea(cfg Config, boxes []glyphBox, maxAdvance int) []byte {
 	putI16(b, 16, int16(xMaxExtent))
 	if cfg.ItalicAngle != 0 {
 		putI16(b, 18, 1000)
-		putI16(b, 20, int16(math.Round(math.Tan(-cfg.ItalicAngle*math.Pi/180)*1000)))
+		putI16(b, 20, int16(math.Round(math.Tan(cfg.ItalicAngle*math.Pi/180)*1000)))
 	} else {
 		putI16(b, 18, 1)
 		putI16(b, 20, 0)

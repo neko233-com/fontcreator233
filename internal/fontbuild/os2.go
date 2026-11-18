@@ -126,41 +126,41 @@ func unicodeRangeBits(glyphs []Glyph) [4]uint32 {
 		case r >= 0x0400 && r <= 0x04FF:
 			set(9)
 		case r >= 0x1E00 && r <= 0x1EFF:
-			set(22)
+			set(29)
 		case r >= 0x1F00 && r <= 0x1FFF:
-			set(23)
-		case r >= 0x2000 && r <= 0x206F:
-			set(24)
-		case r >= 0x20A0 && r <= 0x20CF:
-			set(26)
-		case r >= 0x2190 && r <= 0x21FF:
 			set(30)
-		case r >= 0x2200 && r <= 0x22FF:
+		case r >= 0x2000 && r <= 0x206F:
 			set(31)
-		case r >= 0x2500 && r <= 0x257F:
-			set(36)
-		case r >= 0x25A0 && r <= 0x25FF:
+		case r >= 0x20A0 && r <= 0x20CF:
+			set(33)
+		case r >= 0x2190 && r <= 0x21FF:
+			set(37)
+		case r >= 0x2200 && r <= 0x22FF:
 			set(38)
-		case r >= 0x2600 && r <= 0x26FF:
-			set(39)
-		case r >= 0x3000 && r <= 0x303F:
-			set(41)
-		case r >= 0x3040 && r <= 0x309F:
-			set(42)
-		case r >= 0x30A0 && r <= 0x30FF:
+		case r >= 0x2500 && r <= 0x257F:
 			set(43)
-		case r >= 0x3130 && r <= 0x318F:
+		case r >= 0x25A0 && r <= 0x25FF:
 			set(45)
-		case r >= 0x4E00 && r <= 0x9FFF:
-			set(53)
-		case r >= 0xAC00 && r <= 0xD7AF:
+		case r >= 0x2600 && r <= 0x26FF:
+			set(46)
+		case r >= 0x3000 && r <= 0x303F:
+			set(48)
+		case r >= 0x3040 && r <= 0x309F:
+			set(49)
+		case r >= 0x30A0 && r <= 0x30FF:
 			set(50)
-		case r >= 0xFE30 && r <= 0xFE4F:
+		case r >= 0x3130 && r <= 0x318F:
+			set(52)
+		case r >= 0x4E00 && r <= 0x9FFF:
 			set(59)
+		case r >= 0xAC00 && r <= 0xD7AF:
+			set(56)
+		case r >= 0xFE30 && r <= 0xFE4F:
+			set(65)
 		case r >= 0xFF00 && r <= 0xFFEF:
-			set(62)
+			set(68)
 		case r >= 0xF900 && r <= 0xFAFF:
-			set(54)
+			set(61)
 		}
 	}
 	return bits

@@ -511,7 +511,7 @@ func fontConfig(r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph
 		Designer:    r.Meta.Designer,
 		Description: r.Meta.Description,
 		License:     r.Meta.License,
-		LicenseURL:  "https://scripts.sil.org/OFL",
+		LicenseURL:  licenseURL(r.Meta.License),
 		Copyright:   "Copyright 2026 " + r.Meta.Designer,
 		SampleText:  r.Meta.SampleText,
 		Ascender:    r.Metrics.Ascender,
@@ -525,6 +525,13 @@ func fontConfig(r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph
 		Created:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		Glyphs:      glyphs,
 	}
+}
+
+func licenseURL(license string) string {
+	if license == "OFL-1.1" {
+		return "https://scripts.sil.org/OFL"
+	}
+	return ""
 }
 
 func widthClass(width float64) int {
@@ -601,10 +608,27 @@ func fontStem(family, style string) string {
 	if f == "" {
 		f = "Font"
 	}
-	if s == "" {
-		return f
+	stem := f
+	if s != "" {
+		stem += "-" + s
 	}
-	return f + "-" + s
+	stem = strings.TrimRight(stem, " .")
+	if isWindowsReserved(stem) {
+		stem = "font-" + stem
+	}
+	return stem
+}
+
+func isWindowsReserved(name string) bool {
+	switch strings.ToUpper(name) {
+	case "CON", "PRN", "AUX", "NUL":
+		return true
+	}
+	upper := strings.ToUpper(name)
+	if len(upper) == 4 && (strings.HasPrefix(upper, "COM") || strings.HasPrefix(upper, "LPT")) {
+		return upper[3] >= '1' && upper[3] <= '9'
+	}
+	return false
 }
 
 func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph, merged map[rune]fontbuild.Glyph, derived map[rune]fontbuild.Glyph, o Options, stem string) ([]string, []SplitFont, error) {

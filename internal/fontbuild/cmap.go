@@ -1,6 +1,9 @@
 package fontbuild
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 type cmapPair struct {
 	r   uint32
@@ -17,7 +20,7 @@ type group12 struct {
 	gid        uint32
 }
 
-func buildCmap(glyphs []Glyph) []byte {
+func buildCmap(glyphs []Glyph) ([]byte, error) {
 	pairs := make([]cmapPair, 0, len(glyphs))
 	for i, g := range glyphs {
 		if g.Rune <= 0 || g.Rune > 0x10FFFF {
@@ -27,7 +30,10 @@ func buildCmap(glyphs []Glyph) []byte {
 	}
 	sort.Slice(pairs, func(i, j int) bool { return pairs[i].r < pairs[j].r })
 
-	format4 := buildFormat4(pairs)
+	format4, err := buildFormat4(pairs)
+	if err != nil {
+		return nil, err
+	}
 	format12 := buildFormat12(pairs)
 	const headerLen = 4 + 8*4
 	off4 := headerLen
@@ -57,10 +63,10 @@ func buildCmap(glyphs []Glyph) []byte {
 	}
 	copy(out[off4:], format4)
 	copy(out[off12:], format12)
-	return out
+	return out, nil
 }
 
-func buildFormat4(pairs []cmapPair) []byte {
+func buildFormat4(pairs []cmapPair) ([]byte, error) {
 	var bmp []cmapPair
 	for _, p := range pairs {
 		if p.r <= 0xFFFF {
@@ -83,6 +89,9 @@ func buildFormat4(pairs []cmapPair) []byte {
 	segs = append(segs, segment{start: 0xFFFF, end: 0xFFFF, delta: 1})
 	segCount := len(segs)
 	length := 16 + 8*segCount
+	if length > 0xFFFF {
+		return nil, fmt.Errorf("cmap format 4 needs %d segments (max 8189); use fewer non-contiguous BMP codepoints", segCount)
+	}
 	out := make([]byte, length)
 	putU16(out, 0, 4)
 	putU16(out, 2, uint16(length))
@@ -106,7 +115,7 @@ func buildFormat4(pairs []cmapPair) []byte {
 		putU16(out, deltaOff+i*2, s.delta)
 		putU16(out, rangeOff+i*2, 0)
 	}
-	return out
+	return out, nil
 }
 
 func buildFormat12(pairs []cmapPair) []byte {

@@ -42,17 +42,44 @@ func Load() (*Set, error) {
 	return global, globalErr
 }
 
-var cache sync.Map // rune -> cachedGlyph
-
 type cachedGlyph struct {
 	path geom.Path
 	adv  int
 }
 
+var glyphCache = struct {
+	sync.Mutex
+	m     map[rune]cachedGlyph
+	order []rune
+	max   int
+}{m: map[rune]cachedGlyph{}, max: 8192}
+
+func cacheGet(r rune) (cachedGlyph, bool) {
+	glyphCache.Lock()
+	defer glyphCache.Unlock()
+	c, ok := glyphCache.m[r]
+	return c, ok
+}
+
+func cachePut(r rune, c cachedGlyph) {
+	glyphCache.Lock()
+	defer glyphCache.Unlock()
+	if _, exists := glyphCache.m[r]; exists {
+		glyphCache.m[r] = c
+		return
+	}
+	if len(glyphCache.order) >= glyphCache.max {
+		oldest := glyphCache.order[0]
+		glyphCache.order = glyphCache.order[1:]
+		delete(glyphCache.m, oldest)
+	}
+	glyphCache.order = append(glyphCache.order, r)
+	glyphCache.m[r] = c
+}
+
 // Glyph returns the base outline and advance for r, with Y up and baseline 0.
 func (s *Set) Glyph(r rune) (geom.Path, int, bool, error) {
-	if v, ok := cache.Load(r); ok {
-		c := v.(cachedGlyph)
+	if c, ok := cacheGet(r); ok {
 		return c.path.Clone(), c.adv, true, nil
 	}
 	fonts := []*sfnt.Font{s.SC, s.KR}
@@ -65,7 +92,7 @@ func (s *Set) Glyph(r rune) (geom.Path, int, bool, error) {
 			return nil, 0, false, err
 		}
 		if ok {
-			cache.Store(r, cachedGlyph{path: path.Clone(), adv: adv})
+			cachePut(r, cachedGlyph{path: path.Clone(), adv: adv})
 			return path, adv, true, nil
 		}
 	}

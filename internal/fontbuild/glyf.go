@@ -70,6 +70,9 @@ func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
 	prevX, prevY := 0, 0
 	for _, p := range points {
 		dx, dy := p.x-prevX, p.y-prevY
+		if dx < -32768 || dx > 32767 || dy < -32768 || dy > 32767 {
+			return nil, glyphBox{}, errDeltaOverflow
+		}
 		prevX, prevY = p.x, p.y
 		var flag byte
 		if p.on {
@@ -131,7 +134,10 @@ func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
 	return out, box, nil
 }
 
-var errIndexTooLarge = indexError("glyph has too many points or contours")
+var (
+	errIndexTooLarge = indexError("glyph has too many points or contours")
+	errDeltaOverflow = indexError("glyph coordinate delta exceeds int16 range")
+)
 
 type indexError string
 

@@ -138,6 +138,19 @@ func TestParallelDeterminism(t *testing.T) {
 	}
 }
 
+func TestFontStemSafety(t *testing.T) {
+	tests := map[[2]string]string{
+		{"CON", ""}:       "font-CON",
+		{"Family.", ""}:   "Family",
+		{"A/B", "Italic"}: "A-B-Italic",
+	}
+	for in, want := range tests {
+		if got := fontStem(in[0], in[1]); got != want {
+			t.Fatalf("fontStem(%q,%q) = %q, want %q", in[0], in[1], got, want)
+		}
+	}
+}
+
 func TestBuildSpecimenOutput(t *testing.T) {
 	r := sampleRecipe(t)
 	r.Output.Specimen = true

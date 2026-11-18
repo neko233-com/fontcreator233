@@ -133,9 +133,13 @@ func Build(cfg Config) ([]byte, error) {
 	}
 
 	glyf, loca := buildGlyf(encoded)
+	cmapData, err := buildCmap(glyphs)
+	if err != nil {
+		return nil, err
+	}
 	tables := []table{
 		{"OS/2", buildOS2(cfg, glyphs, fontBox)},
-		{"cmap", buildCmap(glyphs)},
+		{"cmap", cmapData},
 		{"glyf", glyf},
 		{"head", buildHead(cfg, fontBox)},
 		{"hhea", buildHhea(cfg, boxes, maxAdvance)},
@@ -176,7 +180,7 @@ func normalizeConfig(cfg Config) Config {
 	if cfg.License == "" {
 		cfg.License = "OFL-1.1"
 	}
-	if cfg.LicenseURL == "" {
+	if cfg.LicenseURL == "" && cfg.License == "OFL-1.1" {
 		cfg.LicenseURL = "https://scripts.sil.org/OFL"
 	}
 	if cfg.Copyright == "" {

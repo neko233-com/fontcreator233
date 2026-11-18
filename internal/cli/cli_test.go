@@ -264,6 +264,41 @@ func TestImportExportCLI(t *testing.T) {
 	}
 }
 
+func TestRecipeSplitCJK(t *testing.T) {
+	r := recipe.Default()
+	r.Meta.Family = "Split Recipe"
+	r.Meta.License = "OFL-1.1"
+	r.Coverage.Base.CJK = "sample"
+	r.Output.Formats = []string{"ttf"}
+	r.Output.Targets = []string{"universal"}
+	r.Output.Specimen = false
+	r.Output.Open = false
+	r.Output.SplitCJK = 64
+	if err := r.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := yaml.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "split.recipe.yaml")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errText, code := run(t, "build", path, "--out", t.TempDir(), "--no-open", "--json")
+	if code != 0 {
+		t.Fatalf("code=%d err=%s", code, errText)
+	}
+	var v map[string]any
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatal(err)
+	}
+	split := v["split"].([]any)
+	if len(split) < 2 {
+		t.Fatalf("recipe splitCJK ignored: %#v", v["split"])
+	}
+}
+
 func TestBuildWorkspaceAndClean(t *testing.T) {
 	path := sampleRecipeFile(t)
 	outDir := t.TempDir()

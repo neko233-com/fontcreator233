@@ -136,6 +136,25 @@ func TestItalicBits(t *testing.T) {
 	}
 }
 
+func TestRejectsDeltaOverflow(t *testing.T) {
+	cfg := testConfig()
+	cfg.Glyphs = append(cfg.Glyphs, Glyph{Rune: 'X', Advance: 600, Path: geom.RectPath(-32000, 0, 32000, 100)})
+	if _, err := Build(cfg); err == nil {
+		t.Fatal("expected delta overflow error")
+	}
+}
+
+func TestRejectsCmapFormat4Overflow(t *testing.T) {
+	cfg := testConfig()
+	cfg.Glyphs = cfg.Glyphs[:1]
+	for i := 0; i < 9000; i++ {
+		cfg.Glyphs = append(cfg.Glyphs, Glyph{Rune: rune(0x1000 + i*2), Advance: 500})
+	}
+	if _, err := Build(cfg); err == nil {
+		t.Fatal("expected cmap format 4 overflow error")
+	}
+}
+
 func TestBuildPrependsNotdef(t *testing.T) {
 	cfg := testConfig()
 	cfg.Glyphs = cfg.Glyphs[1:]
