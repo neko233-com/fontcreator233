@@ -135,7 +135,10 @@ fontcreator inspect dist/<font>.ttf --json
 ## 7. Limits to state honestly
 
 The font does not support Arabic, Hebrew, Indic scripts, Thai, vertical layout,
-complex shaping, or GPOS mark attachment. CJK/Hangul outlines come from the
-embedded OFL bases and receive geometric restyling and synthetic bold, not a
-full redraw. `full` coverage means “all glyphs present in the embedded bases”,
-not every Unicode block.
+complex shaping, variable axes, or color fonts. Generated OpenType covers
+`liga`, `kern`, `case`, `frac`, `tnum`, `ss01`, `smcp`, `onum`, `zero`, `sups`,
+`subs`, and simple top-center `mark` anchors; advanced contextual substitutions,
+mark-to-mark, and cursive attachment are not generated. CJK/Hangul outlines come
+from the embedded OFL bases and receive geometric restyling and synthetic bold,
+not a full redraw. `full` coverage means “all glyphs present in the embedded
+bases”, not every Unicode block.
