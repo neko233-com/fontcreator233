@@ -185,7 +185,12 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	}
 	result.GlyphRunes = append([]rune(nil), keys...)
 	extraGlyphs, ligatures := makeLigatures(merged)
+	featureGlyphs, substitutions := makeSubstitutions(merged, int(math.Round(r.Metrics.CapHeight*1000)))
+	fractionGlyphs, fractionLigatures := makeFractions(merged)
 	glyphs = append(glyphs, extraGlyphs...)
+	glyphs = append(glyphs, featureGlyphs...)
+	glyphs = append(glyphs, fractionGlyphs...)
+	ligatures = append(ligatures, fractionLigatures...)
 	kerning := makeKerning(merged, r.Style.Weight)
 	usedBase := len(derived) > 0
 	splitSet := map[rune]bool{}
@@ -201,6 +206,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	merged = nil
 	cfg := fontConfig(r, resolvedStyle, glyphs)
 	cfg.Ligatures = ligatures
+	cfg.Substitutions = substitutions
 	cfg.Kerning = kerning
 	if usedBase {
 		designer := strings.TrimSpace(r.Meta.Designer)
@@ -280,7 +286,11 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 				Glyphs:       glyphInfo,
 				Coverage:     result.Coverage,
 				HasKerning:   len(kerning) > 0,
-				HasLigatures: len(ligatures) > 0,
+				HasLigatures: hasLigatureFeature(ligatures, "liga"),
+				HasFractions: hasLigatureFeature(ligatures, "frac"),
+				HasCase:      hasSubstitutionFeature(substitutions, "case"),
+				HasTnum:      hasSubstitutionFeature(substitutions, "tnum"),
+				HasSS01:      hasSubstitutionFeature(substitutions, "ss01"),
 				KernPairs:    len(kerning),
 			},
 		})
@@ -650,6 +660,28 @@ func notdefPath() geom.Path {
 	return append(outer, inner...)
 }
 
+func hasLigatureFeature(ligatures []fontbuild.Ligature, feature string) bool {
+	for _, l := range ligatures {
+		f := l.Feature
+		if f == "" {
+			f = "liga"
+		}
+		if f == feature {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSubstitutionFeature(subs []fontbuild.Substitution, feature string) bool {
+	for _, s := range subs {
+		if s.Feature == feature {
+			return true
+		}
+	}
+	return false
+}
+
 func makeLigatures(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbuild.Ligature) {
 	specs := []struct {
 		name  string
@@ -685,6 +717,97 @@ func makeLigatures(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbu
 			components[i] = glyphName(rn)
 		}
 		ligs = append(ligs, fontbuild.Ligature{Components: components, Glyph: spec.name})
+	}
+	return out, ligs
+}
+
+func makeSubstitutions(glyphs map[rune]fontbuild.Glyph, capHeight int) ([]fontbuild.Glyph, []fontbuild.Substitution) {
+	var out []fontbuild.Glyph
+	var subs []fontbuild.Substitution
+	digits := []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
+	maxAdvance := 0
+	for _, rn := range digits {
+		if g, ok := glyphs[rn]; ok && g.Advance > maxAdvance {
+			maxAdvance = g.Advance
+		}
+	}
+	for _, rn := range digits {
+		g, ok := glyphs[rn]
+		if !ok || len(g.Path) == 0 {
+			continue
+		}
+		path := g.Path.Clone()
+		if maxAdvance > g.Advance {
+			path = path.Transformed(geom.Translate(float64(maxAdvance-g.Advance)/2, 0))
+		}
+		name := glyphName(rn) + ".tnum"
+		out = append(out, fontbuild.Glyph{Name: name, NoCmap: true, Advance: maxAdvance, Path: path})
+		subs = append(subs, fontbuild.Substitution{Feature: "tnum", From: glyphName(rn), To: name})
+	}
+
+	caseRunes := []rune{'-', 0x2013, 0x2014, '(', ')', '[', ']', '{', '}', 0x00AB, 0x00BB, 0x2039, 0x203A}
+	for _, rn := range caseRunes {
+		g, ok := glyphs[rn]
+		if !ok || len(g.Path) == 0 {
+			continue
+		}
+		b := g.Path.Bounds()
+		center := (b.MinY + b.MaxY) / 2
+		shift := float64(capHeight)/2 - center
+		name := glyphName(rn) + ".case"
+		out = append(out, fontbuild.Glyph{Name: name, NoCmap: true, Advance: g.Advance, Path: g.Path.Transformed(geom.Translate(0, shift))})
+		subs = append(subs, fontbuild.Substitution{Feature: "case", From: glyphName(rn), To: name})
+	}
+	if g, ok := glyphs['a']; ok && len(g.Path) > 0 && g.Advance > 0 {
+		path := g.Path.Transformed(geom.Translate(-float64(g.Advance)/2, 0))
+		path = path.Transformed(geom.Scale(1.06, 1))
+		path = path.Transformed(geom.Translate(float64(g.Advance)/2, 0))
+		name := glyphName('a') + ".alt"
+		out = append(out, fontbuild.Glyph{Name: name, NoCmap: true, Advance: g.Advance, Path: path})
+		subs = append(subs, fontbuild.Substitution{Feature: "ss01", From: glyphName('a'), To: name})
+	}
+	return out, subs
+}
+
+func makeFractions(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbuild.Ligature) {
+	specs := []struct {
+		name string
+		num  rune
+		den  rune
+	}{
+		{"fraction_one_half", '1', '2'},
+		{"fraction_one_third", '1', '3'},
+		{"fraction_two_thirds", '2', '3'},
+		{"fraction_one_quarter", '1', '4'},
+		{"fraction_three_quarters", '3', '4'},
+		{"fraction_one_eighth", '1', '8'},
+		{"fraction_three_eighths", '3', '8'},
+		{"fraction_five_eighths", '5', '8'},
+		{"fraction_seven_eighths", '7', '8'},
+	}
+	slash, hasSlash := glyphs['/']
+	if !hasSlash || len(slash.Path) == 0 {
+		return nil, nil
+	}
+	const scale = 0.55
+	var out []fontbuild.Glyph
+	var ligs []fontbuild.Ligature
+	for _, spec := range specs {
+		num, okN := glyphs[spec.num]
+		den, okD := glyphs[spec.den]
+		if !okN || !okD || len(num.Path) == 0 || len(den.Path) == 0 {
+			continue
+		}
+		var path geom.Path
+		path = append(path, num.Path.Transformed(geom.Scale(scale, scale)).Transformed(geom.Translate(0, 280))...)
+		path = append(path, slash.Path.Transformed(geom.Scale(scale*0.8, scale*0.8)).Transformed(geom.Translate(250, 0))...)
+		path = append(path, den.Path.Transformed(geom.Scale(scale, scale)).Transformed(geom.Translate(420, 0))...)
+		out = append(out, fontbuild.Glyph{Name: spec.name, NoCmap: true, Advance: 780, Path: path})
+		ligs = append(ligs, fontbuild.Ligature{
+			Feature:    "frac",
+			Components: []string{glyphName(spec.num), glyphName('/'), glyphName(spec.den)},
+			Glyph:      spec.name,
+		})
 	}
 	return out, ligs
 }

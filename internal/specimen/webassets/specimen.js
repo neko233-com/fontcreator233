@@ -221,13 +221,13 @@
   function applyFeatures() {
     var demo = document.getElementById("feature-demo");
     var code = document.getElementById("feature-code");
-    var liga = document.getElementById("feature-liga");
-    var kern = document.getElementById("feature-kern");
-    if (!demo) return;
-    var l = liga && liga.checked ? 1 : 0;
-    var k = kern && kern.checked ? 1 : 0;
-    demo.style.fontFeatureSettings = '"liga" ' + l + ', "kern" ' + k;
-    if (code) code.textContent = 'font-feature-settings: "liga" ' + l + ', "kern" ' + k + ';';
+    var ids = ["liga", "kern", "frac", "case", "tnum", "ss01"];
+    var settings = ids.map(function (id) {
+      var el = document.getElementById("feature-" + id);
+      return '"' + id + '" ' + (el && el.checked ? 1 : 0);
+    }).join(", ");
+    demo.style.fontFeatureSettings = settings;
+    if (code) code.textContent = "font-feature-settings: " + settings + ";";
   }
 
   function wire() {
@@ -286,7 +286,7 @@
     }
     if (search) search.addEventListener("input", applyFilter);
     if (scriptSelect) scriptSelect.addEventListener("change", applyFilter);
-    ["feature-liga", "feature-kern"].forEach(function (id) {
+    ["feature-liga", "feature-kern", "feature-frac", "feature-case", "feature-tnum", "feature-ss01"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener("change", applyFeatures);
     });

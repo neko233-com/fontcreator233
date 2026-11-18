@@ -35,8 +35,16 @@ type KernPair struct {
 
 // Ligature maps a component sequence to one glyph.
 type Ligature struct {
+	Feature    string
 	Components []string
 	Glyph      string
+}
+
+// Substitution is a one-for-one GSUB replacement for a feature tag.
+type Substitution struct {
+	Feature string
+	From    string
+	To      string
 }
 
 // Config is the complete font metadata and glyph set.
@@ -57,15 +65,16 @@ type Config struct {
 	CapHeight int
 	XHeight   int
 
-	WeightClass int
-	WidthClass  int
-	ItalicAngle float64
-	FixedPitch  bool
-	Created     time.Time
-	Jobs        int
-	Glyphs      []Glyph
-	Kerning     []KernPair
-	Ligatures   []Ligature
+	WeightClass   int
+	WidthClass    int
+	ItalicAngle   float64
+	FixedPitch    bool
+	Created       time.Time
+	Jobs          int
+	Glyphs        []Glyph
+	Kerning       []KernPair
+	Ligatures     []Ligature
+	Substitutions []Substitution
 }
 
 type glyphBox struct {
@@ -183,14 +192,17 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 		} else if len(kern) > 0 {
 			tables = append(tables, table{"kern", kern})
 		}
-		if gpos, err := buildGPOSTable(glyphs, cfg.Kerning); err != nil {
+		if gpos, err := buildGPOSTable(glyphs, cfg.Kerning, cfg.CapHeight, cfg.XHeight); err != nil {
 			return nil, err
 		} else if len(gpos) > 0 {
 			tables = append(tables, table{"GPOS", gpos})
 		}
 	}
-	if len(cfg.Ligatures) > 0 {
-		if gsub, err := buildGSUBTable(glyphs, cfg.Ligatures); err != nil {
+	if hasMarkGlyphs(glyphs) {
+		tables = append(tables, table{"GDEF", buildGDEF(glyphs)})
+	}
+	if len(cfg.Ligatures) > 0 || len(cfg.Substitutions) > 0 {
+		if gsub, err := buildGSUBTable(glyphs, cfg.Ligatures, cfg.Substitutions); err != nil {
 			return nil, err
 		} else if len(gsub) > 0 {
 			tables = append(tables, table{"GSUB", gsub})

@@ -25,14 +25,18 @@ from fontTools.ttLib import TTFont
 f = TTFont(sys.argv[1])
 for name in f.getGlyphOrder():
     f["glyf"][name]
-if "GSUB" not in f or [r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord] != ["liga"]:
+if "GSUB" not in f or "liga" not in [r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord]:
     raise SystemExit("GSUB liga missing")
-if "GPOS" not in f or [r.FeatureTag for r in f["GPOS"].table.FeatureList.FeatureRecord] != ["kern"]:
-    raise SystemExit("GPOS kern missing")
+if not {"case", "frac", "tnum", "ss01"}.issubset({r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord}):
+    raise SystemExit("GSUB case/frac/tnum/ss01 missing")
+gpos_tags = [r.FeatureTag for r in f["GPOS"].table.FeatureList.FeatureRecord] if "GPOS" in f else []
+if "kern" not in gpos_tags or "mark" not in gpos_tags:
+    raise SystemExit(f"GPOS kern/mark missing: {gpos_tags}")
 if "kern" not in f or not f["kern"].kernTables[0].kernTable:
     raise SystemExit("legacy kern missing")
-lookup = f["GSUB"].table.LookupList.Lookup[0]
-if lookup.LookupType != 4 or "f" not in lookup.SubTable[0].ligatures:
+if "GDEF" not in f:
+    raise SystemExit("GDEF missing")
+if not any(l.LookupType == 4 and "f" in l.SubTable[0].ligatures for l in f["GSUB"].table.LookupList.Lookup):
     raise SystemExit("liga lookup missing")
 print("ok", len(f.getGlyphOrder()), len(f.getBestCmap()))
 `

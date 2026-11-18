@@ -36,7 +36,14 @@ func testOptions(t *testing.T) Options {
 				{Rune: 'あ', Script: "kana"},
 				{Rune: '€', Script: "symbols"},
 			},
-			Coverage: map[string]int{"latin": 3, "cjk": 1, "hangul": 1},
+			Coverage:     map[string]int{"latin": 3, "cjk": 1, "hangul": 1},
+			HasKerning:   true,
+			HasLigatures: true,
+			HasFractions: true,
+			HasCase:      true,
+			HasTnum:      true,
+			HasSS01:      true,
+			KernPairs:    23,
 		},
 		SelfContained: false,
 		Open:          false,
@@ -61,7 +68,8 @@ func TestBuildSpecimen(t *testing.T) {
 		"TestFont-Regular.glyphs.js", "data-accent=\"#5B8CFF\"",
 		`id="asset-error"`, "__fontcreatorBoot",
 		"IN YOUR APPS", "剪映 / CapCut", "CAPTION PREVIEW", "Download TTF",
-		"OPENTYPE", "feature-liga", "font-feature-settings",
+		"OPENTYPE", "feature-liga", "feature-frac", "feature-case", "feature-tnum", "feature-ss01",
+		"font-feature-settings",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)

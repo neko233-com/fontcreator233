@@ -6,12 +6,25 @@ import (
 	"sort"
 )
 
+type layoutFeatureSpec struct {
+	Tag        string
+	LookupType uint16
+	Subtable   []byte
+}
+
 // layoutTable assembles a minimal OpenType GSUB/GPOS table with a DFLT/latn
 // script list, one feature, and one lookup.
 func layoutTable(featureTag string, lookupType uint16, subtable []byte) []byte {
-	scriptList := buildScriptList([]string{"DFLT", "latn"})
-	featureList := buildFeatureList(featureTag)
-	lookupList := buildLookupList(lookupType, subtable)
+	return layoutTableMulti([]layoutFeatureSpec{{Tag: featureTag, LookupType: lookupType, Subtable: subtable}})
+}
+
+func layoutTableMulti(features []layoutFeatureSpec) []byte {
+	if len(features) == 0 {
+		return nil
+	}
+	scriptList := buildScriptList([]string{"DFLT", "latn"}, len(features))
+	featureList := buildFeatureList(features)
+	lookupList := buildLookupList(features)
 	headerLen := 10
 	scriptOff := headerLen
 	featureOff := scriptOff + len(scriptList)
@@ -27,15 +40,16 @@ func layoutTable(featureTag string, lookupType uint16, subtable []byte) []byte {
 	return out
 }
 
-func buildScriptList(tags []string) []byte {
-	scriptTable := make([]byte, 10)
+func buildScriptList(tags []string, featureCount int) []byte {
+	scriptTable := make([]byte, 10+2*featureCount)
 	putU16(scriptTable, 0, 4)      // DefaultLangSys offset
 	putU16(scriptTable, 2, 0)      // LangSysCount
 	putU16(scriptTable, 4, 0)      // LookupOrder
 	putU16(scriptTable, 6, 0xFFFF) // ReqFeatureIndex
-	putU16(scriptTable, 8, 1)      // FeatureIndexCount
-	// The feature index record is the final uint16.
-	scriptTable = append(scriptTable, 0, 0)
+	putU16(scriptTable, 8, uint16(featureCount))
+	for i := 0; i < featureCount; i++ {
+		putU16(scriptTable, 10+2*i, uint16(i))
+	}
 	header := 2 + 6*len(tags)
 	out := make([]byte, header+len(scriptTable))
 	putU16(out, 0, uint16(len(tags)))
@@ -48,30 +62,46 @@ func buildScriptList(tags []string) []byte {
 	return out
 }
 
-func buildFeatureList(tag string) []byte {
-	feature := make([]byte, 6)
-	putU16(feature, 0, 0) // FeatureParams
-	putU16(feature, 2, 1)
-	putU16(feature, 4, 0) // lookup index
-	out := make([]byte, 8+len(feature))
-	putU16(out, 0, 1)
-	copy(out[2:6], tag)
-	putU16(out, 6, 8)
-	copy(out[8:], feature)
+func buildFeatureList(features []layoutFeatureSpec) []byte {
+	header := 2 + 6*len(features)
+	total := header + 6*len(features)
+	out := make([]byte, total)
+	putU16(out, 0, uint16(len(features)))
+	off := header
+	for i, f := range features {
+		rec := 2 + i*6
+		copy(out[rec:rec+4], f.Tag)
+		putU16(out, rec+4, uint16(off))
+		feature := out[off : off+6]
+		putU16(feature, 0, 0) // FeatureParams
+		putU16(feature, 2, 1)
+		putU16(feature, 4, uint16(i)) // lookup index
+		off += 6
+	}
 	return out
 }
 
-func buildLookupList(lookupType uint16, subtable []byte) []byte {
-	lookup := make([]byte, 8+len(subtable))
-	putU16(lookup, 0, lookupType)
-	putU16(lookup, 2, 0)
-	putU16(lookup, 4, 1)
-	putU16(lookup, 6, 8)
-	copy(lookup[8:], subtable)
-	out := make([]byte, 4+len(lookup))
-	putU16(out, 0, 1)
-	putU16(out, 2, 4)
-	copy(out[4:], lookup)
+func buildLookupList(features []layoutFeatureSpec) []byte {
+	header := 2 + 2*len(features)
+	offsets := make([]int, len(features))
+	off := header
+	total := header
+	for i, f := range features {
+		offsets[i] = off
+		off += 8 + len(f.Subtable)
+		total = off
+	}
+	out := make([]byte, total)
+	putU16(out, 0, uint16(len(features)))
+	for i, f := range features {
+		putU16(out, 2+2*i, uint16(offsets[i]))
+		lookup := out[offsets[i] : offsets[i]+8+len(f.Subtable)]
+		putU16(lookup, 0, f.LookupType)
+		putU16(lookup, 2, 0)
+		putU16(lookup, 4, 1)
+		putU16(lookup, 6, 8)
+		copy(lookup[8:], f.Subtable)
+	}
 	return out
 }
 
@@ -83,7 +113,7 @@ func glyphIDs(glyphs []Glyph) map[string]uint16 {
 	return ids
 }
 
-func buildGSUB(glyphs []Glyph, ligatures []Ligature) ([]byte, error) {
+func buildLigatureSubtable(glyphs []Glyph, ligatures []Ligature) ([]byte, error) {
 	ids := glyphIDs(glyphs)
 	groups := map[uint16][][]uint16{}
 	for _, lig := range ligatures {
@@ -230,20 +260,105 @@ func buildGPOS(glyphs []Glyph, pairs []KernPair) ([]byte, error) {
 	return out, nil
 }
 
-func buildGSUBTable(glyphs []Glyph, ligatures []Ligature) ([]byte, error) {
-	sub, err := buildGSUB(glyphs, ligatures)
-	if err != nil || sub == nil {
-		return nil, err
+func buildGSUBTable(glyphs []Glyph, ligatures []Ligature, substitutions []Substitution) ([]byte, error) {
+	byFeature := map[string][]Ligature{}
+	for _, lig := range ligatures {
+		feature := lig.Feature
+		if feature == "" {
+			feature = "liga"
+		}
+		byFeature[feature] = append(byFeature[feature], lig)
 	}
-	return layoutTable("liga", 4, sub), nil
+	subsByFeature := map[string][]Substitution{}
+	for _, sub := range substitutions {
+		feature := sub.Feature
+		if feature == "" {
+			feature = "liga"
+		}
+		subsByFeature[feature] = append(subsByFeature[feature], sub)
+	}
+	tags := make([]string, 0, len(byFeature)+len(subsByFeature))
+	seen := map[string]bool{}
+	for tag := range byFeature {
+		seen[tag] = true
+		tags = append(tags, tag)
+	}
+	for tag := range subsByFeature {
+		if !seen[tag] {
+			tags = append(tags, tag)
+		}
+	}
+	sort.Strings(tags)
+	var features []layoutFeatureSpec
+	for _, tag := range tags {
+		if ligs := byFeature[tag]; len(ligs) > 0 {
+			sub, err := buildLigatureSubtable(glyphs, ligs)
+			if err != nil {
+				return nil, err
+			}
+			if len(sub) > 0 {
+				features = append(features, layoutFeatureSpec{Tag: tag, LookupType: 4, Subtable: sub})
+			}
+		}
+		if subs := subsByFeature[tag]; len(subs) > 0 {
+			sub := buildSingleSubtable(glyphs, subs)
+			if len(sub) > 0 {
+				features = append(features, layoutFeatureSpec{Tag: tag, LookupType: 1, Subtable: sub})
+			}
+		}
+	}
+	if len(features) == 0 {
+		return nil, nil
+	}
+	return layoutTableMulti(features), nil
 }
 
-func buildGPOSTable(glyphs []Glyph, pairs []KernPair) ([]byte, error) {
-	sub, err := buildGPOS(glyphs, pairs)
-	if err != nil || sub == nil {
-		return nil, err
+func buildSingleSubtable(glyphs []Glyph, subs []Substitution) []byte {
+	ids := glyphIDs(glyphs)
+	byFrom := map[uint16]uint16{}
+	for _, s := range subs {
+		from, okF := ids[s.From]
+		to, okT := ids[s.To]
+		if okF && okT {
+			byFrom[from] = to
+		}
 	}
-	return layoutTable("kern", 2, sub), nil
+	if len(byFrom) == 0 {
+		return nil
+	}
+	from := make([]uint16, 0, len(byFrom))
+	for gid := range byFrom {
+		from = append(from, gid)
+	}
+	sort.Slice(from, func(i, j int) bool { return from[i] < from[j] })
+	coverage := buildCoverage(from)
+	header := 6 + 2*len(from)
+	out := make([]byte, header+len(coverage))
+	putU16(out, 0, 2) // SingleSubst format 2
+	putU16(out, 2, uint16(header))
+	putU16(out, 4, uint16(len(from)))
+	for i, gid := range from {
+		putU16(out, 6+2*i, byFrom[gid])
+	}
+	copy(out[header:], coverage)
+	return out
+}
+
+func buildGPOSTable(glyphs []Glyph, pairs []KernPair, capHeight, xHeight int) ([]byte, error) {
+	var features []layoutFeatureSpec
+	if sub, err := buildGPOS(glyphs, pairs); err != nil {
+		return nil, err
+	} else if len(sub) > 0 {
+		features = append(features, layoutFeatureSpec{Tag: "kern", LookupType: 2, Subtable: sub})
+	}
+	if marks := buildMarkBaseSubtable(glyphs, capHeight, xHeight); len(marks) > 0 {
+		features = append(features, layoutFeatureSpec{Tag: "mark", LookupType: 4, Subtable: marks})
+	}
+	if len(features) == 0 {
+		return nil, nil
+	}
+	sort.Slice(features, func(i, j int) bool { return features[i].Tag < features[j].Tag })
+	return layoutTableMulti(features), nil
 }
 
 func buildKernTable(glyphs []Glyph, pairs []KernPair) ([]byte, error) {

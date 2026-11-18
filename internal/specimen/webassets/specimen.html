@@ -115,6 +115,11 @@
     <div class="feature-meta">
       {{if .Data.HasLigatures}}<span><b>liga</b> fi · fl · ffi · ffl</span>{{else}}<span><b>liga</b> not present</span>{{end}}
       {{if .Data.HasKerning}}<span><b>kern</b> {{if .Data.KernPairs}}{{.Data.KernPairs}} pairs{{else}}present{{end}}</span><span><b>GPOS</b> pair positioning</span><span><b>kern</b> legacy fallback</span>{{else}}<span><b>kern</b> not present</span>{{end}}
+      {{if .Data.HasFractions}}<span><b>frac</b> 1/2 · 3/4 · 1/8</span>{{end}}
+      {{if .Data.HasCase}}<span><b>case</b> raised punctuation</span>{{end}}
+      {{if .Data.HasTnum}}<span><b>tnum</b> tabular figures</span>{{end}}
+      {{if .Data.HasSS01}}<span><b>ss01</b> alternate a</span>{{end}}
+      <span><b>mark</b> combining accents</span>
     </div>
     <div class="feature-controls">
       <label class="feature-toggle">
@@ -127,11 +132,31 @@
         <span>Kerning</span>
         <code>kern</code>
       </label>
+      {{if .Data.HasFractions}}<label class="feature-toggle">
+        <input id="feature-frac" type="checkbox" checked>
+        <span>Fractions</span>
+        <code>frac</code>
+      </label>{{end}}
+      {{if .Data.HasCase}}<label class="feature-toggle">
+        <input id="feature-case" type="checkbox" checked>
+        <span>Case</span>
+        <code>case</code>
+      </label>{{end}}
+      {{if .Data.HasTnum}}<label class="feature-toggle">
+        <input id="feature-tnum" type="checkbox" checked>
+        <span>Tabular</span>
+        <code>tnum</code>
+      </label>{{end}}
+      {{if .Data.HasSS01}}<label class="feature-toggle">
+        <input id="feature-ss01" type="checkbox" checked>
+        <span>Alternate a</span>
+        <code>ss01</code>
+      </label>{{end}}
       <span class="feature-sep">/</span>
       <span class="feature-note">Toggle and watch the outline reflow.</span>
     </div>
-    <div id="feature-demo" class="feature-demo specimen-font">fi fl ffi ffl<br><span class="feature-pair">AVATAR · To Wa · Type</span></div>
-    <pre id="feature-code" class="code feature-code">font-feature-settings: "liga" 1, "kern" 1;</pre>
+    <div id="feature-demo" class="feature-demo specimen-font">fi fl ffi ffl<br><span class="feature-pair">AVATAR · To Wa · 1/2 3/4 1/8 · (A) [B] · 0123 · q́</span></div>
+    <pre id="feature-code" class="code feature-code">font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;</pre>
   </section>
 
   <section id="scale" class="panel scale">

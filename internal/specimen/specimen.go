@@ -32,6 +32,10 @@ type Data struct {
 	Coverage     map[string]int
 	HasKerning   bool
 	HasLigatures bool
+	HasFractions bool
+	HasCase      bool
+	HasTnum      bool
+	HasSS01      bool
 	KernPairs    int
 }
 

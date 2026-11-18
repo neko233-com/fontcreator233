@@ -32,7 +32,9 @@ Just Go, an OFL base font, and a recipe.
   CJK/kana/Hangul/symbols. Global coverage is reported honestly, not claimed.
 - **Real outputs**: TTF, WOFF, local HTML specimen, Unity UPM + TMP importer,
   Unreal import script + CompositeFont ranges, Web CSS with `unicode-range`,
-  and system install notes.
+  system install notes, and app handoff guides.
+- **OpenType**: generated `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`, and
+  basic `mark` anchors, plus GPOS and legacy kern tables.
 - **Pleasant to use**: Bubble Tea TUI with progress, ETA, cancellation, and a
   plain/JSON fallback for automation.
 - **Safe workspace**: builds stage and commit atomically; `clean` removes only
@@ -353,9 +355,10 @@ Optional cross-checks use fontTools and `fc-scan` in CI.
 
 - No Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
 - No variable-font output, color fonts, emoji, or WOFF2 encoding.
-- Generated OpenType support is limited to `liga` and `kern`; no contextual
-  substitutions, stylistic sets, mark positioning, cursive attachment, or
-  advanced GPOS/GSUB features. `learn` can report those features in other fonts.
+- Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`, and
+  simple top-center mark anchors. It does not generate contextual substitutions,
+  mark-to-mark, cursive attachment, variable axes, color layers, or advanced
+  GPOS/GSUB. `learn` can report those features in other fonts.
 - CJK/Hangul style transfer is geometric + synthetic bold, not a full redraw.
 - Unity/Unreal packages are generated; validate them in your Editor.
 - Builds are byte-identical within one tool version, OS/arch, and Go version.
