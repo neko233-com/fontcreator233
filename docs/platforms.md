@@ -14,6 +14,7 @@ Generated fonts include OpenType features for Latin text: `liga`
 `ss01` alternate `a`, `smcp` small caps, `onum` oldstyle figures, `zero` slashed
 zero, `sups`/`subs` figures, and basic top-center `mark` anchors. Imported fonts
 may expose richer GSUB/GPOS data, which `learn` reports without re-emitting it.
+See [`opentype.md`](opentype.md) for the full feature matrix and limits.
 
 ## App guides
 

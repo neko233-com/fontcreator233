@@ -35,7 +35,7 @@ Just Go, an OFL base font, and a recipe.
   system install notes, and app handoff guides.
 - **OpenType**: generated `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
   `smcp`, `onum`, `zero`, `sups`, `subs`, and basic `mark` anchors, plus GPOS
-  and legacy kern tables.
+  and legacy kern tables. See [`docs/opentype.md`](docs/opentype.md).
 - **Pleasant to use**: Bubble Tea TUI with progress, ETA, cancellation, and a
   plain/JSON fallback for automation.
 - **Safe workspace**: builds stage and commit atomically; `clean` removes only
