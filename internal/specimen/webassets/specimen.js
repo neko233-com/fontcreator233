@@ -15,7 +15,7 @@
   var toastTimer = null;
   var virtualizer = null;
   var cols = 8;
-  var rowHeight = 84;
+  var rowHeight = 88;
 
   function scriptOf(cp) {
     if ((cp >= 0x3040 && cp <= 0x30ff) || (cp >= 0x31f0 && cp <= 0x31ff) || (cp >= 0xff66 && cp <= 0xff9f)) return "kana";
@@ -42,7 +42,7 @@
 
   function copy(text) {
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(function () { toast("Copied " + text); }, function () { fallbackCopy(text); });
+      navigator.clipboard.writeText(text).then(function () { toast("Copied"); }, function () { fallbackCopy(text); });
     } else {
       fallbackCopy(text);
     }
@@ -55,14 +55,14 @@
     ta.style.opacity = "0";
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand("copy"); toast("Copied " + text); } catch (e) { toast("Copy failed"); }
+    try { document.execCommand("copy"); toast("Copied"); } catch (e) { toast("Copy failed"); }
     document.body.removeChild(ta);
   }
 
   function computeCols() {
-    var width = scroll.clientWidth || 800;
-    cols = Math.max(4, Math.min(16, Math.floor(width / 84)));
-    layer.style.setProperty("--cols", String(cols));
+    var width = scroll ? scroll.clientWidth : 800;
+    cols = Math.max(4, Math.min(16, Math.floor(width / 88)));
+    if (layer) layer.style.setProperty("--cols", String(cols));
   }
 
   function makeRow(index) {
@@ -100,7 +100,7 @@
   }
 
   function fallbackRender() {
-    if (!spacer || !layer) return;
+    if (!scroll || !spacer || !layer) return;
     var totalRows = Math.ceil(filtered.length / cols);
     spacer.style.height = (totalRows * rowHeight) + "px";
     var top = scroll.scrollTop;
@@ -113,9 +113,10 @@
   function rebuildVirtualizer() {
     if (virtualizer && virtualizer.cleanup) virtualizer.cleanup();
     virtualizer = null;
+    if (!scroll) return;
     computeCols();
     var rows = Math.ceil(filtered.length / cols);
-    countLabel.textContent = filtered.length.toLocaleString() + " glyphs · " + cols + " columns";
+    if (countLabel) countLabel.textContent = filtered.length.toLocaleString() + " glyphs · " + cols + " columns";
     if (!window.TanStackVirtual || !window.TanStackVirtual.Virtualizer) {
       fallbackRender();
       return;
@@ -137,12 +138,14 @@
     if (!virtualizer) { fallbackRender(); return; }
     virtualizer._willUpdate();
     var items = virtualizer.getVirtualItems();
-    spacer.style.height = virtualizer.getTotalSize() + "px";
+    if (spacer) spacer.style.height = virtualizer.getTotalSize() + "px";
+    if (!layer) return;
     layer.textContent = "";
     for (var i = 0; i < items.length; i++) layer.appendChild(makeRow(items[i].index));
   }
 
   function applyFilter() {
+    if (!search || !scriptSelect) return;
     var q = (search.value || "").trim().toLowerCase();
     var script = scriptSelect.value;
     var target = null;
@@ -155,23 +158,44 @@
       var ch = String.fromCodePoint(g.cp).toLowerCase();
       return ch === q || (target !== null && g.cp === target) || hex(g.cp).toLowerCase().indexOf(q) >= 0;
     });
-    scroll.scrollTop = 0;
+    if (scroll) scroll.scrollTop = 0;
     rebuildVirtualizer();
   }
 
   function setFontStatus() {
     var status = document.getElementById("font-status");
     var banner = document.getElementById("font-error");
+    if (!status) return;
     if (!document.fonts || !document.fonts.check) {
       status.textContent = "font API unavailable";
       return;
     }
     document.fonts.ready.then(function () {
       var ok = document.fonts.check('16px "Specimen"');
+      status.className = "status " + (ok ? "ok" : "bad");
       status.textContent = ok ? "font loaded" : "font missing";
-      status.className = "status-pill " + (ok ? "ok" : "bad");
-      banner.hidden = ok;
+      if (banner) banner.hidden = ok;
     });
+  }
+
+  function controlValue(id, format) {
+    var el = document.getElementById(id);
+    var out = document.getElementById(id + "-value");
+    if (el && out) out.textContent = format(el.value);
+  }
+
+  function applyTester() {
+    var text = document.getElementById("tester-text");
+    var size = document.getElementById("tester-size");
+    var leading = document.getElementById("tester-leading");
+    var tracking = document.getElementById("tester-tracking");
+    if (!text || !size || !leading || !tracking) return;
+    text.style.fontSize = size.value + "px";
+    text.style.lineHeight = (Number(leading.value) / 100).toFixed(2);
+    text.style.letterSpacing = (Number(tracking.value) / 100) + "em";
+    controlValue("tester-size", function (v) { return v; });
+    controlValue("tester-leading", function (v) { return (Number(v) / 100).toFixed(2); });
+    controlValue("tester-tracking", function (v) { return (Number(v) / 100).toFixed(2) + "em"; });
   }
 
   function wire() {
@@ -179,32 +203,50 @@
       document.documentElement.style.setProperty("--accent", document.body.dataset.accent);
     }
     setFontStatus();
-    var hero = document.getElementById("hero");
-    var size = document.getElementById("hero-size");
-    var sizeValue = document.getElementById("hero-size-value");
-    size.addEventListener("input", function () {
-      hero.style.fontSize = size.value + "px";
-      sizeValue.textContent = size.value + " px";
+    var text = document.getElementById("tester-text");
+    var size = document.getElementById("tester-size");
+    var leading = document.getElementById("tester-leading");
+    var tracking = document.getElementById("tester-tracking");
+    var reset = document.getElementById("tester-reset");
+    if (size) size.addEventListener("input", applyTester);
+    if (leading) leading.addEventListener("input", applyTester);
+    if (tracking) tracking.addEventListener("input", applyTester);
+    if (reset) reset.addEventListener("click", function () {
+      if (size) size.value = "112";
+      if (leading) leading.value = "104";
+      if (tracking) tracking.value = "-2";
+      applyTester();
     });
-    document.getElementById("copy-hero").addEventListener("click", function () { copy(hero.innerText); });
-    document.getElementById("copy-css").addEventListener("click", function () { copy(document.getElementById("css-snippet").innerText); });
-    document.getElementById("theme-toggle").addEventListener("click", function () {
+    applyTester();
+    ["copy-sample"].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (btn && text) btn.addEventListener("click", function () { copy(text.innerText); });
+    });
+    ["copy-css", "copy-css-2", "copy-css-3"].forEach(function (id) {
+      var btn = document.getElementById(id);
+      var snippet = document.getElementById("css-snippet");
+      if (btn && snippet) btn.addEventListener("click", function () { copy(snippet.innerText); });
+    });
+    var theme = document.getElementById("theme-toggle");
+    if (theme) theme.addEventListener("click", function () {
       var root = document.documentElement;
       var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
       root.dataset.theme = dark ? "light" : "dark";
     });
-    var resizeTimer = null;
-    window.addEventListener("resize", function () {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(rebuildVirtualizer, 120);
-    });
-    scroll.addEventListener("scroll", function () {
-      window.requestAnimationFrame(function () {
-        if (virtualizer) renderVirtual(); else fallbackRender();
+    if (scroll) {
+      var resizeTimer = null;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(rebuildVirtualizer, 140);
       });
-    }, { passive: true });
-    search.addEventListener("input", applyFilter);
-    scriptSelect.addEventListener("change", applyFilter);
+      scroll.addEventListener("scroll", function () {
+        window.requestAnimationFrame(function () {
+          if (virtualizer) renderVirtual(); else fallbackRender();
+        });
+      }, { passive: true });
+    }
+    if (search) search.addEventListener("input", applyFilter);
+    if (scriptSelect) scriptSelect.addEventListener("change", applyFilter);
     rebuildVirtualizer();
   }
 
