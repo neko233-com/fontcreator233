@@ -110,9 +110,17 @@ func buildApps(o Options) ([]string, error) {
 		return nil, fmt.Errorf("apps: no fonts")
 	}
 	fontName := filepath.Base(o.Fonts[0].Path)
+	fontRef := "font/" + fontName
 	family := o.Family
 	style := o.Style
 	display := family + " " + style
+	fontDir := filepath.Join(dir, "font")
+	if err := os.MkdirAll(fontDir, 0o755); err != nil {
+		return nil, err
+	}
+	if err := copyFile(o.Fonts[0].Path, filepath.Join(fontDir, fontName)); err != nil {
+		return nil, err
+	}
 
 	index := struct {
 		Schema   string     `json:"schema"`
@@ -127,7 +135,7 @@ func buildApps(o Options) ([]string, error) {
 		Schema:   "fontcreator233/apps/v1",
 		Family:   family,
 		Style:    style,
-		Font:     fontName,
+		Font:     fontRef,
 		License:  o.License,
 		Readme:   "README.md",
 		Captions: []string{"caption.srt", "caption.ass"},
@@ -143,7 +151,7 @@ func buildApps(o Options) ([]string, error) {
 
 	var readme strings.Builder
 	fmt.Fprintf(&readme, "# %s — app usage\n\n", display)
-	fmt.Fprintf(&readme, "The primary font is `%s`. Install it once, then choose it by family name in each app.\n\n", fontName)
+	fmt.Fprintf(&readme, "The primary font is `%s`. Install it once, then choose it by family name in each app.\n\n", fontRef)
 	if o.License == "OFL-1.1" {
 		readme.WriteString("License: OFL-1.1. See `../OFL.txt` for the full text.\n\n")
 	} else {
@@ -172,9 +180,9 @@ func buildApps(o Options) ([]string, error) {
 		return nil, err
 	}
 
-	paths := []string{readmePath, filepath.Join(dir, "font-usage.json")}
+	paths := []string{readmePath, filepath.Join(dir, "font-usage.json"), filepath.Join(fontDir, fontName)}
 	for _, app := range appGuides {
-		doc := appDoc(display, fontName, app)
+		doc := appDoc(display, fontRef, app)
 		path := filepath.Join(dir, app.ID+".md")
 		if err := os.WriteFile(path, []byte(doc), 0o644); err != nil {
 			return nil, err
@@ -195,10 +203,10 @@ func buildApps(o Options) ([]string, error) {
 	return paths, nil
 }
 
-func appDoc(display, fontName string, app appGuide) string {
+func appDoc(display, fontRef string, app appGuide) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# %s in %s\n\n", display, app.Name)
-	fmt.Fprintf(&b, "Font file: `%s`  \nPlatforms: %s  \nMethod: %s\n\n", fontName, app.Platforms, app.Method)
+	fmt.Fprintf(&b, "Font file: `%s`  \nPlatforms: %s  \nMethod: %s\n\n", fontRef, app.Platforms, app.Method)
 	b.WriteString("## Use\n\n")
 	b.WriteString(app.Use)
 	b.WriteString("\n\n## Install\n\n")
@@ -216,7 +224,7 @@ func appDoc(display, fontName string, app appGuide) string {
 		b.WriteString("2. Upload the TTF and wait for the family to appear.\n")
 		b.WriteString("3. If upload is unavailable, use a desktop editor with the TTF and place the rendered artwork.\n")
 	case "Load font file", "Import asset":
-		fmt.Fprintf(&b, "1. Keep `%s` in the project folder.\n", fontName)
+		fmt.Fprintf(&b, "1. Keep `%s` in the project folder.\n", fontRef)
 		b.WriteString("2. Load or import the TTF through the app's font/file picker.\n")
 		b.WriteString("3. Assign the font resource to the text object or theme.\n")
 	case "Generated UPM package":

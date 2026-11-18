@@ -115,6 +115,7 @@ func TestBuildApps(t *testing.T) {
 		"apps/README.md", "apps/font-usage.json", "apps/photoshop.md",
 		"apps/capcut.md", "apps/premiere.md", "apps/davinci.md",
 		"apps/figma.md", "apps/blender.md", "apps/caption.srt", "apps/caption.ass",
+		"apps/font/Rock-Roll-Regular.ttf",
 	} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
 			t.Fatalf("missing %s: %v", rel, err)

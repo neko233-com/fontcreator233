@@ -220,8 +220,8 @@ dist/
 ### Apps and editors
 
 `apps/` is a ready-to-hand-off usage pack rather than a fake integration. It
-ships a single `README.md`, a machine-readable `font-usage.json`, per-app guides,
-and `caption.srt` / `caption.ass` samples:
+ships the primary TTF in `apps/font/`, a single `README.md`, a machine-readable
+`font-usage.json`, per-app guides, and `caption.srt` / `caption.ass` samples:
 
 ![fontcreator233 app handoff](docs/assets/apps-dark.png)
 
