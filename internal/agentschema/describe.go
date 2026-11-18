@@ -74,7 +74,11 @@ func Describe() map[string]any {
 		"opentype": map[string]any{
 			"generated": []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "ccmp", "mark", "mkmk"},
 			"tables":    []string{"GSUB", "GPOS", "GDEF", "kern"},
-			"note":      "Generated features are deterministic and Latin-focused. `learn` reports richer GSUB/GPOS in external fonts without re-emitting them.",
+			"unsupported": []string{
+				"variable axes (fvar/gvar/HVAR)", "color layers (COLR/CPAL/SVG )",
+				"contextual substitutions (calt/cswh)", "cursive attachment",
+			},
+			"note": "Generated features are deterministic and Latin-focused. `learn` reports richer GSUB/GPOS, variable axes, and color tables in external fonts without re-emitting them.",
 		},
 		"platforms": map[string]any{
 			"universal": "TTF + WOFF + HTML specimen + manifest",
@@ -133,6 +137,7 @@ func Markdown() string {
 	ot := Describe()["opentype"].(map[string]any)
 	b.WriteString("- generated: " + strings.Join(ot["generated"].([]string), ", ") + "\n")
 	b.WriteString("- tables: " + strings.Join(ot["tables"].([]string), ", ") + "\n")
+	b.WriteString("- unsupported: " + strings.Join(ot["unsupported"].([]string), ", ") + "\n")
 	b.WriteString("- " + ot["note"].(string) + "\n")
 	b.WriteString("\n## Targets\n\n")
 	platforms := Describe()["platforms"].(map[string]any)
