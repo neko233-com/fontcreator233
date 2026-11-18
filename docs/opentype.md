@@ -38,10 +38,11 @@ font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;
 
 ## Verification
 
-- `go test ./...` builds fonts and checks the tables with fontTools when it is
-  available.
-- `scripts/validate-fonts.py` loads every generated table through fontTools.
-- HarfBuzz shaping checks cover `1/2`, `(A)`, `0123`, `fi`, `a`, `abc`,
+- `go test ./...` builds fonts and asserts the GSUB/GPOS/GDEF/`kern` tags and
+  lookup types with fontTools when it is available.
+- `scripts/validate-fonts.py` loads every glyph and the required core tables;
+  the Go test is the one that asserts layout tables.
+- HarfBuzz shaping was run manually for `1/2`, `(A)`, `0123`, `fi`, `a`, `abc`,
   `0123456789`, `0`, `123` (sup/sub), and `q́`.
 - `fontcreator learn <font> --json` reports the same tags and lookup types in
   external fonts, including variable axes and color tables when present.
