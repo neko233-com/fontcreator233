@@ -18,7 +18,7 @@ func (a *app) cmdClean(args []string) int {
 	yes := fs.Bool("yes", false, "skip confirmation")
 	force := fs.Bool("force", false, "delete modified managed files")
 	var targets stringList
-	fs.Var(&targets, "target", "limit to universal|web|system|unity|unreal")
+	fs.Var(&targets, "target", "limit to universal|web|system|unity|unreal|apps")
 	older := fs.String("older-than", "", "only files built before this age, e.g. 7d or 30d")
 	values := map[string]bool{"out": true, "target": true, "older-than": true}
 	if err := parseFlexible(fs, args, values); err != nil {

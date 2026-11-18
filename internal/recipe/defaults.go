@@ -46,7 +46,7 @@ func Default() *Recipe {
 		},
 		Output: Output{
 			Formats:  []string{"ttf", "woff"},
-			Targets:  []string{"universal", "web", "system", "unity"},
+			Targets:  []string{"universal", "web", "system", "unity", "apps"},
 			Specimen: true,
 			Open:     true,
 			SplitCJK: 0,

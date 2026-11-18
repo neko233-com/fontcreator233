@@ -60,6 +60,7 @@ func TestBuildSpecimen(t *testing.T) {
 		"./assets/vendor/tanstack-virtual.iife.js",
 		"TestFont-Regular.glyphs.js", "data-accent=\"#5B8CFF\"",
 		`id="asset-error"`, "__fontcreatorBoot",
+		"IN YOUR APPS", "剪映 / CapCut", "CAPTION PREVIEW", "Download TTF",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)

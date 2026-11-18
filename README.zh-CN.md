@@ -2,7 +2,7 @@
 
 **为 agent 打造的确定性、离线字体创造器。**
 
-你看参考图，fontcreator233 把你的视觉判断变成真正可安装的字体：TTF/WOFF、好看的本地 HTML 样张，以及 Unity TMP、Unreal、Web、系统四套产物。
+你看参考图，fontcreator233 把你的视觉判断变成真正可安装的字体：TTF/WOFF、好看的本地 HTML 样张，Unity TMP、Unreal、Web、系统产物，以及 Photoshop、剪映/CapCut、Premiere、Figma、Office 等应用的使用包。
 
 ![fontcreator233 样张](docs/assets/specimen-dark.png)
 
@@ -106,18 +106,22 @@ dist/
 ├─ fontcreator233.manifest.json
 ├─ web/font.css
 ├─ system/INSTALL.md
+├─ apps/           # Photoshop、剪映/CapCut、Premiere、Figma、Office…
 ├─ unity/          # UPM + TMP 导入器 + 字符集
 └─ unreal/         # Font 导入脚本 + CompositeFont ranges
 ```
 
+- **应用场景包**：`apps/` 包含 Photoshop、Illustrator、InDesign、剪映/CapCut、Premiere、After Effects、DaVinci、Final Cut、Figma、Canva、Office、OBS、Blender、Godot、Unity、Unreal 的说明，以及 `caption.srt`/`caption.ass` 字幕样例。桌面软件安装系统字体；Blender/Godot 直接加载 TTF；移动端剪映按版本可能支持导入或需要渲染图替代。
 - **Unity TMP**：`Tools/Fontcreator233/Create TMP Font Assets`、`Create Static TMP Font Assets`、`Wire Fallback Chain`。移动端可用 `--split-cjk 4096`。生成器不启动/测试 Unity。
 - **Unreal**：在 Editor Python 中运行 `unreal/Scripts/fontcreator233_import.py`；API 不支持时打印 CompositeFont 范围。生成器不启动/测试 UE。
 - **Web**：`web/font.css` 全部本地文件；分片字体带 `unicode-range`。不生成 WOFF2。
 - **系统**：`system/INSTALL.md` 覆盖 Windows/macOS/Linux。
 
+![fontcreator233 应用场景包](docs/assets/apps-dark.png)
+
 ## 好看、离线的样张
 
-Vercel/Geist 风格：巨大的生成字体 `Aa`、可编辑 type tester（字号/行距/字距）、scale 瀑布、多语言卡片、可搜索/筛选的虚拟化字形网格。
+Vercel/Geist 风格：巨大的生成字体 `Aa`、可编辑 type tester（字号/行距/字距）、scale 瀑布、多语言卡片、应用/字幕/海报预览、可搜索/筛选的虚拟化字形网格。
 
 - Geist Sans/Mono（OFL）做 UI。
 - TanStack Virtual（MIT）打包为经典脚本，`file://` 直接可开。

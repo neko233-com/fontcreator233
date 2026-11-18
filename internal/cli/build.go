@@ -19,7 +19,7 @@ func (a *app) cmdBuild(args []string) int {
 	fs := a.newFlagSet("build", &common)
 	out := fs.String("out", "dist", "output directory")
 	var targets stringList
-	fs.Var(&targets, "target", "universal|web|system|unity|unreal|all (repeatable)")
+	fs.Var(&targets, "target", "universal|web|system|unity|unreal|apps|all (repeatable)")
 	split := fs.Int("split-cjk", -1, "split CJK/Hangul into chunks of N codepoints (overrides recipe)")
 	jobs := fs.Int("jobs", 0, "worker count (default CPU count)")
 	assetsDir := fs.String("assets-dir", "", "shared web assets directory")

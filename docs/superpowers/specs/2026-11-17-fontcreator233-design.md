@@ -249,7 +249,7 @@ glyphs:
 
 output:
   formats: [ttf, woff]      # 支持 ttf / woff；默认两者
-  targets: [universal, web, system, unity]  # universal|web|system|unity|unreal|all
+  targets: [universal, web, system, unity, apps]  # universal|web|system|unity|unreal|apps|all
   specimen: true
   open: true                # CLI --no-open 可覆盖
   splitCJK: 0               # >0：按码位数切分 CJK 子字体；0=不切

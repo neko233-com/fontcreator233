@@ -19,9 +19,10 @@ Global behavior:
 fontcreator build recipe.yaml --out dist --target all --jobs 8 --no-open
 ```
 
-Flags: `--out`, `--target` (repeatable/comma), `--split-cjk`, `--jobs`,
-`--assets-dir`, `--self-contained-html`, `--no-auto-clean`, `--force`,
-`--no-open`, `--plain`, `--no-tui`, `--json`, `--quiet`.
+Flags: `--out`, `--target` (repeatable/comma; `universal`, `web`, `system`,
+`unity`, `unreal`, `apps`, `all`), `--split-cjk`, `--jobs`, `--assets-dir`,
+`--self-contained-html`, `--no-auto-clean`, `--force`, `--no-open`, `--plain`,
+`--no-tui`, `--json`, `--quiet`.
 
 ## build-all
 
@@ -77,6 +78,7 @@ fontcreator clean --out dist --dry-run          # staging/backup scratch only
 fontcreator clean --out dist --all --dry-run    # preview managed outputs
 fontcreator clean --out dist --all --yes
 fontcreator clean --out dist --target unity --yes
+fontcreator clean --out dist --target apps --yes
 fontcreator clean --out dist --older-than 7d --yes
 ```
 

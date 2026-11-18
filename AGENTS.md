@@ -3,7 +3,8 @@
 fontcreator233 is a deterministic, offline font creator. **You** (the agent) read
 the reference image and decide the style. The CLI never calls a vision model.
 It turns a reviewable `recipe.yaml` into real TTF/WOFF fonts, a local HTML
-specimen, and Unity/Unreal/Web/System packages.
+specimen, Unity/Unreal/Web/System packages, and an app handoff pack for
+Photoshop, 剪映/CapCut, Premiere, Figma, Office, and other editors.
 
 ## First call
 

@@ -518,6 +518,8 @@ func inferTarget(rel string) string {
 			return "web"
 		case "system":
 			return "system"
+		case "apps":
+			return "apps"
 		}
 	}
 	return "universal"

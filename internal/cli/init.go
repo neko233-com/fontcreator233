@@ -132,7 +132,7 @@ glyphs:
 
 output:
   formats: [ttf, woff]
-  targets: [universal, web, system, unity]
+  targets: [universal, web, system, unity, apps]
   specimen: true
   open: true
   splitCJK: 0

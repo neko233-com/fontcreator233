@@ -8,8 +8,9 @@
 **A deterministic, offline font creator built for agents.**
 
 You look at the reference image. fontcreator233 turns your visual decisions into
-a real, installable typeface — plus a polished local specimen and packages for
-Unity TMP, Unreal, the web, and your operating system.
+a real, installable typeface — plus a polished local specimen, packages for
+Unity TMP, Unreal, the web, and your operating system, and app handoff guides
+for Photoshop, 剪映/CapCut, Premiere, Figma, and Office.
 
 ![fontcreator233 specimen](docs/assets/specimen-dark.png)
 
@@ -211,9 +212,31 @@ dist/
 ├─ Charsets/
 ├─ web/font.css
 ├─ system/INSTALL.md
+├─ apps/           # Photoshop, 剪映/CapCut, Premiere, Figma, Office, …
 ├─ unity/          # UPM package + TMP importer + charsets
 └─ unreal/         # Font import script + CompositeFont ranges
 ```
+
+### Apps and editors
+
+`apps/` is a ready-to-hand-off usage pack rather than a fake integration. It
+ships a single `README.md`, a machine-readable `font-usage.json`, per-app guides,
+and `caption.srt` / `caption.ass` samples:
+
+![fontcreator233 app handoff](docs/assets/apps-dark.png)
+
+- **Adobe:** Photoshop, Illustrator, InDesign, Premiere Pro, After Effects.
+- **Video:** 剪映 / CapCut, DaVinci Resolve, Final Cut Pro, OBS.
+- **Design/docs:** Figma, Canva, Microsoft Office.
+- **3D/engine:** Blender, Godot, Unity, Unreal.
+- **Web/system:** local `font.css`, Windows/macOS/Linux install notes.
+
+The TTF is the source of truth. Photoshop, Premiere, Resolve, Office, OBS, and
+CapCut desktop use system-installed fonts; Figma desktop uses local fonts and
+Figma web needs the Font Helper; Blender and Godot load the font file directly.
+Mobile 剪映/CapCut builds vary, so the guide gives an import path and a
+rendered-artwork fallback. Caption samples are safe for SRT workflows and ASS
+styling. No app is launched or tested by the generator.
 
 ### Unity TMP
 
@@ -243,7 +266,8 @@ not generated; run `woff2_compress` externally if you need it.
 
 The HTML is a Vercel/Geist-inspired review surface: a giant generated `Aa`,
 editable type tester with size/leading/tracking, scale waterfall, multilingual
-coverage cards, and a virtualized glyph grid with search and script filters.
+coverage cards, an app/caption/poster preview, and a virtualized glyph grid with
+search and script filters.
 
 Everything is local:
 

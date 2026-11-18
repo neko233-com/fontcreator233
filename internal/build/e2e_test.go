@@ -79,6 +79,12 @@ func TestE2EThreeStyles(t *testing.T) {
 			"unity/Charsets/all.txt",
 			"unreal/Scripts/fontcreator233_import.py",
 			"unreal/fontcreator233.manifest.json",
+			"apps/README.md",
+			"apps/font-usage.json",
+			"apps/photoshop.md",
+			"apps/capcut.md",
+			"apps/caption.srt",
+			"apps/caption.ass",
 		} {
 			if _, err := os.Stat(filepath.Join(out, filepath.FromSlash(rel))); err != nil {
 				t.Fatalf("%s: missing %s: %v", path, rel, err)
@@ -88,7 +94,7 @@ func TestE2EThreeStyles(t *testing.T) {
 		if !strings.Contains(string(css), "@font-face") || !strings.Contains(string(css), "font-display: swap") {
 			t.Fatalf("%s: css = %s", path, css)
 		}
-		if len(res.Targets["unity"]) == 0 || len(res.Targets["unreal"]) == 0 {
+		if len(res.Targets["unity"]) == 0 || len(res.Targets["unreal"]) == 0 || len(res.Targets["apps"]) == 0 {
 			t.Fatalf("%s: targets = %#v", path, res.Targets)
 		}
 	}

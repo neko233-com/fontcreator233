@@ -48,7 +48,11 @@ Always use the agent's own vision. Do not ask the CLI to analyze an image.
 
 ## Package targets
 
-- `--target all` writes `universal`, `web`, `system`, `unity`, `unreal`.
+- `--target all` writes `universal`, `web`, `system`, `unity`, `unreal`, `apps`.
+- Apps: `apps/` contains per-app guides for Photoshop, Illustrator, InDesign,
+  剪映/CapCut, Premiere, After Effects, DaVinci, Final Cut, Figma, Canva,
+  Office, OBS, Blender, Godot, Unity, and Unreal, plus SRT/ASS caption samples.
+  Tell the user which apps read system fonts and which load the TTF directly.
 - Unity: `unity/` is a UPM package. `Editor/FontCreator233TMPImporter.cs`
   creates TMP Font Assets, multi-atlas settings, charsets, and fallback chains.
   The generator does not run Unity. Tell the user to install TMP and use

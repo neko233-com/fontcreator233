@@ -76,6 +76,7 @@ func Describe() map[string]any {
 			"system":    "TTF + install instructions",
 			"unity":     "UPM package + Editor TMP importer + charsets + manifest (generation only, no Unity test)",
 			"unreal":    "TTF + Editor Python import script + CompositeFont ranges",
+			"apps":      "App handoff pack: Photoshop/剪映/CapCut/Premiere/Figma/Office guides + SRT/ASS caption samples",
 		},
 		"limits": map[string]any{
 			"unitsPerEm": 1000,
@@ -121,6 +122,16 @@ func Markdown() string {
 	b.WriteString("\n## Commands\n\n")
 	for _, c := range Describe()["commands"].([]map[string]any) {
 		b.WriteString("- `" + c["name"].(string) + "` — " + c["summary"].(string) + "\n")
+	}
+	b.WriteString("\n## Targets\n\n")
+	platforms := Describe()["platforms"].(map[string]any)
+	keys = keys[:0]
+	for k := range platforms {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		b.WriteString("- **" + k + "**: " + platforms[k].(string) + "\n")
 	}
 	b.WriteString("\n## Limits\n\n")
 	b.WriteString("- unitsPerEm: 1000\n- No Arabic/Hebrew/Indic/Thai/complex shaping\n- WOFF2 is not generated\n- Unity/UE packages are generated, not tested against their Editors\n")

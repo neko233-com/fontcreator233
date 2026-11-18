@@ -2,6 +2,7 @@ package targets
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -89,6 +90,72 @@ func TestBuildWebSystemManifest(t *testing.T) {
 	}
 }
 
+func TestBuildApps(t *testing.T) {
+	dir := t.TempDir()
+	font := filepath.Join(dir, "Rock-Roll-Regular.ttf")
+	if err := os.WriteFile(font, []byte("font"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	paths, err := Build(context.Background(), Options{
+		OutDir:  dir,
+		Family:  "Rock & Roll",
+		Style:   "Regular",
+		License: "OFL-1.1",
+		Weight:  400,
+		Targets: []string{"apps"},
+		Fonts:   []FontInput{{Path: font, Primary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths["apps"]) < 10 {
+		t.Fatalf("apps paths = %v", paths["apps"])
+	}
+	for _, rel := range []string{
+		"apps/README.md", "apps/font-usage.json", "apps/photoshop.md",
+		"apps/capcut.md", "apps/premiere.md", "apps/davinci.md",
+		"apps/figma.md", "apps/blender.md", "apps/caption.srt", "apps/caption.ass",
+	} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+			t.Fatalf("missing %s: %v", rel, err)
+		}
+	}
+	readme, _ := os.ReadFile(filepath.Join(dir, "apps", "README.md"))
+	for _, want := range []string{"Photoshop", "剪映 / CapCut", "Premiere Pro", "Blender", "caption.srt"} {
+		if !strings.Contains(string(readme), want) {
+			t.Fatalf("README missing %q", want)
+		}
+	}
+	ass, _ := os.ReadFile(filepath.Join(dir, "apps", "caption.ass"))
+	if !strings.Contains(string(ass), "Rock & Roll") {
+		t.Fatalf("ASS font name missing: %s", ass)
+	}
+	m, err := integration.ReadJSON(filepath.Join(dir, "fontcreator233.manifest.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Apps == nil || m.Apps.Usage != "apps/font-usage.json" || len(m.Apps.Guides) < 10 {
+		t.Fatalf("manifest apps = %#v", m.Apps)
+	}
+	var usage struct {
+		Schema   string `json:"schema"`
+		Captions []string
+		Apps     []struct {
+			ID string `json:"id"`
+		}
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, "apps", "font-usage.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &usage); err != nil {
+		t.Fatal(err)
+	}
+	if usage.Schema != "fontcreator233/apps/v1" || len(usage.Apps) < 16 || len(usage.Captions) != 2 {
+		t.Fatalf("font-usage = %#v", usage)
+	}
+}
+
 func TestWebSpecimenWithExternalAssets(t *testing.T) {
 	dir := t.TempDir()
 	font := filepath.Join(dir, "Test-Regular.ttf")
@@ -135,7 +202,7 @@ func TestWebSpecimenWithExternalAssets(t *testing.T) {
 
 func TestExpandTargets(t *testing.T) {
 	all, err := expandTargets([]string{"all"})
-	if err != nil || len(all) != 5 {
+	if err != nil || len(all) != 6 {
 		t.Fatalf("all = %v err=%v", all, err)
 	}
 	if _, err := expandTargets([]string{"nope"}); err == nil {

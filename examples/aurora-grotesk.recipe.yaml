@@ -46,7 +46,7 @@ glyphs:
 
 output:
   formats: [ttf, woff]
-  targets: [universal, web, system, unity, unreal]
+  targets: [universal, web, system, unity, unreal, apps]
   specimen: true
   open: false
   splitCJK: 0

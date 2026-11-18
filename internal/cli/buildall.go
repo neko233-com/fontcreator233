@@ -27,7 +27,7 @@ func (a *app) cmdBuildAll(args []string) int {
 	fontJobs := fs.Int("font-jobs", 0, "number of fonts to build concurrently")
 	jobs := fs.Int("jobs", 0, "worker count per font")
 	var targets stringList
-	fs.Var(&targets, "target", "universal|web|system|unity|unreal|all")
+	fs.Var(&targets, "target", "universal|web|system|unity|unreal|apps|all")
 	split := fs.Int("split-cjk", -1, "split CJK/Hangul chunks (overrides recipe)")
 	assetsDir := fs.String("assets-dir", "", "shared web assets directory")
 	selfContained := fs.Bool("self-contained-html", false, "inline web assets")

@@ -88,7 +88,7 @@ func Schema() map[string]any {
 		},
 		"targets": map[string]any{
 			"type":  "array",
-			"items": enum("Platform target", "universal", "web", "system", "unity", "unreal", "all"),
+			"items": enum("Platform target", "universal", "web", "system", "unity", "unreal", "apps", "all"),
 		},
 		"specimen": boolean("Generate the HTML specimen"),
 		"open":     boolean("Open the specimen when the build completes"),

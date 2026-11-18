@@ -12,6 +12,8 @@ Vercel/Geist visual language and works directly from `file://` with no network.
 - Scale waterfall from caption to poster.
 - Global coverage cards for Latin, Greek, Russian, Chinese, Japanese, Korean,
   and symbols.
+- App handoff section: Photoshop, 剪映/CapCut, Premiere, After Effects, DaVinci,
+  Figma, Office, Unity/Unreal; caption preview and poster preview.
 - Virtualized glyph library with character/codepoint search and script filter.
 - Webfont CSS, details, license note, and a closing panel.
 

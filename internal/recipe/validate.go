@@ -190,7 +190,7 @@ func validateOutput(o *Output) error {
 		return fail("output.targets", "must not be empty", o.Targets)
 	}
 	for _, t := range o.Targets {
-		if err := oneOf("output.targets", t, "universal", "web", "system", "unity", "unreal", "all"); err != nil {
+		if err := oneOf("output.targets", t, "universal", "web", "system", "unity", "unreal", "apps", "all"); err != nil {
 			return err
 		}
 	}

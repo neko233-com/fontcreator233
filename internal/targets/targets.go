@@ -152,6 +152,12 @@ func Build(ctx context.Context, o Options) (map[string][]string, error) {
 				return nil, err
 			}
 			result["unreal"] = paths
+		case "apps":
+			paths, err := buildApps(o)
+			if err != nil {
+				return nil, err
+			}
+			result["apps"] = paths
 		}
 		select {
 		case <-ctx.Done():
@@ -162,16 +168,25 @@ func Build(ctx context.Context, o Options) (map[string][]string, error) {
 	return result, nil
 }
 
+func targetSelected(in []string, want string) bool {
+	for _, t := range in {
+		if t == want || t == "all" {
+			return true
+		}
+	}
+	return false
+}
+
 func expandTargets(in []string) ([]string, error) {
 	if len(in) == 0 {
 		return []string{"universal"}, nil
 	}
-	allowed := map[string]bool{"universal": true, "web": true, "system": true, "unity": true, "unreal": true}
+	allowed := map[string]bool{"universal": true, "web": true, "system": true, "unity": true, "unreal": true, "apps": true}
 	seen := map[string]bool{}
 	var out []string
 	for _, t := range in {
 		if t == "all" {
-			for _, a := range []string{"universal", "web", "system", "unity", "unreal"} {
+			for _, a := range []string{"universal", "web", "system", "unity", "unreal", "apps"} {
 				if !seen[a] {
 					seen[a] = true
 					out = append(out, a)
@@ -211,6 +226,14 @@ func buildManifest(o Options) (*integration.Manifest, error) {
 	}
 	if o.License == "OFL-1.1" {
 		m.LicenseFile = "OFL.txt"
+	}
+	if targetSelected(o.Targets, "apps") {
+		guides := make([]string, 0, len(appGuides))
+		for _, app := range appGuides {
+			guides = append(guides, "apps/"+app.ID+".md")
+		}
+		sort.Strings(guides)
+		m.Apps = &integration.Apps{Usage: "apps/font-usage.json", Guides: guides}
 	}
 	var allRunes []rune
 	for _, f := range o.Fonts {

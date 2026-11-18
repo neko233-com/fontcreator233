@@ -53,6 +53,12 @@ type Web struct {
 	FontDisplay string `json:"fontDisplay"`
 }
 
+// Apps points at the generated app handoff pack.
+type Apps struct {
+	Usage  string   `json:"usage"`
+	Guides []string `json:"guides,omitempty"`
+}
+
 // Manifest is fontcreator233/integration/v1.
 type Manifest struct {
 	Schema          string   `json:"schema"`
@@ -68,6 +74,7 @@ type Manifest struct {
 	UnityTMP        TMP      `json:"unityTMP"`
 	UnrealComposite Unreal   `json:"unrealComposite"`
 	Web             Web      `json:"web"`
+	Apps            *Apps    `json:"apps,omitempty"`
 }
 
 // Ranges compresses sorted code points into inclusive ranges.
