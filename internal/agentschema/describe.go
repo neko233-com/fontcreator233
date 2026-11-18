@@ -47,6 +47,7 @@ func Describe() map[string]any {
 			"contrast":  "0 uniform geometric strokes; 0.4 humanist; 0.85+ Didone/hairline. Modulates stroke width by tangent angle.",
 			"serif":     "none|slab|bracketed|hairline. Applied to vertical stem endpoints.",
 			"terminal":  "flat|round|angled|flare. Applied to open stroke endpoints; flare widens near the ends.",
+			"tracking":  "Extra advance in percent of em, -5..10. Use 1-2% for flared/display faces.",
 			"roughness": "0 clean; 0.15 hand-drawn; 0.5 loose brush. Deterministic via seed.",
 			"seed":      "Any int64. Same seed + recipe + tool version = same bytes on the same platform.",
 			"skeleton":  "geometric|humanist|serif; affects letterform variants (a/g) and style defaults.",
