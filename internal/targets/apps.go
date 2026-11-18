@@ -37,7 +37,7 @@ var appGuides = []appGuide{
 	{
 		ID: "capcut", Name: "剪映 / CapCut", Platforms: "Windows, macOS, iOS, Android", Method: "System font or import",
 		Use:   "Desktop reads system-installed fonts: install the TTF, restart CapCut, add text, then choose the family from the font picker. Mobile versions vary; when the picker exposes Import font, select the TTF. Otherwise render the text in the desktop app or use the caption sample as a style reference.",
-		Notes: []string{"Some mobile builds only expose built-in fonts; keep a PNG or desktop-rendered title as fallback.", "Import caption.srt for a subtitle track, or use caption.ass in tools that accept ASS styles."},
+		Notes: []string{"手机端常见路径是 文本 → 字体 → 导入字体；不同版本的菜单名称可能不同。", "Some mobile builds only expose built-in fonts; keep a PNG or desktop-rendered title as fallback.", "Import caption.srt for a subtitle track, or use caption.ass in tools that accept ASS styles."},
 	},
 	{
 		ID: "premiere", Name: "Adobe Premiere Pro", Platforms: "Windows, macOS", Method: "System font",
