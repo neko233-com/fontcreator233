@@ -8,6 +8,7 @@ import (
 
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
+	"github.com/neko233-com/fontcreator233/internal/specimen"
 	"github.com/neko233-com/fontcreator233/internal/style"
 	"github.com/neko233-com/fontcreator233/internal/ui"
 	"github.com/neko233-com/fontcreator233/internal/workspace"
@@ -87,6 +88,9 @@ func (a *app) cmdBuild(args []string) int {
 			return a.fail("build", 130, err)
 		}
 		return a.fail("build", 1, err)
+	}
+	if res.SpecimenPath != "" && r.Output.Open && !common.noOpen && !isCI() && !a.json {
+		_ = specimen.Open(res.SpecimenPath)
 	}
 	if a.json {
 		extra := map[string]any{

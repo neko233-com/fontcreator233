@@ -185,6 +185,9 @@ func (s *Server) callTool(ctx context.Context, name string, args json.RawMessage
 						NoOpen:   !a.Open,
 					}, nil)
 					if err == nil {
+						if a.Open && res.SpecimenPath != "" {
+							_ = specimen.Open(res.SpecimenPath)
+						}
 						payload = map[string]any{
 							"ok": true, "font": res.FontPath, "woff": res.WOFFPath,
 							"specimen": res.SpecimenPath, "family": res.Family, "style": res.Style,

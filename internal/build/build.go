@@ -260,7 +260,9 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			AssetsDir:     o.AssetsDir,
 			LinkDir:       o.FinalOutDir,
 			SelfContained: o.SelfContainedHTML,
-			Open:          r.Output.Open && !o.NoOpen,
+			// Opening happens after the workspace commit, against the final
+			// path; opening a stage file would leave a dead tab.
+			Open: false,
 			Data: specimen.Data{
 				Family:      r.Meta.Family,
 				Style:       resolvedStyle,
@@ -331,7 +333,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	}
 	result.Warnings = warnings
 	result.Duration = time.Since(start)
-	summary := result.FontPath
+	summary := result.Family + " " + result.Style
 	if result.SHA256 != "" {
 		summary += " · " + result.SHA256[:12]
 	}

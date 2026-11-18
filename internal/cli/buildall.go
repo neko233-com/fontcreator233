@@ -13,6 +13,7 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/parallel"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
+	"github.com/neko233-com/fontcreator233/internal/specimen"
 	"github.com/neko233-com/fontcreator233/internal/style"
 	"github.com/neko233-com/fontcreator233/internal/ui"
 	"github.com/neko233-com/fontcreator233/internal/workspace"
@@ -128,6 +129,13 @@ func (a *app) cmdBuildAll(args []string) int {
 	}
 	for i := range results {
 		build.RewritePaths(&results[i], stage.Root, ws.Dir)
+	}
+	if *open && !a.json && !isCI() {
+		for _, res := range results {
+			if res.SpecimenPath != "" {
+				_ = specimen.Open(res.SpecimenPath)
+			}
+		}
 	}
 	if a.json {
 		list := make([]map[string]any, 0, len(results))
