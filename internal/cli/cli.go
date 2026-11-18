@@ -80,7 +80,7 @@ func Run(args []string, io IO) int {
 	case "export":
 		return a.cmdExport(rest)
 	case "mcp":
-		return a.fail(cmd, 1, fmt.Errorf("%s is not wired yet in this build", cmd))
+		return a.cmdMCP(rest)
 	default:
 		return a.fail(cmd, 1, fmt.Errorf("unknown command %q", cmd))
 	}
