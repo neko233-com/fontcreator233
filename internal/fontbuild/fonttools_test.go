@@ -12,6 +12,9 @@ func TestFontToolsValidation(t *testing.T) {
 	if err != nil {
 		t.Skip("python not available")
 	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
 	cfg := testConfig()
 	data, err := Build(cfg)
 	if err != nil {

@@ -11,6 +11,9 @@ func TestFontToolsSample(t *testing.T) {
 	if err != nil {
 		t.Skip("python not available")
 	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
 	r := sampleRecipe(t)
 	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
 	if err != nil {
