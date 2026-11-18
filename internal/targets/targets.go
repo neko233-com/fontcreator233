@@ -75,10 +75,31 @@ func Build(ctx context.Context, o Options) (map[string][]string, error) {
 	for _, f := range o.Fonts {
 		allRunes = append(allRunes, f.Runes...)
 	}
+	splitSet := map[rune]bool{}
+	for _, f := range o.Fonts[1:] {
+		for _, r := range f.Runes {
+			splitSet[r] = true
+		}
+	}
 	charsets := integration.Charsets(allRunes)
 	all := append([]rune(nil), allRunes...)
 	sort.Slice(all, func(i, j int) bool { return all[i] < all[j] })
 	charsets["all"] = string(all)
+	if len(o.Fonts) > 1 {
+		var base []rune
+		for _, r := range o.Fonts[0].Runes {
+			if !splitSet[r] {
+				base = append(base, r)
+			}
+		}
+		sort.Slice(base, func(i, j int) bool { return base[i] < base[j] })
+		charsets["base"] = string(base)
+		for i, f := range o.Fonts[1:] {
+			runes := append([]rune(nil), f.Runes...)
+			sort.Slice(runes, func(a, b int) bool { return runes[a] < runes[b] })
+			charsets[fmt.Sprintf("cjk-%02d", i+1)] = string(runes)
+		}
+	}
 	charsetDir := filepath.Join(o.OutDir, "Charsets")
 	if err := os.MkdirAll(charsetDir, 0o755); err != nil {
 		return nil, err
@@ -206,12 +227,19 @@ func buildManifest(o Options) (*integration.Manifest, error) {
 				return nil, err
 			}
 		}
+		charset := "Charsets/all.txt"
+		if i > 0 {
+			charset = fmt.Sprintf("Charsets/cjk-%02d.txt", i)
+		} else if len(o.Fonts) > 1 {
+			charset = "Charsets/base.txt"
+		}
 		font := integration.Font{
 			Path:    rel,
 			SHA256:  sha,
 			Primary: f.Primary || i == 0,
 			Scripts: integration.Scripts(f.Runes),
 			Ranges:  integration.Ranges(f.Runes),
+			Charset: charset,
 		}
 		if f.WOFF != "" {
 			font.WOFF, err = relPath(o.OutDir, f.WOFF)

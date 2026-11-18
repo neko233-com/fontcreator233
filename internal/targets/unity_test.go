@@ -72,14 +72,16 @@ func TestUnityTarget(t *testing.T) {
 	if len(m.Fallbacks) != 2 || m.Fallbacks[1] != "Fonts/Aurora-CJK-01.ttf" {
 		t.Fatalf("fallbacks = %#v", m.Fallbacks)
 	}
-	if len(m.UnityTMP.StaticCharsets) != 1 || m.UnityTMP.StaticCharsets[0] != "Charsets/all.txt" {
-		t.Fatalf("tmp = %#v", m.UnityTMP)
+	if m.Fonts[0].Charset != "Charsets/base.txt" || m.Fonts[1].Charset != "Charsets/cjk-01.txt" {
+		t.Fatalf("charsets = %#v", m.Fonts)
 	}
 	for _, p := range []string{
 		"Editor/FontCreator233TMPImporter.cs",
 		"Fonts/Aurora-Regular.ttf",
 		"Fonts/Aurora-CJK-01.ttf",
 		"Charsets/all.txt",
+		"Charsets/base.txt",
+		"Charsets/cjk-01.txt",
 		"Charsets/cjk.txt",
 		"Charsets/hangul.txt",
 		"OFL.txt",

@@ -17,6 +17,7 @@ namespace FontCreator233
         public string sha256;
         public bool primary;
         public string[] scripts;
+        public string charset;
     }
 
     [Serializable]
@@ -185,7 +186,9 @@ namespace FontCreator233
                 fontAsset.name = Path.GetFileNameWithoutExtension(fontEntry.path);
                 if (staticMode)
                 {
-                    string[] charsets = manifest.unityTMP.staticCharsets ?? manifest.charsets ?? new string[0];
+                    string[] charsets = !string.IsNullOrEmpty(fontEntry.charset)
+                        ? new[] { fontEntry.charset }
+                        : (manifest.unityTMP.staticCharsets ?? manifest.charsets ?? new string[0]);
                     foreach (string charset in charsets)
                     {
                         string charsetPath = packageRoot + "/" + charset;

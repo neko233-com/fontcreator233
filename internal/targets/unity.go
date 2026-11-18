@@ -2,6 +2,7 @@ package targets
 
 import (
 	"embed"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -98,6 +99,32 @@ func buildUnity(o Options, root *integration.Manifest) ([]string, error) {
 	all := append([]rune(nil), allRunes...)
 	sort.Slice(all, func(i, j int) bool { return all[i] < all[j] })
 	charsets["all"] = string(all)
+	if len(o.Fonts) > 1 {
+		splitSet := map[rune]bool{}
+		for _, f := range o.Fonts[1:] {
+			for _, r := range f.Runes {
+				splitSet[r] = true
+			}
+		}
+		var base []rune
+		for _, r := range o.Fonts[0].Runes {
+			if !splitSet[r] {
+				base = append(base, r)
+			}
+		}
+		sort.Slice(base, func(i, j int) bool { return base[i] < base[j] })
+		charsets["base"] = string(base)
+		manifestFonts[0].Charset = "Charsets/base.txt"
+		for i, f := range o.Fonts[1:] {
+			runes := append([]rune(nil), f.Runes...)
+			sort.Slice(runes, func(a, b int) bool { return runes[a] < runes[b] })
+			name := fmt.Sprintf("cjk-%02d", i+1)
+			charsets[name] = string(runes)
+			manifestFonts[i+1].Charset = "Charsets/" + name + ".txt"
+		}
+	} else if len(manifestFonts) > 0 {
+		manifestFonts[0].Charset = "Charsets/all.txt"
+	}
 	charsetNames := make([]string, 0, len(charsets))
 	for script, text := range charsets {
 		name := "Charsets/" + script + ".txt"
@@ -114,7 +141,7 @@ func buildUnity(o Options, root *integration.Manifest) ([]string, error) {
 	m.Fonts = manifestFonts
 	m.Fallbacks = fallbacks
 	m.Charsets = charsetNames
-	m.UnityTMP.StaticCharsets = []string{"Charsets/all.txt"}
+	m.UnityTMP.StaticCharsets = nil
 	m.Web = integration.Web{CSS: "../web/font.css", FontDisplay: "swap"}
 	if err := integration.WriteJSON(filepath.Join(dir, "fontcreator233.manifest.json"), &m); err != nil {
 		return nil, err
