@@ -11,6 +11,8 @@ func TestOS2UnicodeRangeBits(t *testing.T) {
 		Glyph{Rune: '한', Advance: 1000},
 		Glyph{Rune: 'あ', Advance: 1000},
 		Glyph{Rune: '“', Advance: 500},
+		Glyph{Rune: 0x3400, Advance: 1000},
+		Glyph{Rune: 0x20000, Advance: 1000},
 	)
 	data, err := Build(cfg)
 	if err != nil {
@@ -34,5 +36,8 @@ func TestOS2UnicodeRangeBits(t *testing.T) {
 	}
 	if !has('“', 31) {
 		t.Fatal("General Punctuation must set bit 31")
+	}
+	if !has(0x3400, 59) || !has(0x20000, 59) {
+		t.Fatal("CJK Ext A/B must set bit 59")
 	}
 }
