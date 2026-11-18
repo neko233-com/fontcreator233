@@ -34,8 +34,8 @@ Just Go, an OFL base font, and a recipe.
   and system install notes.
 - **Pleasant to use**: Bubble Tea TUI with progress, ETA, cancellation, and a
   plain/JSON fallback for automation.
-- **Safe workspace**: builds stage and commit atomically; `clean` only deletes
-  state-tracked files whose SHA-256 still matches.
+- **Safe workspace**: builds stage and commit atomically; `clean` removes only
+  scratch or state-tracked files whose SHA-256 still matches.
 
 ## Install
 
@@ -82,7 +82,7 @@ fontcreator inspect dist/MyTypeface-Regular.ttf --json
 ```
 
 The agent-side mapping from visual signals to `weight`, `contrast`, `serif`,
-`terminal`, `width`, `slant`, `roughness`, and `seed` is documented in
+`terminal`, `width`, `slant`, `tracking`, `roughness`, and `seed` is documented in
 [`AGENTS.md`](AGENTS.md),
 [`agent-skill/fontcreator233/SKILL.md`](agent-skill/fontcreator233/SKILL.md),
 and [`docs/agent-workflow.md`](docs/agent-workflow.md).

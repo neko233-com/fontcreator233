@@ -20,7 +20,7 @@ fontcreator build work/font.recipe.yaml --out dist --target all
 - **全球化**：拉丁/希腊/西里尔参数化生成，CJK/假名/谚文/符号来自内嵌 OFL 基础字库；覆盖率如实报告。
 - **真实产物**：TTF、WOFF、HTML 样张、Unity UPM + TMP 导入器、Unreal 导入脚本 + CompositeFont 范围、Web CSS、系统安装说明。
 - **CLI 好看**：Bubble Tea 进度、ETA、取消；非 TTY/CI/JSON 自动降级。
-- **工作区安全**：staging + 原子提交；`clean` 只删自己生成且 SHA-256 未变的文件。
+- **工作区安全**：staging + 原子提交；`clean` 只删暂存/历史或自己生成且 SHA-256 未变的文件。
 
 ## 安装
 
