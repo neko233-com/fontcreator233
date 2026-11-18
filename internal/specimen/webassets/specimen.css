@@ -408,6 +408,11 @@ button { cursor: pointer; }
 }
 .feature-demo .feature-pair { display: block; margin-top: 18px; color: var(--muted); font-size: .34em; letter-spacing: -.03em; }
 .feature-code { margin-top: 18px; }
+.feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 22px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.feature-row { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--panel-solid); }
+.feature-sample { font-size: 34px; line-height: 1.1; letter-spacing: -.04em; }
+.feature-label { color: var(--muted); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .04em; }
+.feature-label b { color: var(--ink); font-weight: 500; }
 
 .scale-list { border-top: 1px solid var(--line); }
 .scale-row {
@@ -710,6 +715,7 @@ button { cursor: pointer; }
   .tester-controls { grid-template-columns: 1fr 1fr; }
   .apps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .apps-workflow { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
   .nav { width: calc(100% - 28px); }
@@ -726,6 +732,7 @@ button { cursor: pointer; }
   .scale-row { grid-template-columns: 1fr; gap: 6px; }
   .scale-row span:last-child { font-size: min(var(--size), 44px); }
   .apps-grid { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr; }
   .caption-frame, .poster-demo { min-height: 280px; }
   .glyph-toolbar { flex-direction: column; }
   .glyph-toolbar select { width: 100%; }

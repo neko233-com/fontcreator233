@@ -27,8 +27,8 @@ for name in f.getGlyphOrder():
     f["glyf"][name]
 if "GSUB" not in f or "liga" not in [r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord]:
     raise SystemExit("GSUB liga missing")
-if not {"case", "frac", "tnum", "ss01"}.issubset({r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord}):
-    raise SystemExit("GSUB case/frac/tnum/ss01 missing")
+if not {"case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs"}.issubset({r.FeatureTag for r in f["GSUB"].table.FeatureList.FeatureRecord}):
+    raise SystemExit("GSUB feature set incomplete")
 gpos_tags = [r.FeatureTag for r in f["GPOS"].table.FeatureList.FeatureRecord] if "GPOS" in f else []
 if "kern" not in gpos_tags or "mark" not in gpos_tags:
     raise SystemExit(f"GPOS kern/mark missing: {gpos_tags}")

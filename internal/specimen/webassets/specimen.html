@@ -119,6 +119,11 @@
       {{if .Data.HasCase}}<span><b>case</b> raised punctuation</span>{{end}}
       {{if .Data.HasTnum}}<span><b>tnum</b> tabular figures</span>{{end}}
       {{if .Data.HasSS01}}<span><b>ss01</b> alternate a</span>{{end}}
+      {{if .Data.HasSmcp}}<span><b>smcp</b> small caps</span>{{end}}
+      {{if .Data.HasOnum}}<span><b>onum</b> oldstyle figures</span>{{end}}
+      {{if .Data.HasZero}}<span><b>zero</b> slashed zero</span>{{end}}
+      {{if .Data.HasSups}}<span><b>sups</b> superscript</span>{{end}}
+      {{if .Data.HasSubs}}<span><b>subs</b> subscript</span>{{end}}
       <span><b>mark</b> combining accents</span>
     </div>
     <div class="feature-controls">
@@ -157,6 +162,14 @@
     </div>
     <div id="feature-demo" class="feature-demo specimen-font">fi fl ffi ffl<br><span class="feature-pair">AVATAR · To Wa · 1/2 3/4 1/8 · (A) [B] · 0123 · q́</span></div>
     <pre id="feature-code" class="code feature-code">font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;</pre>
+    <div class="feature-grid specimen-font">
+      {{if .Data.HasSmcp}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "smcp" 1'>Small Caps</span><span class="feature-label"><b>smcp</b> small caps</span></div>{{end}}
+      {{if .Data.HasOnum}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "onum" 1'>0123456789</span><span class="feature-label"><b>onum</b> oldstyle figures</span></div>{{end}}
+      {{if .Data.HasZero}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "zero" 1'>0 O</span><span class="feature-label"><b>zero</b> slashed zero</span></div>{{end}}
+      {{if .Data.HasSups}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "sups" 1'>x2 + y2</span><span class="feature-label"><b>sups</b> superscript</span></div>{{end}}
+      {{if .Data.HasSubs}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "subs" 1'>H2O</span><span class="feature-label"><b>subs</b> subscript</span></div>{{end}}
+      <div class="feature-row"><span class="feature-sample" style='font-feature-settings: "mark" 1'>q́ Ä</span><span class="feature-label"><b>mark</b> anchor positioning</span></div>
+    </div>
   </section>
 
   <section id="scale" class="panel scale">

@@ -33,8 +33,9 @@ Just Go, an OFL base font, and a recipe.
 - **Real outputs**: TTF, WOFF, local HTML specimen, Unity UPM + TMP importer,
   Unreal import script + CompositeFont ranges, Web CSS with `unicode-range`,
   system install notes, and app handoff guides.
-- **OpenType**: generated `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`, and
-  basic `mark` anchors, plus GPOS and legacy kern tables.
+- **OpenType**: generated `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
+  `smcp`, `onum`, `zero`, `sups`, `subs`, and basic `mark` anchors, plus GPOS
+  and legacy kern tables.
 - **Pleasant to use**: Bubble Tea TUI with progress, ETA, cancellation, and a
   plain/JSON fallback for automation.
 - **Safe workspace**: builds stage and commit atomically; `clean` removes only
@@ -281,9 +282,9 @@ not generated; run `woff2_compress` externally if you need it.
 
 The HTML is a Vercel/Geist-inspired review surface: a giant generated `Aa`,
 editable type tester with size/leading/tracking, an OpenType feature playground
-(liga + kern), scale waterfall, multilingual coverage cards, an
-app/caption/poster preview, and a virtualized glyph grid with search and script
-filters.
+(liga, kern, frac, case, tnum, ss01, smcp, onum, zero, sups, subs, mark), scale
+waterfall, multilingual coverage cards, an app/caption/poster preview, and a
+virtualized glyph grid with search and script filters.
 
 ![OpenType feature playground](docs/assets/opentype-dark.png)
 
@@ -355,10 +356,11 @@ Optional cross-checks use fontTools and `fc-scan` in CI.
 
 - No Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
 - No variable-font output, color fonts, emoji, or WOFF2 encoding.
-- Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`, and
-  simple top-center mark anchors. It does not generate contextual substitutions,
-  mark-to-mark, cursive attachment, variable axes, color layers, or advanced
-  GPOS/GSUB. `learn` can report those features in other fonts.
+- Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
+  `smcp`, `onum`, `zero`, `sups`, `subs`, and simple top-center mark anchors.
+  It does not generate contextual substitutions, mark-to-mark, cursive
+  attachment, variable axes, color layers, or advanced GPOS/GSUB. `learn` can
+  report those features in other fonts.
 - CJK/Hangul style transfer is geometric + synthetic bold, not a full redraw.
 - Unity/Unreal packages are generated; validate them in your Editor.
 - Builds are byte-identical within one tool version, OS/arch, and Go version.

@@ -185,7 +185,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	}
 	result.GlyphRunes = append([]rune(nil), keys...)
 	extraGlyphs, ligatures := makeLigatures(merged)
-	featureGlyphs, substitutions := makeSubstitutions(merged, int(math.Round(r.Metrics.CapHeight*1000)))
+	featureGlyphs, substitutions := makeSubstitutions(merged, int(math.Round(r.Metrics.CapHeight*1000)), int(math.Round(r.Metrics.XHeight*1000)))
 	fractionGlyphs, fractionLigatures := makeFractions(merged)
 	glyphs = append(glyphs, extraGlyphs...)
 	glyphs = append(glyphs, featureGlyphs...)
@@ -291,6 +291,11 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 				HasCase:      hasSubstitutionFeature(substitutions, "case"),
 				HasTnum:      hasSubstitutionFeature(substitutions, "tnum"),
 				HasSS01:      hasSubstitutionFeature(substitutions, "ss01"),
+				HasSmcp:      hasSubstitutionFeature(substitutions, "smcp"),
+				HasOnum:      hasSubstitutionFeature(substitutions, "onum"),
+				HasZero:      hasSubstitutionFeature(substitutions, "zero"),
+				HasSups:      hasSubstitutionFeature(substitutions, "sups"),
+				HasSubs:      hasSubstitutionFeature(substitutions, "subs"),
 				KernPairs:    len(kerning),
 			},
 		})
@@ -721,7 +726,7 @@ func makeLigatures(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbu
 	return out, ligs
 }
 
-func makeSubstitutions(glyphs map[rune]fontbuild.Glyph, capHeight int) ([]fontbuild.Glyph, []fontbuild.Substitution) {
+func makeSubstitutions(glyphs map[rune]fontbuild.Glyph, capHeight, xHeight int) ([]fontbuild.Glyph, []fontbuild.Substitution) {
 	var out []fontbuild.Glyph
 	var subs []fontbuild.Substitution
 	digits := []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
@@ -765,6 +770,93 @@ func makeSubstitutions(glyphs map[rune]fontbuild.Glyph, capHeight int) ([]fontbu
 		name := glyphName('a') + ".alt"
 		out = append(out, fontbuild.Glyph{Name: name, NoCmap: true, Advance: g.Advance, Path: path})
 		subs = append(subs, fontbuild.Substitution{Feature: "ss01", From: glyphName('a'), To: name})
+	}
+
+	// Small caps: scale uppercase outlines down to x-height.
+	smcpScale := 0.72
+	if capHeight > 0 && xHeight > 0 {
+		smcpScale = float64(xHeight) / float64(capHeight)
+	}
+	if smcpScale < 0.6 {
+		smcpScale = 0.6
+	}
+	if smcpScale > 0.85 {
+		smcpScale = 0.85
+	}
+	for rn := 'a'; rn <= 'z'; rn++ {
+		lower, okLower := glyphs[rn]
+		upper, okUpper := glyphs[rn-32]
+		if !okLower || !okUpper || len(lower.Path) == 0 || len(upper.Path) == 0 || upper.Advance <= 0 {
+			continue
+		}
+		path := upper.Path.Transformed(geom.Scale(smcpScale, smcpScale))
+		advance := int(math.Round(float64(upper.Advance) * smcpScale))
+		name := glyphName(rn) + ".smcp"
+		out = append(out, fontbuild.Glyph{Name: name, NoCmap: true, Advance: advance, Path: path})
+		subs = append(subs, fontbuild.Substitution{Feature: "smcp", From: glyphName(rn), To: name})
+	}
+
+	// Oldstyle figures: approximate with a smaller size and vertical offsets.
+	oldstyleScale := 0.82
+	oldstyleDescenders := map[rune]bool{'3': true, '4': true, '5': true, '7': true, '9': true}
+	oldstyleAscenders := map[rune]bool{'6': true, '8': true}
+	for _, rn := range digits {
+		g, ok := glyphs[rn]
+		if !ok || len(g.Path) == 0 {
+			continue
+		}
+		path := g.Path.Transformed(geom.Scale(oldstyleScale, oldstyleScale))
+		switch {
+		case oldstyleDescenders[rn]:
+			path = path.Transformed(geom.Translate(0, -150))
+		case oldstyleAscenders[rn]:
+			path = path.Transformed(geom.Translate(0, 110))
+		}
+		advance := int(math.Round(float64(g.Advance) * oldstyleScale))
+		name := glyphName(rn) + ".onum"
+		out = append(out, fontbuild.Glyph{Name: name, NoCmap: true, Advance: advance, Path: path})
+		subs = append(subs, fontbuild.Substitution{Feature: "onum", From: glyphName(rn), To: name})
+	}
+
+	// Superscript and subscript figures.
+	for _, rn := range digits {
+		g, ok := glyphs[rn]
+		if !ok || len(g.Path) == 0 {
+			continue
+		}
+		advance := int(math.Round(float64(g.Advance) * 0.62))
+		supsPath := g.Path.Transformed(geom.Scale(0.62, 0.62)).Transformed(geom.Translate(0, 360))
+		supsName := glyphName(rn) + ".sups"
+		out = append(out, fontbuild.Glyph{Name: supsName, NoCmap: true, Advance: advance, Path: supsPath})
+		subs = append(subs, fontbuild.Substitution{Feature: "sups", From: glyphName(rn), To: supsName})
+
+		subsPath := g.Path.Transformed(geom.Scale(0.62, 0.62)).Transformed(geom.Translate(0, -90))
+		subsName := glyphName(rn) + ".subs"
+		out = append(out, fontbuild.Glyph{Name: subsName, NoCmap: true, Advance: advance, Path: subsPath})
+		subs = append(subs, fontbuild.Substitution{Feature: "subs", From: glyphName(rn), To: subsName})
+	}
+
+	// Slashed zero.
+	if zero, ok := glyphs['0']; ok && len(zero.Path) > 0 {
+		b := zero.Path.Bounds()
+		w, h := b.Width(), b.Height()
+		if w > 0 && h > 0 {
+			path := zero.Path.Clone()
+			p1 := geom.Point{X: b.MinX + w*0.22, Y: b.MinY + h*0.06}
+			p2 := geom.Point{X: b.MaxX - w*0.22, Y: b.MaxY - h*0.06}
+			dir := p2.Sub(p1).Normalize()
+			normal := geom.Point{X: -dir.Y, Y: dir.X}.Mul(math.Max(w, h) * 0.045)
+			bar := geom.Contour{
+				{P: p1.Add(normal), On: true},
+				{P: p2.Add(normal), On: true},
+				{P: p2.Sub(normal), On: true},
+				{P: p1.Sub(normal), On: true},
+			}
+			path = append(path, bar)
+			name := glyphName('0') + ".zero"
+			out = append(out, fontbuild.Glyph{Name: name, NoCmap: true, Advance: zero.Advance, Path: path})
+			subs = append(subs, fontbuild.Substitution{Feature: "zero", From: glyphName('0'), To: name})
+		}
 	}
 	return out, subs
 }

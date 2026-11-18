@@ -71,6 +71,11 @@ func Describe() map[string]any {
 			"baseFont": "Embedded static OFL instances: fontcreator233 Base SC (CJK/kana/symbols) and Base KR (Hangul).",
 			"note":     "Counts are actual cmap coverage, not a promise of every Unicode block.",
 		},
+		"opentype": map[string]any{
+			"generated": []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "mark"},
+			"tables":    []string{"GSUB", "GPOS", "GDEF", "kern"},
+			"note":      "Generated features are deterministic and Latin-focused. `learn` reports richer GSUB/GPOS in external fonts without re-emitting them.",
+		},
 		"platforms": map[string]any{
 			"universal": "TTF + WOFF + HTML specimen + manifest",
 			"web":       "font.css with local font files and unicode-range for split fonts",
@@ -124,6 +129,11 @@ func Markdown() string {
 	for _, c := range Describe()["commands"].([]map[string]any) {
 		b.WriteString("- `" + c["name"].(string) + "` — " + c["summary"].(string) + "\n")
 	}
+	b.WriteString("\n## OpenType\n\n")
+	ot := Describe()["opentype"].(map[string]any)
+	b.WriteString("- generated: " + strings.Join(ot["generated"].([]string), ", ") + "\n")
+	b.WriteString("- tables: " + strings.Join(ot["tables"].([]string), ", ") + "\n")
+	b.WriteString("- " + ot["note"].(string) + "\n")
 	b.WriteString("\n## Targets\n\n")
 	platforms := Describe()["platforms"].(map[string]any)
 	keys = keys[:0]

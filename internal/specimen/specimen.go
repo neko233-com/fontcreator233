@@ -36,6 +36,11 @@ type Data struct {
 	HasCase      bool
 	HasTnum      bool
 	HasSS01      bool
+	HasSmcp      bool
+	HasOnum      bool
+	HasZero      bool
+	HasSups      bool
+	HasSubs      bool
 	KernPairs    int
 }
 

@@ -10,7 +10,8 @@ Vercel/Geist visual language and works directly from `file://` with no network.
 - Ticker across Latin, CJK, Greek, Cyrillic, and Hangul.
 - Type tester: editable headline with size, leading, and tracking controls.
 - OpenType playground: `liga`, `kern`, `frac`, `case`, `tnum`, and `ss01`
-  toggles, live `font-feature-settings`, and feature-table metadata.
+  toggles, plus a feature grid for `smcp`, `onum`, `zero`, `sups`, `subs`, and
+  `mark`; live `font-feature-settings` and feature-table metadata.
 - Scale waterfall from caption to poster.
 - Global coverage cards for Latin, Greek, Russian, Chinese, Japanese, Korean,
   and symbols.

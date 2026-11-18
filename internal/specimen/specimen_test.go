@@ -43,6 +43,11 @@ func testOptions(t *testing.T) Options {
 			HasCase:      true,
 			HasTnum:      true,
 			HasSS01:      true,
+			HasSmcp:      true,
+			HasOnum:      true,
+			HasZero:      true,
+			HasSups:      true,
+			HasSubs:      true,
 			KernPairs:    23,
 		},
 		SelfContained: false,
@@ -69,7 +74,7 @@ func TestBuildSpecimen(t *testing.T) {
 		`id="asset-error"`, "__fontcreatorBoot",
 		"IN YOUR APPS", "剪映 / CapCut", "CAPTION PREVIEW", "Download TTF",
 		"OPENTYPE", "feature-liga", "feature-frac", "feature-case", "feature-tnum", "feature-ss01",
-		"font-feature-settings",
+		"font-feature-settings", "smcp", "onum", "zero", "sups", "subs", "feature-grid",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)
