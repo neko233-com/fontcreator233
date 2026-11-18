@@ -187,9 +187,11 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	extraGlyphs, ligatures := makeLigatures(merged)
 	featureGlyphs, substitutions := makeSubstitutions(merged, int(math.Round(r.Metrics.CapHeight*1000)), int(math.Round(r.Metrics.XHeight*1000)))
 	fractionGlyphs, fractionLigatures := makeFractions(merged)
+	colorGlyphs, colorSpec := makeColorGlyph(merged)
 	glyphs = append(glyphs, extraGlyphs...)
 	glyphs = append(glyphs, featureGlyphs...)
 	glyphs = append(glyphs, fractionGlyphs...)
+	glyphs = append(glyphs, colorGlyphs...)
 	ligatures = append(ligatures, fractionLigatures...)
 	ligatures = append(ligatures, makeComposedLigatures(merged)...)
 	kerning := makeKerning(merged, r.Style.Weight)
@@ -210,6 +212,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	cfg.Ligatures = ligatures
 	cfg.Substitutions = substitutions
 	cfg.Kerning = kerning
+	cfg.Color = colorSpec
 	if usedBase {
 		designer := strings.TrimSpace(r.Meta.Designer)
 		if designer == "" {
@@ -267,6 +270,10 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			recipeName = filepath.Base(r.SourcePath)
 		}
 		varMin, varDef, varMax := fontbuild.VariableRange(r.Style.Weight)
+		colorRune := 0
+		if colorSpec != nil {
+			colorRune = int(colorSpec.Rune)
+		}
 		html, err := specimen.Build(specimen.Options{
 			OutDir:        o.OutDir,
 			FontPath:      result.FontPath,
@@ -301,6 +308,8 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 				HasSubs:      hasSubstitutionFeature(substitutions, "subs"),
 				HasCcmp:      hasLigatureFeature(ligatures, "ccmp"),
 				HasMkmk:      hasMkmk,
+				HasColor:     colorSpec != nil,
+				ColorRune:    colorRune,
 				HasVariable:  r.Output.Variable,
 				VarMin:       varMin,
 				VarDefault:   varDef,
@@ -615,6 +624,7 @@ func fontConfig(r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph
 		ItalicAngle: r.Style.Slant,
 		Created:     buildTime(),
 		Variable:    r.Output.Variable,
+		Accent:      r.Meta.Accent,
 		Glyphs:      glyphs,
 	}
 }
@@ -920,6 +930,34 @@ func makeSubstitutions(glyphs map[rune]fontbuild.Glyph, capHeight, xHeight int) 
 		}
 	}
 	return out, subs
+}
+
+// makeColorGlyph adds a self-contained COLR/CPAL accent glyph. It is a
+// demonstration color glyph, not arbitrary color-font authoring.
+func makeColorGlyph(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, *fontbuild.ColorGlyph) {
+	baseRune := rune(0)
+	for _, candidate := range []rune{0xE000, 0xF8FF, 0xF0000} {
+		if _, exists := glyphs[candidate]; !exists {
+			baseRune = candidate
+			break
+		}
+	}
+	if baseRune == 0 {
+		return nil, nil
+	}
+	baseName := glyphName(baseRune)
+	base := fontbuild.Glyph{Rune: baseRune, Name: baseName, Advance: 600, Path: geom.Circle(300, 350, 250)}
+	outer := fontbuild.Glyph{Name: "color.layer0", NoCmap: true, Advance: 600, Path: geom.Circle(300, 350, 250)}
+	inner := fontbuild.Glyph{Name: "color.layer1", NoCmap: true, Advance: 600, Path: geom.Circle(300, 350, 105)}
+	spec := &fontbuild.ColorGlyph{
+		Base: baseName,
+		Rune: baseRune,
+		Layers: []fontbuild.ColorLayer{
+			{Glyph: "color.layer0", PaletteIndex: 0},
+			{Glyph: "color.layer1", PaletteIndex: 1},
+		},
+	}
+	return []fontbuild.Glyph{base, outer, inner}, spec
 }
 
 func makeFractions(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbuild.Ligature) {

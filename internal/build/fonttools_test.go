@@ -42,6 +42,44 @@ print("ok", axis.minValue, axis.defaultValue, axis.maxValue)
 	}
 }
 
+func TestFontToolsColor(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+if "COLR" not in f or "CPAL" not in f:
+    raise SystemExit("COLR/CPAL missing")
+layers = f["COLR"].ColorLayers
+if "uniE000" not in layers or len(layers["uniE000"]) != 2:
+    raise SystemExit(f"bad COLR layers: {layers}")
+if layers["uniE000"][0].colorID != 0 or layers["uniE000"][1].colorID != 1:
+    raise SystemExit(f"bad palette indices: {layers['uniE000']}")
+palette = f["CPAL"].palettes[0]
+if len(palette) < 3:
+    raise SystemExit(f"bad CPAL palette: {palette}")
+accent = palette[0]
+if (accent.red, accent.green, accent.blue) != (0x5B, 0x8C, 0xFF):
+    raise SystemExit(f"bad accent color: {accent.red},{accent.green},{accent.blue}")
+print("ok", len(layers["uniE000"]), len(palette))
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools color: %v\n%s", err, out)
+	}
+}
+
 func TestFontToolsSample(t *testing.T) {
 	python, err := exec.LookPath("python")
 	if err != nil {

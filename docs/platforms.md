@@ -15,9 +15,10 @@ Generated fonts include OpenType features for Latin text: `liga`
 zero, `sups`/`subs` figures, `ccmp` base+mark composition, basic top-center
 `mark` anchors, and `mkmk` stacked marks. With `output.variable: true` the font
 also carries one `wght` axis via `fvar` + `gvar`; the specimen exposes a live
-weight slider. Imported fonts may expose richer GSUB/GPOS data, which `learn`
-reports without re-emitting it. See [`opentype.md`](opentype.md) for the full
-feature matrix and limits.
+weight slider. Every font includes one COLR/CPAL accent glyph at `U+E000` using
+the recipe accent color. Imported fonts may expose richer GSUB/GPOS data, which
+`learn` reports without re-emitting it. See [`opentype.md`](opentype.md) for the
+full feature matrix and limits.
 
 ## App guides
 

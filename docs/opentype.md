@@ -14,6 +14,8 @@ HarfBuzz shaping was used for manual verification.
 | `kern` | Legacy pair kerning for older software |
 | `fvar` | Opt-in `wght` axis metadata (min/default/max) |
 | `gvar` | Per-point outline deltas for the `wght` axis |
+| `COLR` | Color glyph layers (v0) |
+| `CPAL` | Color palette used by `COLR` |
 
 ## Generated features
 
@@ -55,6 +57,22 @@ CJK/Hangul/kana stay at their default outlines. Advances are unchanged because
 `HVAR` is not emitted; the axis changes outlines, not metrics. Split CJK fonts
 are static.
 
+## Color glyph
+
+Every generated font includes one COLR v0 / CPAL color glyph at `U+E000`:
+
+- palette 0: the recipe accent color (BGRA)
+- palette 1: white
+- palette 2: black fallback
+
+The glyph has an accent outer layer and a white inner layer. A black base
+outline is kept as a fallback for software without COLR support. This is a
+demonstration color glyph, not arbitrary color-font authoring.
+
+```html
+<span style="font-family: MyTypeface">&#xE000;</span>
+```
+
 ## Verification
 
 - `go test ./...` builds fonts and asserts the GSUB/GPOS/GDEF/`kern` tags and
@@ -66,6 +84,8 @@ are static.
   `q́̄` (`mkmk`).
 - fontTools asserts the `fvar` axis and non-zero `gvar` deltas for `A`; HarfBuzz
   glyph extents were checked at `wght` 420, 620, and 820.
+- fontTools asserts the `COLR` base/layer records and the `CPAL` accent/white
+  palette; the specimen screenshot was rendered in Chrome.
 - `fontcreator learn <font> --json` reports the same tags and lookup types in
   external fonts, including variable axes and color tables when present.
 
@@ -74,7 +94,8 @@ are static.
 Generated fonts are static and Latin-focused. They do **not** include:
 
 - additional variable axes beyond `wght`, or metric variations (`HVAR`/`MVAR`);
-- color layers (`COLR`/`CPAL`/`SVG `);
+- arbitrary color glyph authoring beyond the `U+E000` COLR/CPAL demo, or SVG /
+  `sbix` / CBDT color tables;
 - contextual substitutions (`calt`, `cswh`) beyond the `ccmp` composition
   ligatures above;
 - cursive attachment;

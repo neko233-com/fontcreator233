@@ -32,7 +32,8 @@ fontcreator status --out dist --json
 `output.variable: true` emits one real `wght` axis via `fvar` + `gvar`. The
 `init` template and examples enable it; set it to `false` for a static font.
 The axis varies Latin/Greek/Cyrillic/symbol and generated feature glyphs; CJK,
-Hangul, and kana stay static.
+Hangul, and kana stay static. Every font also contains one COLR/CPAL accent glyph
+at `U+E000` using `meta.accent`.
 
 Iterate at most three times: structure first, then texture, then terminals.
 

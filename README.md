@@ -38,6 +38,8 @@ Just Go, an OFL base font, and a recipe.
   plus GPOS and legacy kern tables. See [`docs/opentype.md`](docs/opentype.md).
 - **Variable weight (opt-in)**: `output.variable: true` emits one real `wght`
   axis with `fvar` + `gvar`; the specimen has a live weight slider.
+- **Color glyph**: every font ships one COLR/CPAL accent glyph at `U+E000`,
+  using the recipe accent and a white inner layer.
 - **Pleasant to use**: Bubble Tea TUI with progress, ETA, cancellation, and a
   plain/JSON fallback for automation.
 - **Safe workspace**: builds stage and commit atomically; `clean` removes only
@@ -357,7 +359,8 @@ Optional cross-checks use fontTools and `fc-scan` in CI.
 ## Limits
 
 - No Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
-- No color fonts, emoji, or WOFF2 encoding.
+- No arbitrary color-font authoring beyond the `U+E000` COLR/CPAL demo, and no
+  emoji or WOFF2 encoding.
 - Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
   `smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, simple top-center mark
   anchors, and `mkmk` stacked marks. A single opt-in `wght` variable axis is

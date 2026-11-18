@@ -72,6 +72,8 @@ type Config struct {
 	Created       time.Time
 	Jobs          int
 	Variable      bool
+	Accent        string
+	Color         *ColorGlyph
 	Glyphs        []Glyph
 	Kerning       []KernPair
 	Ligatures     []Ligature
@@ -207,6 +209,12 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 			return nil, err
 		} else if len(gsub) > 0 {
 			tables = append(tables, table{"GSUB", gsub})
+		}
+	}
+	if cfg.Color != nil {
+		if colr := buildCOLR(glyphs, cfg.Color); len(colr) > 0 {
+			tables = append(tables, table{"COLR", colr})
+			tables = append(tables, table{"CPAL", buildCPAL(cfg.Accent)})
 		}
 	}
 	if cfg.Variable {

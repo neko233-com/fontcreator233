@@ -55,7 +55,8 @@ Always use the agent's own vision. Do not ask the CLI to analyze an image.
 - `--target all` writes `universal`, `web`, `system`, `unity`, `unreal`, `apps`.
 - `output.variable: true` emits one real `wght` axis with `fvar` + `gvar`; the
   `init` template and examples enable it. The specimen gets a live weight
-  slider. CJK/Hangul/kana outlines stay static.
+  slider. CJK/Hangul/kana outlines stay static. Every font also has one
+  COLR/CPAL accent glyph at `U+E000` using `meta.accent`.
 - Apps: `apps/` contains per-app guides for Photoshop, Illustrator, InDesign,
   剪映/CapCut, Premiere, After Effects, DaVinci, Final Cut, Figma, Canva,
   Office, OBS, Blender, Godot, Unity, and Unreal, plus SRT/ASS caption samples.

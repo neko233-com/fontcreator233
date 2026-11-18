@@ -411,6 +411,7 @@ button { cursor: pointer; }
 .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 22px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .feature-row { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--panel-solid); }
 .feature-sample { font-size: 34px; line-height: 1.1; letter-spacing: -.04em; }
+.color-sample { font-size: 40px; line-height: 1; }
 .feature-label { color: var(--muted); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .04em; }
 .feature-label b { color: var(--ink); font-weight: 500; }
 .variable-panel { margin-top: 22px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }

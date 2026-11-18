@@ -43,6 +43,8 @@ type Data struct {
 	HasSubs      bool
 	HasCcmp      bool
 	HasMkmk      bool
+	HasColor     bool
+	ColorRune    int
 	HasVariable  bool
 	VarMin       int
 	VarDefault   int

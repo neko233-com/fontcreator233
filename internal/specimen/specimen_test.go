@@ -50,6 +50,8 @@ func testOptions(t *testing.T) Options {
 			HasSubs:      true,
 			HasCcmp:      true,
 			HasMkmk:      true,
+			HasColor:     true,
+			ColorRune:    0xE000,
 			HasVariable:  true,
 			VarMin:       400,
 			VarDefault:   620,
@@ -82,6 +84,7 @@ func TestBuildSpecimen(t *testing.T) {
 		"OPENTYPE", "feature-liga", "feature-frac", "feature-case", "feature-tnum", "feature-ss01",
 		"font-feature-settings", "smcp", "onum", "zero", "sups", "subs", "feature-grid",
 		"ccmp", "mkmk", "VARIABLE AXIS", "var-axis", "var-sample", "font-variation-settings",
+		"COLR", "color-sample", "&#xE000;",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)

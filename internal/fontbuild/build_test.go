@@ -117,6 +117,41 @@ func TestVariableFontTables(t *testing.T) {
 	}
 }
 
+func TestColorFontTables(t *testing.T) {
+	cfg := testConfig()
+	cfg.Accent = "#5B8CFF"
+	cfg.Glyphs = append(cfg.Glyphs,
+		Glyph{Rune: 0xE000, Name: "uniE000", Advance: 600, Path: geom.RectPath(50, 50, 550, 650)},
+		Glyph{Name: "color.layer0", NoCmap: true, Advance: 600, Path: geom.RectPath(50, 50, 550, 650)},
+		Glyph{Name: "color.layer1", NoCmap: true, Advance: 600, Path: geom.RectPath(150, 150, 450, 550)},
+	)
+	cfg.Color = &ColorGlyph{
+		Base: "uniE000",
+		Rune: 0xE000,
+		Layers: []ColorLayer{
+			{Glyph: "color.layer0", PaletteIndex: 0},
+			{Glyph: "color.layer1", PaletteIndex: 1},
+		},
+	}
+	data, err := Build(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tags := map[string]bool{}
+	n := int(binary.BigEndian.Uint16(data[4:]))
+	for i := 0; i < n; i++ {
+		tags[string(data[12+i*16:12+i*16+4])] = true
+	}
+	for _, tag := range []string{"COLR", "CPAL"} {
+		if !tags[tag] {
+			t.Fatalf("missing %s (tables: %v)", tag, tags)
+		}
+	}
+	if _, err := sfnt.Parse(data); err != nil {
+		t.Fatalf("parse color font: %v", err)
+	}
+}
+
 func TestBuildTTF(t *testing.T) {
 	cfg := testConfig()
 	data, err := Build(cfg)

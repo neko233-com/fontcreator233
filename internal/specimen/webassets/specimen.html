@@ -126,6 +126,7 @@
       {{if .Data.HasSubs}}<span><b>subs</b> subscript</span>{{end}}
       {{if .Data.HasCcmp}}<span><b>ccmp</b> composed accents</span>{{end}}
       {{if .Data.HasMkmk}}<span><b>mkmk</b> stacked marks</span>{{end}}
+      {{if .Data.HasColor}}<span><b>COLR</b> color glyph</span>{{end}}
       <span><b>mark</b> combining accents</span>
     </div>
     <div class="feature-controls">
@@ -173,6 +174,7 @@
       <div class="feature-row"><span class="feature-sample" style='font-feature-settings: "mark" 1'>q́ Ä</span><span class="feature-label"><b>mark</b> anchor positioning</span></div>
       {{if .Data.HasCcmp}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "ccmp" 1'>á é</span><span class="feature-label"><b>ccmp</b> composed accents</span></div>{{end}}
       {{if .Data.HasMkmk}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "mark" 1, "mkmk" 1'>q́̄</span><span class="feature-label"><b>mkmk</b> stacked marks</span></div>{{end}}
+      {{if .Data.HasColor}}<div class="feature-row"><span class="feature-sample color-sample">&#x{{printf "%X" .Data.ColorRune}};</span><span class="feature-label"><b>COLR</b> accent color layer</span></div>{{end}}
     </div>
     {{if .Data.HasVariable}}
     <div class="variable-panel">

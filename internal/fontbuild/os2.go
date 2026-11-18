@@ -146,6 +146,8 @@ func unicodeRangeBits(glyphs []Glyph) [4]uint32 {
 			set(45)
 		case r >= 0x2600 && r <= 0x26FF:
 			set(46)
+		case r >= 0xE000 && r <= 0xF8FF:
+			set(60)
 		case r >= 0x3000 && r <= 0x303F:
 			set(48)
 		case r >= 0x3040 && r <= 0x309F:

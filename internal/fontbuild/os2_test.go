@@ -13,6 +13,7 @@ func TestOS2UnicodeRangeBits(t *testing.T) {
 		Glyph{Rune: '“', Advance: 500},
 		Glyph{Rune: 0x3400, Advance: 1000},
 		Glyph{Rune: 0x20000, Advance: 1000},
+		Glyph{Rune: 0xE000, Advance: 600},
 	)
 	data, err := Build(cfg)
 	if err != nil {
@@ -39,5 +40,8 @@ func TestOS2UnicodeRangeBits(t *testing.T) {
 	}
 	if !has(0x3400, 59) || !has(0x20000, 59) {
 		t.Fatal("CJK Ext A/B must set bit 59")
+	}
+	if !has(0xE000, 60) {
+		t.Fatal("Private Use Area must set bit 60")
 	}
 }
