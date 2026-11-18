@@ -20,6 +20,7 @@ type Params struct {
 	SerifSize      float64
 	Contrast       float64
 	Overshoot      float64
+	Tracking       float64
 	Roughness      float64
 	JitterRotation float64
 	Weight         int
@@ -47,6 +48,7 @@ func Resolve(r *recipe.Recipe) Params {
 		SerifSize:      r.Style.SerifSize * stem,
 		Contrast:       r.Style.Contrast,
 		Overshoot:      r.Style.Overshoot,
+		Tracking:       r.Style.Tracking,
 		Roughness:      r.Style.Roughness,
 		JitterRotation: r.Style.JitterRotation,
 		Weight:         weight,

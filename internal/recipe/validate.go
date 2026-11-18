@@ -150,6 +150,9 @@ func validateStyle(s *Style) error {
 	if !finite(s.Overshoot) || s.Overshoot < 0 || s.Overshoot > 0.1 {
 		return fail("style.overshoot", "must be between 0 and 0.1", s.Overshoot)
 	}
+	if !finite(s.Tracking) || s.Tracking < -5 || s.Tracking > 10 {
+		return fail("style.tracking", "must be between -5 and 10 percent", s.Tracking)
+	}
 	if !finite(s.Roughness) || s.Roughness < 0 || s.Roughness > 1 {
 		return fail("style.roughness", "must be between 0 and 1", s.Roughness)
 	}

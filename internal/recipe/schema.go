@@ -58,6 +58,7 @@ func Schema() map[string]any {
 		"serif":          enum("Serif style", "none", "slab", "bracketed", "hairline"),
 		"serifSize":      num("Serif size relative to stem", 0, 1),
 		"overshoot":      num("Round-letter overshoot fraction", 0, 0.1),
+		"tracking":       num("Extra advance tracking as percent of em", -5, 10),
 		"roughness":      num("Deterministic hand-drawn jitter 0-1", 0, 1),
 		"jitterRotation": num("Per-glyph rotation jitter in degrees", 0, 2),
 		"seed":           map[string]any{"type": "integer", "description": "Deterministic seed"},

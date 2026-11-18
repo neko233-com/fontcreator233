@@ -49,6 +49,7 @@ type Style struct {
 	Serif          string  `yaml:"serif" json:"serif"`
 	SerifSize      float64 `yaml:"serifSize" json:"serifSize"`
 	Overshoot      float64 `yaml:"overshoot" json:"overshoot"`
+	Tracking       float64 `yaml:"tracking" json:"tracking"`
 	Roughness      float64 `yaml:"roughness" json:"roughness"`
 	JitterRotation float64 `yaml:"jitterRotation" json:"jitterRotation"`
 	Seed           int64   `yaml:"seed" json:"seed"`

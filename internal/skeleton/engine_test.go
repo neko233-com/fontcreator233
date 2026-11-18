@@ -144,6 +144,16 @@ func TestFlareChangesPath(t *testing.T) {
 	}
 }
 
+func TestTrackingChangesAdvance(t *testing.T) {
+	base := builder(t, nil)
+	tracked := builder(t, func(r *recipe.Recipe) { r.Style.Tracking = 2 })
+	_, a0, _, _ := base.Glyph('H')
+	_, a2, _, _ := tracked.Glyph('H')
+	if a2-a0 != 20 {
+		t.Fatalf("tracking advance delta = %v, want 20", a2-a0)
+	}
+}
+
 func TestSkeletonVariants(t *testing.T) {
 	geometric := builder(t, func(r *recipe.Recipe) { r.Style.Skeleton = "geometric" })
 	serif := builder(t, func(r *recipe.Recipe) { r.Style.Skeleton = "serif" })

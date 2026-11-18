@@ -21,16 +21,17 @@ metrics:
 
 style:
   skeleton: geometric
-  weight: 560
+  weight: 540
   width: 108
   slant: 0
-  contrast: 0.62
+  contrast: 0.42
   terminal: flare
   serif: none
   serifSize: 0
   overshoot: 0.016
-  roughness: 0.18
-  jitterRotation: 0.4
+  tracking: 1.5
+  roughness: 0.08
+  jitterRotation: 0.2
   seed: 233
 
 coverage:

@@ -81,12 +81,13 @@ Reference: organic stems, flared terminals, medium contrast, slight rotation.
 ```yaml
 style:
   skeleton: geometric
-  weight: 560
+  weight: 540
   width: 108
-  contrast: 0.62
+  contrast: 0.42
   terminal: flare
-  roughness: 0.18
-  jitterRotation: 0.4
+  tracking: 1.5
+  roughness: 0.08
+  jitterRotation: 0.2
   seed: 233
 ```
 

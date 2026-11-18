@@ -68,7 +68,7 @@ func (b *Builder) widthAt(t geom.Point, mul, tParam float64, flare bool) float64
 	w := b.P.Stem * mul * f
 	if flare && tParam >= 0 {
 		near := math.Exp(-math.Pow(tParam/0.08, 2)) + math.Exp(-math.Pow((1-tParam)/0.08, 2))
-		w *= 1 + 0.9*near
+		w *= 1 + 0.38*near
 	}
 	if w < 6 {
 		w = 6

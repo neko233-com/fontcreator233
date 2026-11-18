@@ -72,7 +72,7 @@ func (b *Builder) Glyph(r rune) (geom.Path, float64, bool, error) {
 		return nil, 0, false, fmt.Errorf("glyph %U: %w", r, err)
 	}
 	scale := b.zoneScale(def.Zone)
-	adv := def.Advance * b.P.WidthScale
+	adv := def.Advance*b.P.WidthScale + b.P.Tracking*10
 	if len(p) > 0 {
 		m := geom.Affine{
 			A: b.P.WidthScale,

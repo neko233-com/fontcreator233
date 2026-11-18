@@ -231,6 +231,7 @@ style:
   serif: none               # none | slab | bracketed | hairline
   serifSize: 0              # 0–1，衬线相对大小；serif!=none 时生效
   overshoot: 0.012          # 圆角字母超出 x/cap 高度的比例
+  tracking: 0               # 额外字距，em 百分比，-5–10
   roughness: 0              # 0–1，确定性抖动
   jitterRotation: 0         # 0–2 度，逐字微旋转
   seed: 233
@@ -272,6 +273,7 @@ output:
 | `terminal` | 开放笔画端点：平切/圆头/斜切/喇叭口 |
 | `serif` | 垂直笔画末端的衬线形状 |
 | `overshoot` | 圆/弧超出 x-height、cap-height 的量，避免视觉缩小 |
+| `tracking` | 额外字距（em 百分比，-5–10），用于喇叭口、展示字体的呼吸感 |
 | `roughness` | 基于 `seed` 的确定性点抖动，形成手绘/有机感 |
 | `jitterRotation` | 每字确定性微旋转，形成海报/手工感 |
 | `xHeight` / `capHeight` | 分别缩放小写/大写骨架的 y 坐标 |
