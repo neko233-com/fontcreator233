@@ -28,10 +28,7 @@ func buildUnity(o Options, root *integration.Manifest) ([]string, error) {
 	slug := packageSlug(o.Family)
 	packageName := "com.neko233.fontcreator233.generated." + slug
 	display := o.Family + " " + o.Style + " (fontcreator233)"
-	version := o.Version
-	if version == "" {
-		version = "1.0.0"
-	}
+	version := unityVersion(o.Version)
 
 	replace := func(b []byte, pairs ...string) []byte {
 		s := string(b)
@@ -161,6 +158,40 @@ func buildUnity(o Options, root *integration.Manifest) ([]string, error) {
 		paths = append(paths, filepath.Join(dir, filepath.FromSlash(name)))
 	}
 	return paths, nil
+}
+
+func unityVersion(v string) string {
+	v = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(v), "Version"))
+	var parts []string
+	var cur strings.Builder
+	flush := func() {
+		if cur.Len() > 0 {
+			part := strings.TrimLeft(cur.String(), "0")
+			if part == "" {
+				part = "0"
+			}
+			parts = append(parts, part)
+			cur.Reset()
+		}
+	}
+	for _, r := range v {
+		if r >= '0' && r <= '9' {
+			cur.WriteRune(r)
+			continue
+		}
+		flush()
+		if len(parts) >= 3 {
+			break
+		}
+	}
+	flush()
+	if len(parts) == 0 {
+		return "1.0.0"
+	}
+	for len(parts) < 3 {
+		parts = append(parts, "0")
+	}
+	return strings.Join(parts[:3], ".")
 }
 
 func packageSlug(family string) string {

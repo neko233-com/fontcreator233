@@ -21,7 +21,7 @@ Vercel/Geist visual language and works directly from `file://` with no network.
 assets/
 ├─ specimen.css
 ├─ specimen.js
-├─ virtual-list.js (TanStack Virtual IIFE)
+├─ vendor/tanstack-virtual.iife.js
 ├─ geist/Geist-Variable.woff2
 ├─ geist/GeistMono-Variable.woff2
 ├─ licenses/Geist-OFL.txt
@@ -65,3 +65,5 @@ page never needs `fetch()` on `file://`.
   rendering, font loading, and the glyph grid.
 - `document.fonts.check('16px "Specimen"')` drives the status pill and error
   banner; a missing font shows a clear message instead of a blank page.
+- A missing `*.glyphs.js` or `assets/` directory raises a visible asset banner;
+  the page never silently renders an empty grid.

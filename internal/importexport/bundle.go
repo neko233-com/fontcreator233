@@ -10,13 +10,18 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
+	"github.com/neko233-com/fontcreator233/internal/style"
+	"github.com/neko233-com/fontcreator233/internal/workspace"
 )
 
 // BundleIndex is the bundle.json schema.
@@ -64,14 +69,26 @@ func ExportBundle(ctx context.Context, recipePath, outZip string, targets []stri
 	if len(targets) > 0 {
 		r.Output.Targets = targets
 	}
-	res, err := build.Build(ctx, r, build.Options{OutDir: tmp, Targets: r.Output.Targets, NoOpen: true}, nil)
-	if err != nil {
+	if _, err := build.Build(ctx, r, build.Options{OutDir: tmp, Targets: r.Output.Targets, SplitCJK: r.Output.SplitCJK, NoOpen: true}, nil); err != nil {
 		return ExportResult{}, err
 	}
-	_ = res
 	recipeData, err := os.ReadFile(recipePath)
 	if err != nil {
 		return ExportResult{}, err
+	}
+	if r.Glyphs.Overrides != "" {
+		src := r.Glyphs.Overrides
+		if !filepath.IsAbs(src) && r.SourcePath != "" {
+			src = filepath.Join(filepath.Dir(r.SourcePath), src)
+		}
+		if err := copyDir(src, filepath.Join(tmp, "glyphs")); err != nil {
+			return ExportResult{}, fmt.Errorf("bundle: copy glyph overrides: %w", err)
+		}
+		r.Glyphs.Overrides = "glyphs"
+		recipeData, err = yaml.Marshal(r)
+		if err != nil {
+			return ExportResult{}, err
+		}
 	}
 	if err := os.WriteFile(filepath.Join(tmp, "recipe.yaml"), recipeData, 0o644); err != nil {
 		return ExportResult{}, err
@@ -181,7 +198,7 @@ func writeZip(root, outPath string) (int, error) {
 }
 
 // ImportBundle safely extracts and validates a bundle.
-func ImportBundle(zipPath, outDir string, buildAfter, force bool) (ImportResult, error) {
+func ImportBundle(ctx context.Context, zipPath, outDir string, buildAfter, force bool) (ImportResult, error) {
 	zr, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return ImportResult{}, err
@@ -204,10 +221,11 @@ func ImportBundle(zipPath, outDir string, buildAfter, force bool) (ImportResult,
 		path string
 	}
 	var entries []entry
+	seen := map[string]bool{}
 	for _, f := range zr.File {
-		name := strings.ReplaceAll(f.Name, "\\", "/")
-		if name == "" || strings.HasPrefix(name, "/") || strings.Contains(name, "..") {
-			return ImportResult{}, fmt.Errorf("bundle: unsafe path %q", f.Name)
+		name, err := bundleRel(f.Name)
+		if err != nil {
+			return ImportResult{}, fmt.Errorf("bundle: %w", err)
 		}
 		mode := f.Mode()
 		if mode&os.ModeSymlink != 0 {
@@ -216,12 +234,12 @@ func ImportBundle(zipPath, outDir string, buildAfter, force bool) (ImportResult,
 		if f.FileInfo().IsDir() {
 			continue
 		}
+		if seen[name] {
+			return ImportResult{}, fmt.Errorf("bundle: duplicate entry %q", name)
+		}
+		seen[name] = true
 		if f.UncompressedSize64 > maxFile {
 			return ImportResult{}, fmt.Errorf("bundle: file %q too large", name)
-		}
-		total += int64(f.UncompressedSize64)
-		if total > maxTotal {
-			return ImportResult{}, fmt.Errorf("bundle: uncompressed size exceeds limit")
 		}
 		dest := filepath.Join(tmp, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
@@ -236,11 +254,19 @@ func ImportBundle(zipPath, outDir string, buildAfter, force bool) (ImportResult,
 			_ = rc.Close()
 			return ImportResult{}, err
 		}
-		_, copyErr := io.Copy(out, rc)
+		// Trust actual bytes, not the central directory's declared size.
+		n, copyErr := io.Copy(out, io.LimitReader(rc, maxFile+1))
 		_ = out.Close()
 		_ = rc.Close()
 		if copyErr != nil {
 			return ImportResult{}, copyErr
+		}
+		if n > maxFile {
+			return ImportResult{}, fmt.Errorf("bundle: file %q exceeds size limit", name)
+		}
+		total += n
+		if total > maxTotal {
+			return ImportResult{}, fmt.Errorf("bundle: uncompressed size exceeds limit")
 		}
 		entries = append(entries, entry{name: name, path: dest})
 	}
@@ -256,15 +282,36 @@ func ImportBundle(zipPath, outDir string, buildAfter, force bool) (ImportResult,
 		return ImportResult{}, fmt.Errorf("bundle: unsupported schema %q", index.Schema)
 	}
 	for rel, want := range index.Files {
-		got, err := hashFile(filepath.Join(tmp, filepath.FromSlash(rel)))
+		clean, err := bundleRel(rel)
+		if err != nil {
+			return ImportResult{}, fmt.Errorf("bundle: index: %w", err)
+		}
+		if !seen[clean] {
+			return ImportResult{}, fmt.Errorf("bundle: index lists missing file %s", rel)
+		}
+		got, err := hashFile(filepath.Join(tmp, filepath.FromSlash(clean)))
 		if err != nil || got != want {
 			return ImportResult{}, fmt.Errorf("bundle: checksum mismatch for %s", rel)
+		}
+	}
+	for name := range seen {
+		if name == "bundle.json" {
+			continue
+		}
+		if _, ok := index.Files[name]; !ok {
+			return ImportResult{}, fmt.Errorf("bundle: unindexed file %s", name)
 		}
 	}
 	if index.License == "OFL-1.1" {
 		if _, err := os.Stat(filepath.Join(tmp, "OFL.txt")); err != nil {
 			return ImportResult{}, fmt.Errorf("bundle: OFL.txt missing for OFL font")
 		}
+	}
+	tmpRecipe := filepath.Join(tmp, "recipe.yaml")
+	if r, err := recipe.Load(tmpRecipe); err != nil {
+		return ImportResult{}, fmt.Errorf("bundle: recipe: %w", err)
+	} else if baseEnabled(r) && index.License != "OFL-1.1" {
+		return ImportResult{}, fmt.Errorf("bundle: base-derived fonts must be OFL-1.1")
 	}
 	if entries, err := os.ReadDir(outDir); err == nil && len(entries) > 0 && !force {
 		return ImportResult{}, fmt.Errorf("bundle: output directory %s is not empty (use --force)", outDir)
@@ -291,12 +338,61 @@ func ImportBundle(zipPath, outDir string, buildAfter, force bool) (ImportResult,
 			return res, fmt.Errorf("bundle: rebuild recipe: %w", err)
 		}
 		r.Output.Open = false
-		if _, err := build.Build(context.Background(), r, build.Options{OutDir: outDir, Targets: r.Output.Targets, NoOpen: true}, nil); err != nil {
+		ws, err := workspace.Open(outDir, workspace.Options{Force: true})
+		if err != nil {
+			return res, err
+		}
+		if _, _, err := build.BuildToWorkspace(ctx, ws, workspace.BuildMeta{
+			Recipe:  recipePath,
+			Family:  r.Meta.Family,
+			Style:   style.ResolveStyle(r),
+			Targets: r.Output.Targets,
+		}, r, build.Options{Targets: r.Output.Targets, SplitCJK: r.Output.SplitCJK, NoOpen: true}, nil); err != nil {
 			return res, err
 		}
 		res.Built = true
 	}
 	return res, nil
+}
+
+func bundleRel(name string) (string, error) {
+	name = strings.ReplaceAll(name, "\\", "/")
+	if name == "" || strings.HasPrefix(name, "/") || path.IsAbs(name) {
+		return "", fmt.Errorf("unsafe path %q", name)
+	}
+	clean := path.Clean(name)
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.ContainsAny(clean, ":\x00") {
+		return "", fmt.Errorf("unsafe path %q", name)
+	}
+	return clean, nil
+}
+
+func baseEnabled(r *recipe.Recipe) bool {
+	return r.Coverage.Base.CJK != "none" || r.Coverage.Base.Kana ||
+		r.Coverage.Base.Hangul || r.Coverage.Base.Symbols
+}
+
+func copyDir(src, dst string) error {
+	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, p)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return os.MkdirAll(dst, 0o755)
+		}
+		if d.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("symlink rejected: %s", p)
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		return copyFile(p, target)
+	})
 }
 
 func copyFile(src, dst string) error {

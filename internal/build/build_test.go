@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/neko233-com/fontcreator233/internal/derive"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
@@ -138,16 +139,84 @@ func TestParallelDeterminism(t *testing.T) {
 	}
 }
 
+func TestSourceDateEpoch(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1234567890")
+	if got := buildTime().Unix(); got != 1234567890 {
+		t.Fatalf("buildTime = %d", got)
+	}
+	t.Setenv("SOURCE_DATE_EPOCH", "not-a-number")
+	if got := buildTime().Unix(); got != time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).Unix() {
+		t.Fatalf("fallback buildTime = %d", got)
+	}
+}
+
 func TestFontStemSafety(t *testing.T) {
 	tests := map[[2]string]string{
-		{"CON", ""}:       "font-CON",
-		{"Family.", ""}:   "Family",
-		{"A/B", "Italic"}: "A-B-Italic",
+		{"CON", ""}:             "font-CON",
+		{"Family.", ""}:         "Family",
+		{"A/B", "Italic"}:       "A-B-Italic",
+		{"Rock & Roll", ""}:     "Rock-Roll",
+		{"Sharp # Display", ""}: "Sharp-Display",
 	}
 	for in, want := range tests {
 		if got := fontStem(in[0], in[1]); got != want {
 			t.Fatalf("fontStem(%q,%q) = %q, want %q", in[0], in[1], got, want)
 		}
+	}
+}
+
+func TestFullCoverageUsesEmbeddedCmap(t *testing.T) {
+	r := sampleRecipe(t)
+	r.Coverage.Base.CJK = "full"
+	r.Coverage.Base.Kana = false
+	r.Coverage.Base.Hangul = false
+	r.Coverage.Base.Symbols = false
+	r.Output.Specimen = false
+	if err := r.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := res.CoverageReport["cjk"]
+	if st.Requested == 0 || st.Found != st.Requested || st.Missing != 0 {
+		t.Fatalf("full coverage stat = %#v", st)
+	}
+	if st.Found < 20000 {
+		t.Fatalf("full CJK coverage unusually small: %#v", st)
+	}
+}
+
+func TestBaseCopyrightIsPreserved(t *testing.T) {
+	r := sampleRecipe(t)
+	dir := t.TempDir()
+	res, err := Build(context.Background(), r, Options{OutDir: dir}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(res.FontPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := sfnt.Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf sfnt.Buffer
+	copyright, err := f.Name(&buf, sfnt.NameIDCopyright)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(copyright, "Adobe") || !strings.Contains(copyright, "Noto Sans SC/KR") {
+		t.Fatalf("copyright = %q", copyright)
+	}
+	license, err := f.Name(&buf, sfnt.NameIDLicense)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(license, "SIL Open Font License") {
+		t.Fatalf("license = %q", license)
 	}
 }
 

@@ -245,7 +245,23 @@
 <div id="font-error" class="font-error" hidden>
   The specimen font failed to load. Check that <code>{{.FontRel}}</code> exists next to this HTML file.
 </div>
+<div id="asset-error" class="font-error" hidden>
+  Specimen assets failed to load. Keep <code>{{.AssetRel}}/</code> and <code>{{.GlyphDataRel}}</code> next to this HTML file, then reload.
+</div>
+<noscript>
+  <div class="font-error">This specimen needs JavaScript for the virtual glyph grid and type tester.</div>
+</noscript>
 
+<script>
+window.__fontcreatorBoot = false;
+setTimeout(function () {
+  if (window.__fontcreatorBoot) return;
+  var el = document.getElementById("asset-error");
+  if (el) el.hidden = false;
+  var status = document.getElementById("font-status");
+  if (status) { status.className = "status bad"; status.textContent = "assets missing"; }
+}, 2500);
+</script>
 {{if .SelfContained}}
 <script>{{.GlyphJS}}</script>
 <script>{{.VendorJS}}</script>

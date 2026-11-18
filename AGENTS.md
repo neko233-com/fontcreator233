@@ -47,7 +47,7 @@ your parameter changes, not noise.
 ## Agent-native contract
 
 - `--json` prints exactly one JSON envelope on stdout; logs go to stderr.
-- Exit codes: 0 success, 1 recipe/user error, 2 internal.
+- Exit codes: 0 success, 1 recipe/user error, 2 internal, 130 canceled.
 - `fontcreator mcp` runs a stdio MCP server with:
   `fontcreator_describe`, `fontcreator_validate`, `fontcreator_build`,
   `fontcreator_inspect`, `fontcreator_specimen`, `fontcreator_library_list`,

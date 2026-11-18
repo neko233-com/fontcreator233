@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -39,6 +40,7 @@ type Options struct {
 	NoTUI             bool
 	NoAutoClean       bool
 	AssetsDir         string
+	FinalOutDir       string
 	SelfContainedHTML bool
 }
 
@@ -83,6 +85,13 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	start := time.Now()
 	if rep == nil {
 		rep = ui.NopReporter{}
+	}
+	if o.AssetsDir != "" {
+		abs, err := filepath.Abs(o.AssetsDir)
+		if err != nil {
+			return Result{}, err
+		}
+		o.AssetsDir = abs
 	}
 	resolvedStyle := style.ResolveStyle(r)
 	params := style.Resolve(r)
@@ -175,9 +184,28 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		glyphs = append(glyphs, g)
 	}
 	result.GlyphRunes = append([]rune(nil), keys...)
+	usedBase := len(derived) > 0
+	splitSet := map[rune]bool{}
+	for rn := range derived {
+		if rn >= 0x2E80 {
+			splitSet[rn] = true
+		}
+	}
+	// Release the generation maps before the encoder allocates its own
+	// buffers; only the sorted glyph slice is needed from here on.
+	gen = nil
+	derived = nil
+	merged = nil
 	cfg := fontConfig(r, resolvedStyle, glyphs)
+	if usedBase {
+		designer := strings.TrimSpace(r.Meta.Designer)
+		if designer == "" {
+			designer = "fontcreator233"
+		}
+		cfg.Copyright = baseCopyright + " Modified by " + designer + "."
+	}
 	cfg.Jobs = o.Jobs
-	ttf, err := fontbuild.Build(cfg)
+	ttf, err := fontbuild.BuildContext(ctx, cfg)
 	if err != nil {
 		return result, fmt.Errorf("compile font: %w", err)
 	}
@@ -208,7 +236,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			result.WOFFPath = woffPath
 		}
 		if o.SplitCJK > 0 {
-			split, infos, err := buildSplits(ctx, r, resolvedStyle, glyphs, merged, derived, o, stem)
+			split, infos, err := buildSplits(ctx, r, resolvedStyle, glyphs, splitSet, o, stem)
 			if err != nil {
 				return result, err
 			}
@@ -217,7 +245,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		}
 	}
 	if r.Output.Specimen && result.FontPath != "" {
-		glyphInfo := make([]specimen.GlyphInfo, 0, len(merged))
+		glyphInfo := make([]specimen.GlyphInfo, 0, len(keys))
 		for _, rn := range keys {
 			glyphInfo = append(glyphInfo, specimen.GlyphInfo{Rune: rn, Script: unicodes.ScriptOf(rn)})
 		}
@@ -230,6 +258,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			FontPath:      result.FontPath,
 			FontFile:      filepath.Base(result.FontPath),
 			AssetsDir:     o.AssetsDir,
+			LinkDir:       o.FinalOutDir,
 			SelfContained: o.SelfContainedHTML,
 			Open:          r.Output.Open && !o.NoOpen,
 			Data: specimen.Data{
@@ -288,6 +317,8 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			Targets:        targetList,
 			Fonts:          inputs,
 			SpecimenPath:   result.SpecimenPath,
+			AssetsDir:      o.AssetsDir,
+			FinalOutDir:    o.FinalOutDir,
 			TMP:            r.Output.TMP,
 		})
 		if err != nil {
@@ -295,14 +326,19 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		}
 		result.Targets = targetPaths
 	}
-	if hasBaseGlyphs(derived) && r.Style.Weight != 400 {
+	if usedBase && r.Style.Weight != 400 {
 		warnings = append(warnings, "CJK/Hangul weight is synthetic (base outlines are emboldened, not redrawn)")
 	}
 	result.Warnings = warnings
 	result.Duration = time.Since(start)
+	summary := result.FontPath
+	if result.SHA256 != "" {
+		summary += " · " + result.SHA256[:12]
+	}
 	rep.Event(ui.Event{
 		Kind:     ui.EvDone,
 		Warnings: warnings,
+		Summary:  summary,
 		Duration: result.Duration,
 	})
 	return result, nil
@@ -364,6 +400,17 @@ func buildDerived(ctx context.Context, r *recipe.Recipe, p style.Params, jobs in
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if r.Coverage.Base.CJK == "full" {
+		// `full` means every glyph actually present in the embedded bases,
+		// not every code point in the raw Unicode blocks.
+		kept := requested[:0]
+		for _, rn := range requested {
+			if set.Has(rn) {
+				kept = append(kept, rn)
+			}
+		}
+		requested = kept
+	}
 	embolden := (float64(r.Style.Weight) - 400) / 500 * 30
 	if embolden < 0 {
 		embolden = 0
@@ -396,8 +443,14 @@ func buildDerived(ctx context.Context, r *recipe.Recipe, p style.Params, jobs in
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	full := r.Coverage.Base.CJK == "full"
 	for i, rn := range requested {
 		res := results[i]
+		if full && !res.ok {
+			// An empty cmap glyph (for example the ideographic space)
+			// contributes no outline; it is not a missing coverage target.
+			continue
+		}
 		st := stats[res.script]
 		st.Requested++
 		if !res.ok {
@@ -504,15 +557,19 @@ func generatedEnabled(r rune, scripts []string) bool {
 }
 
 func fontConfig(r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph) fontbuild.Config {
+	designer := strings.TrimSpace(r.Meta.Designer)
+	if designer == "" {
+		designer = "fontcreator233"
+	}
 	return fontbuild.Config{
 		Family:      r.Meta.Family,
 		Style:       resolvedStyle,
 		Version:     r.Meta.Version,
-		Designer:    r.Meta.Designer,
+		Designer:    designer,
 		Description: r.Meta.Description,
 		License:     r.Meta.License,
 		LicenseURL:  licenseURL(r.Meta.License),
-		Copyright:   "Copyright 2026 " + r.Meta.Designer,
+		Copyright:   "Copyright 2026 " + designer,
 		SampleText:  r.Meta.SampleText,
 		Ascender:    r.Metrics.Ascender,
 		Descender:   r.Metrics.Descender,
@@ -522,9 +579,18 @@ func fontConfig(r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph
 		WeightClass: r.Style.Weight,
 		WidthClass:  widthClass(r.Style.Width),
 		ItalicAngle: r.Style.Slant,
-		Created:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		Created:     buildTime(),
 		Glyphs:      glyphs,
 	}
+}
+
+func buildTime() time.Time {
+	if s := strings.TrimSpace(os.Getenv("SOURCE_DATE_EPOCH")); s != "" {
+		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return time.Unix(n, 0).UTC()
+		}
+	}
+	return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 }
 
 func licenseURL(license string) string {
@@ -568,10 +634,6 @@ func hashFileSHA(path string) string {
 	return hashHex(data)
 }
 
-func hasBaseGlyphs(m map[rune]fontbuild.Glyph) bool {
-	return len(m) > 0
-}
-
 func notdefPath() geom.Path {
 	outer := geom.RectPath(50, 0, 550, 700)
 	inner := geom.RectPath(120, 80, 480, 620).Reverse(0)
@@ -590,13 +652,18 @@ func hashHex(b []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+const baseCopyright = "Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. Derived from Noto Sans SC/KR for fontcreator233 and renamed per the SIL Open Font License 1.1."
+
+// FontStem returns the filesystem-safe stem for a family/style pair.
+func FontStem(family, style string) string { return fontStem(family, style) }
+
 func fontStem(family, style string) string {
 	clean := func(s string) string {
 		var b strings.Builder
 		for _, r := range s {
 			switch {
 			case r == ' ':
-			case r == '/' || r == '\\' || r == ':' || r == '*' || r == '?' || r == '"' || r == '<' || r == '>' || r == '|':
+			case r == '/' || r == '\\' || r == ':' || r == '*' || r == '?' || r == '"' || r == '<' || r == '>' || r == '|' || r == '&' || r == '#':
 				b.WriteRune('-')
 			default:
 				b.WriteRune(r)
@@ -631,12 +698,10 @@ func isWindowsReserved(name string) bool {
 	return false
 }
 
-func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph, merged map[rune]fontbuild.Glyph, derived map[rune]fontbuild.Glyph, o Options, stem string) ([]string, []SplitFont, error) {
-	var splitRunes []rune
-	for rn := range derived {
-		if rn >= 0x2E80 {
-			splitRunes = append(splitRunes, rn)
-		}
+func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph, splitSet map[rune]bool, o Options, stem string) ([]string, []SplitFont, error) {
+	splitRunes := make([]rune, 0, len(splitSet))
+	for rn := range splitSet {
+		splitRunes = append(splitRunes, rn)
 	}
 	sort.Slice(splitRunes, func(i, j int) bool { return splitRunes[i] < splitRunes[j] })
 	if len(splitRunes) == 0 {
@@ -656,7 +721,7 @@ func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, gl
 		var list []fontbuild.Glyph
 		list = append(list, glyphs[0])
 		for _, g := range glyphs[1:] {
-			if _, isSplit := derived[g.Rune]; isSplit && g.Rune >= 0x2E80 && !chunk[g.Rune] {
+			if splitSet[g.Rune] && !chunk[g.Rune] {
 				continue
 			}
 			list = append(list, g)
@@ -664,7 +729,7 @@ func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, gl
 		styleName := fmt.Sprintf("%s CJK %02d", resolvedStyle, idx)
 		cfg := fontConfig(r, styleName, list)
 		cfg.Jobs = o.Jobs
-		data, err := fontbuild.Build(cfg)
+		data, err := fontbuild.BuildContext(ctx, cfg)
 		if err != nil {
 			return nil, nil, err
 		}

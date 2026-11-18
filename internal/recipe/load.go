@@ -53,6 +53,9 @@ func Parse(data []byte, filename string) (*Recipe, error) {
 }
 
 func parseJSON(data []byte, r *Recipe) error {
+	if err := checkJSONDuplicateKeys(data); err != nil {
+		return err
+	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(r); err != nil {
@@ -90,6 +93,62 @@ func parseYAML(data []byte, r *Recipe) error {
 			return fmt.Errorf("decode YAML recipe: trailing document")
 		}
 		return fmt.Errorf("decode YAML recipe: %w", err)
+	}
+	return nil
+}
+
+func checkJSONDuplicateKeys(data []byte) error {
+	type frame struct {
+		object    bool
+		expectKey bool
+		keys      map[string]bool
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	var stack []*frame
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("decode JSON recipe: %w", err)
+		}
+		top := func() *frame {
+			if len(stack) == 0 {
+				return nil
+			}
+			return stack[len(stack)-1]
+		}
+		switch t := tok.(type) {
+		case json.Delim:
+			switch t {
+			case '{', '[':
+				stack = append(stack, &frame{object: t == '{', expectKey: t == '{', keys: map[string]bool{}})
+			case '}', ']':
+				if len(stack) == 0 {
+					return fmt.Errorf("decode JSON recipe: unexpected %q", t)
+				}
+				stack = stack[:len(stack)-1]
+				if f := top(); f != nil && f.object {
+					f.expectKey = true
+				}
+			}
+		case string:
+			if f := top(); f != nil && f.object && f.expectKey {
+				if f.keys[t] {
+					return fmt.Errorf("duplicate JSON key %q", t)
+				}
+				f.keys[t] = true
+				f.expectKey = false
+			} else if f := top(); f != nil && f.object {
+				f.expectKey = true
+			}
+		default:
+			if f := top(); f != nil && f.object && !f.expectKey {
+				f.expectKey = true
+			}
+		}
 	}
 	return nil
 }

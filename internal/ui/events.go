@@ -24,6 +24,7 @@ type Event struct {
 	Total    int
 	Err      error
 	Warnings []string
+	Summary  string
 	Duration time.Duration
 }
 

@@ -42,6 +42,13 @@ func TestParseDuplicateYAMLKey(t *testing.T) {
 	}
 }
 
+func TestParseDuplicateJSONKey(t *testing.T) {
+	_, err := Parse([]byte(`{"meta":{"family":"A","family":"B"}}`), "test.json")
+	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+		t.Fatalf("error = %v, want duplicate", err)
+	}
+}
+
 func TestParseJSON(t *testing.T) {
 	data := []byte(`{"apiVersion":"fontcreator233/v1","meta":{"family":"JSON Font"},"style":{"weight":500}}`)
 	r, err := Parse(data, "test.json")

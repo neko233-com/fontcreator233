@@ -12,7 +12,11 @@ func (a *app) cmdMCP(args []string) int {
 		return a.fail("mcp", 1, fmt.Errorf("mcp takes no arguments"))
 	}
 	server := &mcp.Server{}
-	if err := server.Serve(context.Background(), a.io.In, a.io.Out); err != nil {
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := server.Serve(ctx, a.io.In, a.io.Out); err != nil {
 		fmt.Fprintf(a.io.Err, "fontcreator233 mcp: %v\n", err)
 		return 2
 	}

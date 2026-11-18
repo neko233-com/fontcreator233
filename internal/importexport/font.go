@@ -45,6 +45,7 @@ type Profile struct {
 	Coverage    map[string]int    `json:"coverage"`
 	Runes       []rune            `json:"-"`
 	Confidence  map[string]string `json:"confidence"`
+	Warnings    []string          `json:"warnings,omitempty"`
 
 	RecipePath string   `json:"recipePath,omitempty"`
 	GlyphDir   string   `json:"glyphDir,omitempty"`
@@ -53,7 +54,7 @@ type Profile struct {
 
 // ImportFont profiles path and writes profile.json, recipe.yaml, and optional
 // SVG glyphs under outDir.
-func ImportFont(path, outDir string, extractGlyphs bool, unicodesFilter []rune) (Profile, error) {
+func ImportFont(path, outDir string, extractGlyphs bool, unicodesFilter []rune, force bool) (Profile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Profile{}, err
@@ -91,13 +92,19 @@ func ImportFont(path, outDir string, extractGlyphs bool, unicodesFilter []rune) 
 		p.WeightClass = int(binary.BigEndian.Uint16(os2[4:]))
 		p.WidthClass = int(binary.BigEndian.Uint16(os2[6:]))
 		if len(os2) >= 90 {
+			upm := maxInt(p.UnitsPerEm, 1)
 			if h := int(int16(binary.BigEndian.Uint16(os2[86:]))); h > 0 {
-				p.XHeight = h
+				p.XHeight = h * 1000 / upm
 			}
 			if h := int(int16(binary.BigEndian.Uint16(os2[88:]))); h > 0 {
-				p.CapHeight = h
+				p.CapHeight = h * 1000 / upm
 			}
 		}
+	} else {
+		p.Warnings = append(p.Warnings, "OS/2 table missing; metrics were inferred from the font")
+	}
+	if p.XHeight <= 0 || p.CapHeight <= 0 {
+		p.Warnings = append(p.Warnings, "OS/2 x-height or cap-height missing; review metrics.xHeight and metrics.capHeight")
 	}
 	if p.WeightClass == 0 {
 		p.WeightClass = 400
@@ -117,6 +124,9 @@ func ImportFont(path, outDir string, extractGlyphs bool, unicodesFilter []rune) 
 			p.Runes = append(p.Runes, r)
 			p.Coverage[unicodes.ScriptOf(r)]++
 		}
+	}
+	if entries, err := os.ReadDir(outDir); err == nil && len(entries) > 0 && !force {
+		return Profile{}, fmt.Errorf("import font: output directory %s is not empty (use --force)", outDir)
 	}
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return Profile{}, err
@@ -214,8 +224,8 @@ func profileRecipe(p Profile, extractGlyphs bool) *recipe.Recipe {
 	r.Meta.SampleText = "Hamburgefonstiv 字体创造器 0123"
 	r.Metrics.Ascender = clampInt(p.Ascender, 600, 1000)
 	r.Metrics.Descender = clampInt(p.Descender, -400, -50)
-	r.Metrics.XHeight = clampFloat(float64(p.XHeight)/float64(maxInt(p.UnitsPerEm, 1)), 0.40, 0.60)
-	r.Metrics.CapHeight = clampFloat(float64(p.CapHeight)/float64(maxInt(p.UnitsPerEm, 1)), 0.64, 0.78)
+	r.Metrics.XHeight = clampFloat(float64(p.XHeight)/1000, 0.40, 0.60)
+	r.Metrics.CapHeight = clampFloat(float64(p.CapHeight)/1000, 0.64, 0.78)
 	if r.Metrics.Ascender <= int(r.Metrics.CapHeight*1000) {
 		r.Metrics.Ascender = int(r.Metrics.CapHeight*1000) + 20
 	}

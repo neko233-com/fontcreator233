@@ -99,10 +99,17 @@ func (s *Set) Glyph(r rune) (geom.Path, int, bool, error) {
 	return nil, 0, false, nil
 }
 
-// Has reports whether either base font contains r.
+// Has reports whether either base font maps r to a glyph, without loading its
+// outline.
 func (s *Set) Has(r rune) bool {
-	_, _, ok, _ := s.Glyph(r)
-	return ok
+	var buf sfnt.Buffer
+	for _, f := range []*sfnt.Font{s.SC, s.KR} {
+		gid, err := f.GlyphIndex(&buf, r)
+		if err == nil && gid != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func glyphFrom(f *sfnt.Font, r rune) (geom.Path, int, bool, error) {

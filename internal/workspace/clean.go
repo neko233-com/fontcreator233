@@ -1,7 +1,7 @@
 package workspace
 
 import (
-	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -34,8 +34,8 @@ func (w *Workspace) Clean(o CleanOptions) (CleanResult, error) {
 		return CleanResult{}, err
 	}
 	defer w.releaseLock()
-	if !o.All && len(o.Targets) == 0 && o.OlderThan == 0 && !o.DryRun {
-		return CleanResult{}, fmt.Errorf("clean: no selection; use --all, --target, or --older-than")
+	if !o.All && len(o.Targets) == 0 && o.OlderThan == 0 {
+		return w.cleanScratch(o)
 	}
 	now := time.Now()
 	targets := map[string]bool{}
@@ -115,6 +115,52 @@ func (w *Workspace) Clean(o CleanOptions) (CleanResult, error) {
 			return res, err
 		}
 	}
+	return res, nil
+}
+
+// cleanScratch removes staging/backup scratch and prunes history. It never
+// touches managed output files, so plain `clean` is safe to run routinely.
+func (w *Workspace) cleanScratch(o CleanOptions) (CleanResult, error) {
+	res := CleanResult{DryRun: o.DryRun}
+	for _, dir := range []string{w.TmpDir, w.BackupDir} {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return res, err
+		}
+		for _, e := range entries {
+			rel := filepath.ToSlash(filepath.Join(filepath.Base(dir), e.Name()))
+			res.Deleted = append(res.Deleted, rel)
+			if info, err := e.Info(); err == nil {
+				if e.IsDir() {
+					_ = filepath.WalkDir(filepath.Join(dir, e.Name()), func(path string, d fs.DirEntry, err error) error {
+						if err == nil && !d.IsDir() {
+							if fi, err := d.Info(); err == nil {
+								res.Bytes += fi.Size()
+							}
+						}
+						return nil
+					})
+				} else {
+					res.Bytes += info.Size()
+				}
+			}
+		}
+		if !o.DryRun {
+			_ = os.RemoveAll(dir)
+			_ = os.MkdirAll(dir, 0o755)
+		}
+	}
+	if !o.DryRun {
+		if w.pruneHistory() {
+			if err := w.saveState(); err != nil {
+				return res, err
+			}
+		}
+	}
+	sort.Strings(res.Deleted)
 	return res, nil
 }
 

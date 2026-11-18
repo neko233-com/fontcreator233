@@ -40,6 +40,8 @@ type Options struct {
 	Targets        []string
 	Fonts          []FontInput
 	SpecimenPath   string
+	AssetsDir      string
+	FinalOutDir    string
 	TMP            recipe.TMP
 }
 
@@ -207,6 +209,9 @@ func buildManifest(o Options) (*integration.Manifest, error) {
 		},
 		Web: integration.Web{CSS: "web/font.css", FontDisplay: "swap"},
 	}
+	if o.License == "OFL-1.1" {
+		m.LicenseFile = "OFL.txt"
+	}
 	var allRunes []rune
 	for _, f := range o.Fonts {
 		allRunes = append(allRunes, f.Runes...)
@@ -317,13 +322,35 @@ func buildWeb(o Options, m *integration.Manifest) ([]string, error) {
 		if err := copyFile(o.SpecimenPath, filepath.Join(dir, htmlBase)); err != nil {
 			return nil, err
 		}
-		paths = append(paths, filepath.Join(dir, htmlBase))
+		htmlPath := filepath.Join(dir, htmlBase)
+		paths = append(paths, htmlPath)
 		assetsSrc := filepath.Join(o.OutDir, "assets")
+		assetRel := "assets"
+		if o.AssetsDir != "" {
+			assetsSrc = o.AssetsDir
+			linkDir := o.FinalOutDir
+			if linkDir == "" {
+				linkDir = o.OutDir
+			}
+			if rel, err := filepath.Rel(linkDir, assetsSrc); err == nil {
+				assetRel = filepath.ToSlash(rel)
+			}
+		}
 		if _, err := os.Stat(assetsSrc); err == nil {
 			if err := copyTree(assetsSrc, filepath.Join(dir, "assets")); err != nil {
 				return nil, err
 			}
 			paths = append(paths, filepath.Join(dir, "assets"))
+			if assetRel != "assets" {
+				data, err := os.ReadFile(htmlPath)
+				if err != nil {
+					return nil, err
+				}
+				data = []byte(strings.ReplaceAll(string(data), `"./`+assetRel+`/`, `"./assets/`))
+				if err := os.WriteFile(htmlPath, data, 0o644); err != nil {
+					return nil, err
+				}
+			}
 		}
 		stem := strings.TrimSuffix(htmlBase, filepath.Ext(htmlBase))
 		glyph := filepath.Join(o.OutDir, stem+".glyphs.js")

@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 	"github.com/neko233-com/fontcreator233/internal/skeleton"
 	"github.com/neko233-com/fontcreator233/internal/specimen"
+	"github.com/neko233-com/fontcreator233/internal/style"
 	"github.com/neko233-com/fontcreator233/internal/unicodes"
 	"github.com/neko233-com/fontcreator233/internal/workspace"
 )
@@ -50,6 +52,9 @@ func (s *Server) Serve(ctx context.Context, in io.Reader, out io.Writer) error {
 	scanner.Buffer(make([]byte, 64*1024), 16*1024*1024)
 	enc := json.NewEncoder(out)
 	for scanner.Scan() {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		line := scanner.Bytes()
 		if len(line) == 0 {
 			continue
@@ -152,23 +157,40 @@ func (s *Server) callTool(ctx context.Context, name string, args json.RawMessage
 			if a.Filename == "" {
 				a.Filename = "mcp.recipe.yaml"
 			}
+			if a.OutDir == "" {
+				err = fmt.Errorf("outDir is required")
+			}
 			var r *recipe.Recipe
-			r, err = recipe.Parse([]byte(a.Recipe), a.Filename)
 			if err == nil {
-				var res build.Result
-				res, err = build.Build(ctx, r, build.Options{
-					OutDir:   a.OutDir,
-					Targets:  a.Targets,
-					SplitCJK: a.SplitCJK,
-					Jobs:     a.Jobs,
-					NoOpen:   !a.Open,
-				}, nil)
+				r, err = recipe.Parse([]byte(a.Recipe), a.Filename)
+			}
+			if err == nil {
+				var ws *workspace.Workspace
+				ws, err = workspace.Open(a.OutDir, workspace.Options{})
 				if err == nil {
-					payload = map[string]any{
-						"ok": true, "font": res.FontPath, "woff": res.WOFFPath,
-						"specimen": res.SpecimenPath, "family": res.Family, "style": res.Style,
-						"sha256": res.SHA256, "glyphs": res.Glyphs, "coverage": res.Coverage,
-						"warnings": res.Warnings, "targets": res.Targets, "split": res.Split,
+					splitCJK := a.SplitCJK
+					if splitCJK == 0 {
+						splitCJK = r.Output.SplitCJK
+					}
+					var res build.Result
+					res, _, err = build.BuildToWorkspace(ctx, ws, workspace.BuildMeta{
+						Recipe:  a.Filename,
+						Family:  r.Meta.Family,
+						Style:   style.ResolveStyle(r),
+						Targets: a.Targets,
+					}, r, build.Options{
+						Targets:  a.Targets,
+						SplitCJK: splitCJK,
+						Jobs:     a.Jobs,
+						NoOpen:   !a.Open,
+					}, nil)
+					if err == nil {
+						payload = map[string]any{
+							"ok": true, "font": res.FontPath, "woff": res.WOFFPath,
+							"specimen": res.SpecimenPath, "family": res.Family, "style": res.Style,
+							"sha256": res.SHA256, "glyphs": res.Glyphs, "coverage": res.Coverage,
+							"warnings": res.Warnings, "targets": res.Targets, "split": res.Split,
+						}
 					}
 				}
 			}
@@ -234,7 +256,7 @@ func (s *Server) callTool(ctx context.Context, name string, args json.RawMessage
 		}
 		if err = json.Unmarshal(args, &a); err == nil {
 			var ws *workspace.Workspace
-			ws, err = workspace.Open(a.OutDir, workspace.Options{})
+			ws, err = workspace.OpenReadOnly(a.OutDir)
 			if err == nil {
 				var st workspace.Status
 				st, err = ws.Status()

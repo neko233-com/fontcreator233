@@ -9,7 +9,8 @@ Global behavior:
 - TUI when stderr is a TTY; `--plain`, `--no-tui`, `--json`, `CI=true`, or a
   pipe falls back to line/JSON output.
 - `--json` writes exactly one envelope to stdout. Logs and progress go to stderr.
-- Exit codes: `0` success, `1` user/recipe error, `2` internal error.
+- Exit codes: `0` success, `1` user/recipe error, `2` internal error,
+  `130` canceled (Ctrl+C/SIGTERM).
 - Generated files are workspace-tracked under `<out>/.fontcreator233/`.
 
 ## build
@@ -29,7 +30,20 @@ fontcreator build-all --dir examples --out dist --font-jobs 3 --jobs 4
 ```
 
 Builds every `.yaml`/`.yml`/`.json` recipe in a directory concurrently with a
-single workspace lock and commit.
+single workspace lock and commit. Each font gets its own namespace, so
+packages and manifests never overwrite each other:
+
+```text
+dist/
+├─ AuroraGrotesk-Regular/
+│  ├─ AuroraGrotesk-Regular.ttf
+│  ├─ web/ system/ unity/ unreal/
+│  └─ fontcreator233.manifest.json
+└─ NoirDidone-NoirItalic/
+   └─ ...
+```
+
+Duplicate family/style stems are rejected before building.
 
 ## validate / inspect / specimen
 
@@ -59,19 +73,23 @@ fontcreator library export --dir glyphs --recipe recipe.yaml
 
 ```bash
 fontcreator status --out dist --json
-fontcreator clean --out dist --dry-run --json
+fontcreator clean --out dist --dry-run          # staging/backup scratch only
+fontcreator clean --out dist --all --dry-run    # preview managed outputs
 fontcreator clean --out dist --all --yes
 fontcreator clean --out dist --target unity --yes
 fontcreator clean --out dist --older-than 7d --yes
 ```
 
 `clean` never deletes untracked files or managed files whose SHA-256 changed,
-unless `--force`. Deletion requires `--yes` unless `--dry-run`.
+unless `--force`. Deletion requires `--yes` unless `--dry-run`. A plain
+`clean` is safe maintenance: it only removes staging/backup scratch and prunes
+old build history; use `--all` for generated outputs.
 
 ## import / export
 
 ```bash
 fontcreator import font MyFont.ttf --out work/import --extract-glyphs --json
+fontcreator import font MyFont.ttf --out work/import --force --json
 fontcreator import bundle dist/Font.bundle.zip --out work/restored --build --json
 fontcreator export glyphs dist/Font.ttf --dir glyphs --unicodes 0041-007A --json
 fontcreator export glyphs --recipe recipe.yaml --dir glyphs --scripts latin --json

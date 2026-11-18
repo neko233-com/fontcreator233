@@ -1,7 +1,9 @@
 (function () {
   "use strict";
 
-  var data = window.FontCreatorData || { family: "", cps: [], coverage: {} };
+  var data = window.FontCreatorData;
+  var hasGlyphData = !!(data && data.cps);
+  if (!hasGlyphData) data = { family: "", cps: [], coverage: {} };
   var all = (data.cps || []).map(function (cp) {
     return { cp: cp, script: scriptOf(cp) };
   });
@@ -162,6 +164,16 @@
     rebuildVirtualizer();
   }
 
+  function showAssetError() {
+    var el = document.getElementById("asset-error");
+    if (el) el.hidden = false;
+    var status = document.getElementById("font-status");
+    if (status) {
+      status.className = "status bad";
+      status.textContent = "assets missing";
+    }
+  }
+
   function setFontStatus() {
     var status = document.getElementById("font-status");
     var banner = document.getElementById("font-error");
@@ -173,8 +185,16 @@
     document.fonts.ready.then(function () {
       var ok = document.fonts.check('16px "Specimen"');
       status.className = "status " + (ok ? "ok" : "bad");
-      status.textContent = ok ? "font loaded" : "font missing";
+      status.textContent = ok ? (hasGlyphData ? "font loaded" : "assets missing") : "font missing";
       if (banner) banner.hidden = ok;
+      if (!ok) {
+        var asset = document.getElementById("asset-error");
+        if (asset) asset.hidden = true;
+      }
+    }, function () {
+      status.className = "status bad";
+      status.textContent = "font error";
+      if (banner) banner.hidden = false;
     });
   }
 
@@ -201,6 +221,13 @@
   function wire() {
     if (document.body.dataset.accent) {
       document.documentElement.style.setProperty("--accent", document.body.dataset.accent);
+    }
+    var styleLink = document.querySelector('link[rel="stylesheet"]');
+    if (!hasGlyphData || (styleLink && !styleLink.sheet)) {
+      showAssetError();
+    } else {
+      var asset = document.getElementById("asset-error");
+      if (asset) asset.hidden = true;
     }
     setFontStatus();
     var text = document.getElementById("tester-text");
@@ -248,6 +275,7 @@
     if (search) search.addEventListener("input", applyFilter);
     if (scriptSelect) scriptSelect.addEventListener("change", applyFilter);
     rebuildVirtualizer();
+    window.__fontcreatorBoot = true;
   }
 
   if (document.readyState === "loading") {

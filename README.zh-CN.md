@@ -146,7 +146,8 @@ fontcreator mcp
 
 ```bash
 fontcreator status --out dist --json
-fontcreator clean --out dist --dry-run
+fontcreator clean --out dist --dry-run          # 只清理暂存/历史
+fontcreator clean --out dist --all --dry-run    # 预览全部产物
 fontcreator clean --out dist --all --yes
 fontcreator clean --out dist --target unity --yes
 ```

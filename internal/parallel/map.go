@@ -18,6 +18,12 @@ func Map[T any, R any](ctx context.Context, items []T, workers int, fn func(cont
 	}
 	if workers <= 0 {
 		workers = runtime.NumCPU()
+		if workers > 16 {
+			workers = 16
+		}
+	}
+	if workers > 64 {
+		workers = 64
 	}
 	if workers > len(items) {
 		workers = len(items)

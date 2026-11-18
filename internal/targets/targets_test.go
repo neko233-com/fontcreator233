@@ -54,6 +54,9 @@ func TestBuildWebSystemManifest(t *testing.T) {
 	if m.Schema != "fontcreator233/integration/v1" || len(m.Fonts) != 2 {
 		t.Fatalf("manifest = %#v", m)
 	}
+	if m.LicenseFile != "OFL.txt" {
+		t.Fatalf("licenseFile = %q", m.LicenseFile)
+	}
 	if m.Fallbacks[0] != "Test-Regular.ttf" || len(m.UnrealComposite.SubFonts) != 1 {
 		t.Fatalf("fallbacks = %#v", m)
 	}
@@ -83,6 +86,50 @@ func TestBuildWebSystemManifest(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(dir, p)); err != nil {
 			t.Fatalf("missing %s: %v", p, err)
 		}
+	}
+}
+
+func TestWebSpecimenWithExternalAssets(t *testing.T) {
+	dir := t.TempDir()
+	font := filepath.Join(dir, "Test-Regular.ttf")
+	if err := os.WriteFile(font, []byte("font"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	assets := t.TempDir()
+	if err := os.WriteFile(filepath.Join(assets, "specimen.css"), []byte("body{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	html := filepath.Join(dir, "Test-Regular.html")
+	rel, err := filepath.Rel(dir, assets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := `<link rel="stylesheet" href="./` + filepath.ToSlash(rel) + `/specimen.css">`
+	if err := os.WriteFile(html, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Build(context.Background(), Options{
+		OutDir:       dir,
+		Family:       "Test",
+		Style:        "Regular",
+		License:      "OFL-1.1",
+		Weight:       400,
+		Targets:      []string{"web"},
+		SpecimenPath: html,
+		AssetsDir:    assets,
+		Fonts:        []FontInput{{Path: font, Primary: true}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "web", "Test-Regular.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"./assets/specimen.css"`) {
+		t.Fatalf("html still points at external assets: %s", data)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "web", "assets", "specimen.css")); err != nil {
+		t.Fatal(err)
 	}
 }
 

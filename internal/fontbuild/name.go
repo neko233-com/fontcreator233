@@ -8,6 +8,10 @@ import (
 
 func buildName(cfg Config) []byte {
 	ps := postScriptName(cfg.Family, cfg.Style)
+	licenseDescription := cfg.License
+	if cfg.License == "OFL-1.1" {
+		licenseDescription = "This Font Software is licensed under the SIL Open Font License, Version 1.1."
+	}
 	values := map[uint16]string{
 		0:  cfg.Copyright,
 		1:  cfg.Family,
@@ -20,7 +24,7 @@ func buildName(cfg Config) []byte {
 		9:  cfg.Designer,
 		10: cfg.Description,
 		11: "https://github.com/neko233-com/fontcreator233",
-		13: cfg.License,
+		13: licenseDescription,
 		14: cfg.LicenseURL,
 		16: cfg.Family,
 		17: cfg.Style,

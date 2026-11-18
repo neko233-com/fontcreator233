@@ -47,7 +47,7 @@ func (a *app) cmdSpecimen(args []string) int {
 		FontFile:      filepath.Base(fontPath),
 		AssetsDir:     *assetsDir,
 		SelfContained: *selfContained,
-		Open:          !common.noOpen && !isCI(),
+		Open:          !common.noOpen && !isCI() && !a.json,
 		Data: specimen.Data{
 			Family:      info.Family,
 			Style:       info.Style,

@@ -16,7 +16,7 @@ func (a *app) cmdStatus(args []string) int {
 		return a.fail("status", 1, err)
 	}
 	a.json = common.json
-	ws, err := workspace.Open(*out, workspace.Options{})
+	ws, err := workspace.OpenReadOnly(*out)
 	if err != nil {
 		return a.fail("status", 1, err)
 	}

@@ -59,6 +59,7 @@ func TestBuildSpecimen(t *testing.T) {
 		"./assets/specimen.css", "./assets/specimen.js",
 		"./assets/vendor/tanstack-virtual.iife.js",
 		"TestFont-Regular.glyphs.js", "data-accent=\"#5B8CFF\"",
+		`id="asset-error"`, "__fontcreatorBoot",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)
@@ -159,9 +160,12 @@ func TestOpenInjectionAndCI(t *testing.T) {
 }
 
 func TestOpenCommand(t *testing.T) {
-	name, args := openCommand("windows", `C:\tmp\a.html`)
-	if name != "cmd" || len(args) != 4 || args[2] != "" || args[3] != `C:\tmp\a.html` {
+	name, args := openCommand("windows", `C:\tmp\Rock & Roll.html`)
+	if name != "rundll32.exe" || len(args) != 2 || args[0] != "url.dll,FileProtocolHandler" || !strings.HasPrefix(args[1], "file:///") {
 		t.Fatalf("windows = %q %v", name, args)
+	}
+	if strings.Contains(args[1], "cmd") {
+		t.Fatalf("windows command still uses a shell: %q", args[1])
 	}
 	name, args = openCommand("darwin", "/tmp/a.html")
 	if name != "open" || len(args) != 1 {

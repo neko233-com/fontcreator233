@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/parallel"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
-	"github.com/neko233-com/fontcreator233/internal/specimen"
+	"github.com/neko233-com/fontcreator233/internal/style"
 	"github.com/neko233-com/fontcreator233/internal/ui"
 	"github.com/neko233-com/fontcreator233/internal/workspace"
 )
@@ -57,12 +58,20 @@ func (a *app) cmdBuildAll(args []string) int {
 		return a.fail("build-all", 1, fmt.Errorf("no recipe files in %s", *dir))
 	}
 	recipes := make([]*recipe.Recipe, len(paths))
+	stems := make([]string, len(paths))
+	seenStems := map[string]string{}
 	for i, p := range paths {
 		r, err := recipe.Load(p)
 		if err != nil {
 			return a.fail("build-all", 1, err)
 		}
+		stem := build.FontStem(r.Meta.Family, style.ResolveStyle(r))
+		if prev, ok := seenStems[stem]; ok {
+			return a.fail("build-all", 1, fmt.Errorf("recipes %s and %s both produce %s", prev, p, stem))
+		}
+		seenStems[stem] = p
 		recipes[i] = r
+		stems[i] = stem
 	}
 	workers := *fontJobs
 	if workers <= 0 {
@@ -84,10 +93,11 @@ func (a *app) cmdBuildAll(args []string) int {
 		return a.fail("build-all", 1, err)
 	}
 	defer ws.Abort(stage)
-	if _, err := specimen.EnsureAssets(stage.Root, *assetsDir); err != nil {
-		return a.fail("build-all", 1, err)
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
 	}
-	results, err := parallel.Map(context.Background(), recipes, workers, func(ctx context.Context, i int, r *recipe.Recipe) (build.Result, error) {
+	results, err := parallel.Map(ctx, recipes, workers, func(ctx context.Context, i int, r *recipe.Recipe) (build.Result, error) {
 		useTargets := []string(targets)
 		if len(useTargets) == 0 {
 			useTargets = r.Output.Targets
@@ -97,23 +107,27 @@ func (a *app) cmdBuildAll(args []string) int {
 			splitCJK = *split
 		}
 		return build.Build(ctx, r, build.Options{
-			OutDir:            stage.Root,
+			OutDir:            filepath.Join(stage.Root, stems[i]),
+			FinalOutDir:       filepath.Join(ws.Dir, stems[i]),
 			Targets:           useTargets,
 			SplitCJK:          splitCJK,
 			Jobs:              perFont,
-			NoOpen:            !*open || isCI(),
+			NoOpen:            !*open || isCI() || a.json,
 			AssetsDir:         *assetsDir,
 			SelfContainedHTML: *selfContained,
 		}, ui.NopReporter{})
 	})
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return a.fail("build-all", 130, err)
+		}
 		return a.fail("build-all", 1, err)
 	}
 	if _, err := ws.Commit(stage); err != nil {
 		return a.fail("build-all", 1, err)
 	}
 	for i := range results {
-		rewriteResultPaths(&results[i], stage.Root, ws.Dir)
+		build.RewritePaths(&results[i], stage.Root, ws.Dir)
 	}
 	if a.json {
 		list := make([]map[string]any, 0, len(results))

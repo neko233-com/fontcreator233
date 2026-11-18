@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/neko233-com/fontcreator233/internal/importexport"
@@ -26,6 +27,7 @@ func (a *app) cmdImportFont(args []string) int {
 	out := fs.String("out", "imported", "output directory")
 	extract := fs.Bool("extract-glyphs", false, "export glyph SVGs and set glyphs.overrides")
 	unicodes := fs.String("unicodes", "", "optional hex ranges, e.g. 0041-007A,4E00-9FFF")
+	force := fs.Bool("force", false, "allow a non-empty output directory")
 	values := map[string]bool{"out": true, "unicodes": true}
 	if err := parseFlexible(fs, args, values); err != nil {
 		a.json = common.json
@@ -39,7 +41,7 @@ func (a *app) cmdImportFont(args []string) int {
 	if err != nil {
 		return a.fail("import font", 1, err)
 	}
-	profile, err := importexport.ImportFont(fs.Arg(0), *out, *extract, filter)
+	profile, err := importexport.ImportFont(fs.Arg(0), *out, *extract, filter, *force)
 	if err != nil {
 		return a.fail("import font", 1, err)
 	}
@@ -55,6 +57,9 @@ func (a *app) cmdImportFont(args []string) int {
 	fmt.Fprintf(a.io.Out, "  %s %s · %d glyphs · weight %d · italic %.1f\n", profile.Family, profile.Style, profile.Glyphs, profile.WeightClass, profile.ItalicAngle)
 	if profile.GlyphDir != "" {
 		fmt.Fprintf(a.io.Out, "  glyphs: %s (%d extracted)\n", profile.GlyphDir, len(profile.Extracted))
+	}
+	for _, w := range profile.Warnings {
+		fmt.Fprintf(a.io.Err, "warning: %s\n", w)
 	}
 	return 0
 }
@@ -74,7 +79,11 @@ func (a *app) cmdImportBundle(args []string) int {
 	if fs.NArg() != 1 {
 		return a.fail("import bundle", 1, fmt.Errorf("usage: fontcreator import bundle <bundle.zip> --out <dir>"))
 	}
-	res, err := importexport.ImportBundle(fs.Arg(0), *out, *buildAfter, *force)
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	res, err := importexport.ImportBundle(ctx, fs.Arg(0), *out, *buildAfter, *force)
 	if err != nil {
 		return a.fail("import bundle", 1, err)
 	}

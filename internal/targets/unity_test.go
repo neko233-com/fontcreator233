@@ -113,3 +113,16 @@ func TestUnityTarget(t *testing.T) {
 		t.Fatal("unexpected test code")
 	}
 }
+
+func TestUnityVersionNormalization(t *testing.T) {
+	for in, want := range map[string]string{
+		"":             "1.0.0",
+		"Version 7.07": "7.7.0",
+		"1.2":          "1.2.0",
+		"2.0.1-beta":   "2.0.1",
+	} {
+		if got := unityVersion(in); got != want {
+			t.Fatalf("unityVersion(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

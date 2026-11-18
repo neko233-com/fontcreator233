@@ -103,6 +103,118 @@ func TestModifiedManagedFileKept(t *testing.T) {
 	}
 }
 
+func TestCommitRollbackRestoresPreviousBuild(t *testing.T) {
+	w := openWS(t)
+	commitFiles(t, w, "Family", "Regular", "b1", map[string]string{
+		"Family-Regular.ttf":  "old-font",
+		"Family-Regular.woff": "old-woff",
+	})
+	// Force the atomic state replace to fail after files have been moved.
+	if err := os.Mkdir(w.StatePath+".tmp", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stage, err := w.Begin(BuildMeta{ID: "b2", Family: "Family", Style: "Regular"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stage.Path("Family-Regular.ttf"), []byte("new-font"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Commit(stage); err == nil {
+		t.Fatal("expected commit failure")
+	}
+	for path, want := range map[string]string{
+		"Family-Regular.ttf":  "old-font",
+		"Family-Regular.woff": "old-woff",
+	} {
+		data, err := os.ReadFile(filepath.Join(w.Dir, path))
+		if err != nil || string(data) != want {
+			t.Fatalf("%s = %q err=%v, want %q", path, data, err, want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(w.Dir, "Family-Regular.woff")); err != nil {
+		t.Fatalf("stale output not restored: %v", err)
+	}
+}
+
+func TestCommitRejectsDirectoryTarget(t *testing.T) {
+	w := openWS(t)
+	commitFiles(t, w, "Family", "Regular", "b1", map[string]string{"a.txt": "a"})
+	if err := os.Mkdir(filepath.Join(w.Dir, "zdir"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stage, err := w.Begin(BuildMeta{ID: "b2", Family: "Family", Style: "Regular"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rel, body := range map[string]string{"a.txt": "new", "zdir": "file"} {
+		if err := os.WriteFile(stage.Path(rel), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := w.Commit(stage); err == nil {
+		t.Fatal("expected non-regular target rejection")
+	}
+	data, err := os.ReadFile(filepath.Join(w.Dir, "a.txt"))
+	if err != nil || string(data) != "a" {
+		t.Fatalf("a.txt = %q err=%v, want old contents", data, err)
+	}
+}
+
+func TestCleanTargetInNestedBuildAll(t *testing.T) {
+	w := openWS(t)
+	commitFiles(t, w, "batch", "batch", "b1", map[string]string{
+		"Family-Regular/unity/package.json": "unity",
+		"Family-Regular/Family-Regular.ttf": "font",
+	})
+	res, err := w.Clean(CleanOptions{Targets: []string{"unity"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Deleted) != 1 {
+		t.Fatalf("deleted = %#v", res.Deleted)
+	}
+	if _, err := os.Stat(filepath.Join(w.Dir, "Family-Regular/unity/package.json")); !os.IsNotExist(err) {
+		t.Fatalf("nested unity file still exists: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(w.Dir, "Family-Regular/Family-Regular.ttf")); err != nil {
+		t.Fatalf("font removed: %v", err)
+	}
+}
+
+func TestCleanScratchByDefault(t *testing.T) {
+	w := openWS(t)
+	commitFiles(t, w, "Family", "Regular", "b1", map[string]string{"Family-Regular.ttf": "a"})
+	stage, err := w.Begin(BuildMeta{ID: "leftover", Family: "Family", Style: "Regular"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stage.Path("scratch"), []byte("tmp"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := w.Clean(CleanOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Deleted) == 0 {
+		t.Fatal("scratch clean reported nothing")
+	}
+	if _, err := os.Stat(filepath.Join(w.Dir, "Family-Regular.ttf")); err != nil {
+		t.Fatalf("managed output removed by scratch clean: %v", err)
+	}
+}
+
+func TestSafeJoinRejectsSymlinkParent(t *testing.T) {
+	w := openWS(t)
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(w.Dir, "web")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	if _, err := safeJoin(w.Dir, "web/font.css"); err == nil {
+		t.Fatal("safeJoin accepted a symlinked parent")
+	}
+}
+
 func TestLock(t *testing.T) {
 	w := openWS(t)
 	stage, err := w.Begin(BuildMeta{ID: "b1", Family: "F", Style: "R"})
@@ -126,12 +238,23 @@ func TestLock(t *testing.T) {
 
 func TestStaleLockRecovered(t *testing.T) {
 	w := openWS(t)
-	old := lockInfo{PID: 999999, Host: "test", Started: time.Now().Add(-time.Hour)}
+	old := lockInfo{PID: 999999, Host: hostname(), Started: time.Now().Add(-time.Hour)}
 	if err := writeJSON(w.LockPath, old); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := w.Begin(BuildMeta{ID: "b1"}); err != nil {
 		t.Fatalf("stale lock not recovered: %v", err)
+	}
+}
+
+func TestLiveLockRejected(t *testing.T) {
+	w := openWS(t)
+	old := lockInfo{PID: os.Getpid(), Host: hostname(), Started: time.Now().Add(-3 * time.Hour)}
+	if err := writeJSON(w.LockPath, old); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Begin(BuildMeta{ID: "b1"}); err == nil {
+		t.Fatal("live lock was treated as stale")
 	}
 }
 
@@ -145,7 +268,7 @@ func TestClean(t *testing.T) {
 	if err := os.WriteFile(user, []byte("user"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := w.Clean(CleanOptions{DryRun: true})
+	res, err := w.Clean(CleanOptions{DryRun: true, All: true})
 	if err != nil || len(res.Deleted) != 2 || res.Bytes == 0 {
 		t.Fatalf("dry run = %#v err=%v", res, err)
 	}
@@ -199,6 +322,24 @@ func TestCleanRejectsEscape(t *testing.T) {
 		if strings.Contains(p, "evil") {
 			t.Fatalf("escaped path deleted: %v", res.Deleted)
 		}
+	}
+}
+
+func TestOpenReadOnlyDoesNotCreate(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "missing")
+	w, err := OpenReadOnly(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := w.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Files != 0 {
+		t.Fatalf("status = %#v", st)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatalf("read-only open created %s", dir)
 	}
 }
 

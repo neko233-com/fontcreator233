@@ -320,7 +320,7 @@ func TestBuildWorkspaceAndClean(t *testing.T) {
 	if _, _, code := run(t, "clean", "--out", outDir, "--all", "--json"); code != 1 {
 		t.Fatalf("clean without --yes code=%d", code)
 	}
-	out, _, code = run(t, "clean", "--out", outDir, "--dry-run", "--json")
+	out, _, code = run(t, "clean", "--out", outDir, "--all", "--dry-run", "--json")
 	if code != 0 {
 		t.Fatalf("dry run code=%d", code)
 	}
@@ -373,8 +373,20 @@ func TestBuildAll(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &v); err != nil {
 		t.Fatal(err)
 	}
-	if len(v["results"].([]any)) != 2 {
+	results := v["results"].([]any)
+	if len(results) != 2 {
 		t.Fatalf("results = %#v", v)
+	}
+	dirs := map[string]bool{}
+	for _, item := range results {
+		font := item.(map[string]any)["font"].(string)
+		if _, err := os.Stat(font); err != nil {
+			t.Fatalf("missing font %s: %v", font, err)
+		}
+		dirs[filepath.Dir(font)] = true
+	}
+	if len(dirs) != 2 {
+		t.Fatalf("build-all fonts share an output directory: %#v", dirs)
 	}
 }
 

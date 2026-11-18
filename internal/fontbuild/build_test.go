@@ -3,6 +3,7 @@ package fontbuild
 import (
 	"bytes"
 	"compress/zlib"
+	"context"
 	"encoding/binary"
 	"io"
 	"testing"
@@ -37,6 +38,14 @@ func testConfig() Config {
 			{Rune: ' ', Advance: 300},
 			{Rune: '中', Advance: 1000, Path: geom.RectPath(100, 0, 900, 700)},
 		},
+	}
+}
+
+func TestBuildContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := BuildContext(ctx, testConfig()); err == nil {
+		t.Fatal("expected context cancellation")
 	}
 }
 

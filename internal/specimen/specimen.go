@@ -42,6 +42,7 @@ type Options struct {
 	FontFile      string
 	Data          Data
 	AssetsDir     string
+	LinkDir       string
 	SelfContained bool
 	Open          bool
 	OpenFunc      OpenFunc
@@ -104,7 +105,11 @@ func Build(o Options) (string, error) {
 			return "", err
 		}
 		if o.AssetsDir != "" {
-			rel, err := filepath.Rel(o.OutDir, o.AssetsDir)
+			linkDir := o.LinkDir
+			if linkDir == "" {
+				linkDir = o.OutDir
+			}
+			rel, err := filepath.Rel(linkDir, o.AssetsDir)
 			if err == nil {
 				td.AssetRel = filepath.ToSlash(rel)
 			}

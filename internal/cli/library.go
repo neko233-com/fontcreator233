@@ -57,6 +57,7 @@ func (a *app) cmdLibraryExport(args []string) int {
 	fs := a.newFlagSet("library export", &common)
 	dir := fs.String("dir", "library", "output directory")
 	recipePath := fs.String("recipe", "", "optional recipe for style")
+	force := fs.Bool("force", false, "overwrite existing SVG files")
 	values := map[string]bool{"dir": true, "recipe": true}
 	if err := parseFlexible(fs, args, values); err != nil {
 		a.json = common.json
@@ -71,6 +72,9 @@ func (a *app) cmdLibraryExport(args []string) int {
 			return a.fail("library export", 1, err)
 		}
 		r = loaded
+	}
+	if entries, err := os.ReadDir(*dir); err == nil && len(entries) > 0 && !*force {
+		return a.fail("library export", 1, fmt.Errorf("output directory %s is not empty (use --force)", *dir))
 	}
 	if err := os.MkdirAll(*dir, 0o755); err != nil {
 		return a.fail("library export", 1, err)

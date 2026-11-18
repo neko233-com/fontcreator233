@@ -285,7 +285,8 @@ records SHA-256, family, style, target, and time.
 
 ```bash
 fontcreator status --out dist --json
-fontcreator clean --out dist --dry-run
+fontcreator clean --out dist --dry-run          # scratch/history only
+fontcreator clean --out dist --all --dry-run    # preview managed outputs
 fontcreator clean --out dist --all --yes
 fontcreator clean --out dist --target unity --yes
 fontcreator clean --out dist --older-than 7d --yes

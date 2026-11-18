@@ -133,6 +133,37 @@ func Open(dir string, opts Options) (*Workspace, error) {
 	return w, nil
 }
 
+// OpenReadOnly loads workspace state without creating directories. It is used
+// by status so a read-only query does not leave a dist/.fontcreator233 tree
+// behind.
+func OpenReadOnly(dir string) (*Workspace, error) {
+	if dir == "" {
+		dir = "."
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, err
+	}
+	meta := filepath.Join(abs, ".fontcreator233")
+	w := &Workspace{
+		Dir:       abs,
+		MetaDir:   meta,
+		StatePath: filepath.Join(meta, "state.json"),
+		TmpDir:    filepath.Join(meta, "tmp"),
+		BackupDir: filepath.Join(meta, "backup"),
+		LockPath:  filepath.Join(meta, "lock"),
+		opts:      Options{KeepHistory: 100},
+	}
+	if _, err := os.Stat(abs); os.IsNotExist(err) {
+		w.State = State{Schema: stateSchema, Files: map[string]FileRecord{}}
+		return w, nil
+	}
+	if err := w.loadState(); err != nil {
+		return nil, err
+	}
+	return w, nil
+}
+
 func (w *Workspace) loadState() error {
 	data, err := os.ReadFile(w.StatePath)
 	if os.IsNotExist(err) {
@@ -165,11 +196,25 @@ func (w *Workspace) saveState() error {
 		return err
 	}
 	tmp := w.StatePath + ".tmp"
-	if err := os.WriteFile(tmp, append(data, '\n'), 0o644); err != nil {
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	if err != nil {
 		return err
 	}
-	_ = os.Remove(w.StatePath)
-	return os.Rename(tmp, w.StatePath)
+	if _, err := f.Write(append(data, '\n')); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, w.StatePath); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Begin acquires the workspace lock, prunes stale scratch, and creates a stage.
@@ -230,31 +275,55 @@ func (w *Workspace) Commit(stage *Stage) ([]string, error) {
 		final   string
 		backup  string
 		existed bool
+		moved   bool
 	}
 	var moves []move
-	var moved []move
 	rollback := func() {
-		for i := len(moved) - 1; i >= 0; i-- {
-			m := moved[i]
-			_ = os.Remove(m.final)
+		for i := len(moves) - 1; i >= 0; i-- {
+			m := moves[i]
 			if m.existed {
-				_ = os.MkdirAll(filepath.Dir(m.final), 0o755)
-				_ = os.Rename(m.backup, m.final)
+				_ = os.Remove(m.final)
+				if _, err := os.Stat(m.backup); err == nil {
+					_ = os.MkdirAll(filepath.Dir(m.final), 0o755)
+					_ = os.Rename(m.backup, m.final)
+				}
+				continue
+			}
+			if m.moved {
+				_ = os.Remove(m.final)
 			}
 		}
+		_ = w.loadState()
 	}
 	fail := func(err error) ([]string, error) {
 		rollback()
 		return nil, err
 	}
-	now := time.Now().Unix()
+	rels := make([]string, 0, len(newFiles))
 	for rel := range newFiles {
+		rels = append(rels, rel)
+	}
+	sort.Strings(rels)
+
+	// Move existing outputs into backup before publishing anything. All
+	// backups stay recorded so rollback can restore the previous build even
+	// when a failure happens before the next file is moved.
+	for _, rel := range rels {
 		final, err := safeJoin(w.Dir, rel)
 		if err != nil {
 			return fail(err)
 		}
 		m := move{rel: rel, final: final}
-		if _, err := os.Stat(final); err == nil {
+		info, err := os.Lstat(final)
+		switch {
+		case os.IsNotExist(err):
+		case err != nil:
+			return fail(err)
+		case info.Mode()&os.ModeSymlink != 0:
+			return fail(fmt.Errorf("workspace: refusing to replace symlink %s", rel))
+		case !info.Mode().IsRegular():
+			return fail(fmt.Errorf("workspace: refusing to replace non-regular file %s", rel))
+		default:
 			m.existed = true
 			rec, tracked := w.State.Files[rel]
 			if !tracked && !w.opts.Force {
@@ -279,7 +348,8 @@ func (w *Workspace) Commit(stage *Stage) ([]string, error) {
 		}
 		moves = append(moves, m)
 	}
-	for _, m := range moves {
+	for i := range moves {
+		m := &moves[i]
 		if err := os.MkdirAll(filepath.Dir(m.final), 0o755); err != nil {
 			return fail(err)
 		}
@@ -291,8 +361,12 @@ func (w *Workspace) Commit(stage *Stage) ([]string, error) {
 			}
 			_ = os.Remove(staged)
 		}
-		moved = append(moved, m)
+		m.moved = true
 	}
+
+	// Stale files from the same family are moved to backup first too, so a
+	// failed state write leaves the previous build exactly as it was.
+	now := time.Now().Unix()
 	for rel, rec := range oldForFamily {
 		if _, still := newFiles[rel]; still {
 			continue
@@ -302,10 +376,18 @@ func (w *Workspace) Commit(stage *Stage) ([]string, error) {
 			continue
 		}
 		sum, err := hashFile(final)
-		if err == nil && sum == rec.SHA256 {
-			_ = os.Remove(final)
-			delete(w.State.Files, rel)
+		if err != nil || sum != rec.SHA256 {
+			continue
 		}
+		backup := filepath.Join(backupRoot, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(backup), 0o755); err != nil {
+			return fail(err)
+		}
+		if err := os.Rename(final, backup); err != nil {
+			return fail(err)
+		}
+		delete(w.State.Files, rel)
+		moves = append(moves, move{rel: rel, final: final, backup: backup, existed: true, moved: true})
 	}
 	for rel, staged := range newFiles {
 		rec := FileRecord{
@@ -425,18 +507,20 @@ func (w *Workspace) pruneHistory() bool {
 }
 
 func inferTarget(rel string) string {
-	switch {
-	case strings.HasPrefix(rel, "unity/"):
-		return "unity"
-	case strings.HasPrefix(rel, "unreal/"):
-		return "unreal"
-	case strings.HasPrefix(rel, "web/"):
-		return "web"
-	case strings.HasPrefix(rel, "system/"):
-		return "system"
-	default:
-		return "universal"
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	for _, part := range parts {
+		switch part {
+		case "unity":
+			return "unity"
+		case "unreal":
+			return "unreal"
+		case "web":
+			return "web"
+		case "system":
+			return "system"
+		}
 	}
+	return "universal"
 }
 
 func safeJoin(root, rel string) (string, error) {
@@ -448,6 +532,30 @@ func safeJoin(root, rel string) (string, error) {
 	check, err := filepath.Rel(root, final)
 	if err != nil || check == ".." || strings.HasPrefix(check, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("workspace: path escapes output directory: %q", rel)
+	}
+	// Reject symlinked ancestors so a tracked path cannot redirect writes or
+	// deletes outside the workspace. The root itself may be a symlink chosen
+	// by the user; only components below it are checked.
+	current := root
+	parts := strings.Split(check, string(filepath.Separator))
+	for i, part := range parts {
+		if part == "" || part == "." {
+			continue
+		}
+		current = filepath.Join(current, part)
+		info, err := os.Lstat(current)
+		if os.IsNotExist(err) {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return "", fmt.Errorf("workspace: symlink in output path: %q", rel)
+		}
+		if i < len(parts)-1 && !info.IsDir() {
+			return "", fmt.Errorf("workspace: path component is not a directory: %q", rel)
+		}
 	}
 	return final, nil
 }

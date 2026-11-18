@@ -75,6 +75,9 @@ func (a *app) interactive(common commonFlags) bool {
 	if common.json || common.plain || common.noTUI || common.quiet || isCI() {
 		return false
 	}
+	if os.Getenv("NO_COLOR") != "" || strings.EqualFold(os.Getenv("TERM"), "dumb") {
+		return false
+	}
 	f, ok := a.io.Err.(*os.File)
 	return ok && term.IsTerminal(int(f.Fd()))
 }

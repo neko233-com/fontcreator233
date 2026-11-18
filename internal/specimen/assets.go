@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 )
 
 //go:embed webassets
@@ -19,9 +20,13 @@ var specimenTemplate []byte
 
 const assetsVersion = "1"
 
+var assetsMu sync.Mutex
+
 // EnsureAssets writes the embedded CSS/JS/fonts/licenses into dest.
 // assetsDir, when non-empty, overrides outDir/assets.
 func EnsureAssets(outDir, assetsDir string) (string, error) {
+	assetsMu.Lock()
+	defer assetsMu.Unlock()
 	root := filepath.Join(outDir, "assets")
 	if assetsDir != "" {
 		root = assetsDir

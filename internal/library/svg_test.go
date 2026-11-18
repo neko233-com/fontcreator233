@@ -28,6 +28,13 @@ func TestCodepointFromFilename(t *testing.T) {
 	}
 }
 
+func TestSVGRejectsTransform(t *testing.T) {
+	data := []byte(`<svg xmlns="http://www.w3.org/2000/svg" transform="scale(2)"><path d="M 0 0 L 100 0 L 100 100 Z"/></svg>`)
+	if _, err := ParseSVG(data, "scaled.svg"); err == nil {
+		t.Fatal("expected transform rejection")
+	}
+}
+
 func TestSVGRoundTrip(t *testing.T) {
 	var b bytes.Buffer
 	p := geom.Circle(300, 300, 200)

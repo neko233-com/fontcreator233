@@ -2,11 +2,14 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/neko233-com/fontcreator233/internal/agentschema"
 )
@@ -23,6 +26,7 @@ type IO struct {
 type app struct {
 	io   IO
 	json bool
+	ctx  context.Context
 }
 
 // Run executes one command and returns its process exit code.
@@ -36,7 +40,9 @@ func Run(args []string, io IO) int {
 	if io.Err == nil {
 		io.Err = os.Stderr
 	}
-	a := &app{io: io, json: hasJSON(args)}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	a := &app{io: io, json: hasJSON(args), ctx: ctx}
 	if len(args) == 0 {
 		a.usage()
 		return 1
@@ -143,8 +149,12 @@ func (a *app) fail(command string, code int, err error) int {
 }
 
 func errorCode(code int) string {
-	if code == 1 {
+	switch code {
+	case 1:
 		return "user_error"
+	case 130:
+		return "canceled"
+	default:
+		return "internal_error"
 	}
-	return "internal_error"
 }

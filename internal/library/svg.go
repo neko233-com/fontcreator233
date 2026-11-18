@@ -57,8 +57,10 @@ func CodepointFromFilename(name string) (rune, bool) {
 type svgXML struct {
 	DataAdvance string `xml:"data-advance,attr"`
 	Width       string `xml:"width,attr"`
+	Transform   string `xml:"transform,attr"`
 	Paths       []struct {
-		D string `xml:"d,attr"`
+		D         string `xml:"d,attr"`
+		Transform string `xml:"transform,attr"`
 	} `xml:"path"`
 }
 
@@ -69,11 +71,17 @@ func ParseSVG(data []byte, source string) (Override, error) {
 	if err := xml.Unmarshal(data, &doc); err != nil {
 		return Override{}, fmt.Errorf("%s: parse SVG: %w", source, err)
 	}
+	if doc.Transform != "" {
+		return Override{}, fmt.Errorf("%s: SVG transform is not supported; bake it into coordinates", source)
+	}
 	if len(doc.Paths) == 0 {
 		return Override{}, fmt.Errorf("%s: SVG has no <path>", source)
 	}
 	var path geom.Path
 	for _, p := range doc.Paths {
+		if p.Transform != "" {
+			return Override{}, fmt.Errorf("%s: path transform is not supported; bake it into coordinates", source)
+		}
 		cmds, err := geom.ParseCommands(p.D)
 		if err != nil {
 			return Override{}, fmt.Errorf("%s: %w", source, err)

@@ -66,6 +66,12 @@ type table struct {
 
 // Build compiles a TrueType font.
 func Build(cfg Config) ([]byte, error) {
+	return BuildContext(context.Background(), cfg)
+}
+
+// BuildContext is Build with cooperative cancellation between glyphs and
+// tables.
+func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 	cfg = normalizeConfig(cfg)
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
@@ -75,7 +81,10 @@ func Build(cfg Config) ([]byte, error) {
 		data []byte
 		box  glyphBox
 	}
-	results, err := parallel.Map(context.Background(), glyphs, cfg.Jobs, func(_ context.Context, i int, g Glyph) (encResult, error) {
+	results, err := parallel.Map(ctx, glyphs, cfg.Jobs, func(ctx context.Context, i int, g Glyph) (encResult, error) {
+		if err := ctx.Err(); err != nil {
+			return encResult{}, err
+		}
 		data, box, err := encodeGlyph(g)
 		if err != nil {
 			return encResult{}, fmt.Errorf("glyph %d (%U): %w", i, g.Rune, err)
@@ -132,6 +141,9 @@ func Build(cfg Config) ([]byte, error) {
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	glyf, loca := buildGlyf(encoded)
 	cmapData, err := buildCmap(glyphs)
 	if err != nil {

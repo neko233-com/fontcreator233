@@ -26,6 +26,7 @@ type model struct {
 	done     bool
 	err      error
 	warnings []string
+	summary  string
 	start    time.Time
 	duration time.Duration
 	width    int
@@ -125,6 +126,7 @@ func (m *model) handle(e Event) (tea.Model, tea.Cmd) {
 	case EvDone:
 		m.done = true
 		m.warnings = e.Warnings
+		m.summary = e.Summary
 		m.duration = e.Duration
 		return m, tea.Tick(700*time.Millisecond, func(time.Time) tea.Msg { return quitMsg{} })
 	}
@@ -165,6 +167,9 @@ func (m *model) View() string {
 		b.WriteString(fmt.Sprintf("elapsed %s%s\n", elapsed.Round(100*time.Millisecond), eta))
 	} else {
 		b.WriteString(fmt.Sprintf("done in %s\n", m.duration.Round(time.Millisecond)))
+		if m.summary != "" {
+			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render(m.summary) + "\n")
+		}
 	}
 	if len(m.logs) > 0 {
 		b.WriteString("\n")

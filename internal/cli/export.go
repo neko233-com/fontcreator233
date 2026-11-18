@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/neko233-com/fontcreator233/internal/importexport"
@@ -32,13 +33,14 @@ func (a *app) cmdExportGlyphs(args []string) int {
 	var scripts stringList
 	fs.Var(&scripts, "scripts", "limit to latin|greek|cyrillic|cjk|kana|hangul|symbols")
 	limit := fs.Int("limit", 0, "maximum number of glyphs")
+	force := fs.Bool("force", false, "overwrite existing SVG files")
 	values := map[string]bool{"dir": true, "recipe": true, "unicodes": true, "scripts": true, "limit": true}
 	if err := parseFlexible(fs, args, values); err != nil {
 		a.json = common.json
 		return a.fail("export glyphs", 1, err)
 	}
 	a.json = common.json
-	filter := importexport.Filter{Scripts: scripts, Limit: *limit}
+	filter := importexport.Filter{Scripts: scripts, Limit: *limit, Force: *force}
 	var err error
 	filter.Unicodes, err = importexport.ParseUnicodeSpec(*unicodes)
 	if err != nil {
@@ -68,6 +70,7 @@ func (a *app) cmdExportBundle(args []string) int {
 	var common commonFlags
 	fs := a.newFlagSet("export bundle", &common)
 	out := fs.String("out", "", "output zip path")
+	force := fs.Bool("force", false, "overwrite an existing zip")
 	var targets stringList
 	fs.Var(&targets, "target", "universal|web|system|unity|unreal|all")
 	values := map[string]bool{"out": true, "target": true}
@@ -89,7 +92,16 @@ func (a *app) cmdExportBundle(args []string) int {
 		stem := fontStemFromFamily(r.Meta.Family)
 		zipPath = stem + ".bundle.zip"
 	}
-	res, err := importexport.ExportBundle(context.Background(), recipePath, zipPath, targets)
+	if !*force {
+		if _, err := os.Stat(zipPath); err == nil {
+			return a.fail("export bundle", 1, fmt.Errorf("refusing to overwrite %s (use --force)", zipPath))
+		}
+	}
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	res, err := importexport.ExportBundle(ctx, recipePath, zipPath, targets)
 	if err != nil {
 		return a.fail("export bundle", 1, err)
 	}

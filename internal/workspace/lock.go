@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const lockStaleAge = 2 * time.Hour
+
 type lockInfo struct {
 	PID     int       `json:"pid"`
 	Host    string    `json:"host"`
@@ -26,10 +28,22 @@ func (w *Workspace) acquireLock() error {
 		}
 		existing, readErr := os.ReadFile(w.LockPath)
 		var old lockInfo
-		if readErr == nil && json.Unmarshal(existing, &old) == nil {
-			if time.Since(old.Started) < 30*time.Minute {
+		parsed := readErr == nil && json.Unmarshal(existing, &old) == nil
+		stale := false
+		if parsed {
+			if old.Host == hostname() {
+				stale = !processAlive(old.PID)
+			} else {
+				stale = time.Since(old.Started) > lockStaleAge
+			}
+		} else if info, statErr := os.Stat(w.LockPath); statErr == nil {
+			stale = time.Since(info.ModTime()) > lockStaleAge
+		}
+		if !stale {
+			if parsed {
 				return fmt.Errorf("workspace: another build is running (pid %d, started %s)", old.PID, old.Started.Format(time.RFC3339))
 			}
+			return fmt.Errorf("workspace: lock is held by an unreadable lock file %s", w.LockPath)
 		}
 		_ = os.Remove(w.LockPath)
 		f, err = os.OpenFile(w.LockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/derive"
+	"github.com/neko233-com/fontcreator233/internal/geom"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 	"github.com/neko233-com/fontcreator233/internal/svgout"
 	"github.com/neko233-com/fontcreator233/internal/unicodes"
@@ -23,6 +24,7 @@ type Filter struct {
 	Unicodes []rune
 	Scripts  []string
 	Limit    int
+	Force    bool
 }
 
 // ExportGlyphsFromFont writes one SVG per matching glyph.
@@ -42,18 +44,31 @@ func ExportGlyphsFromFont(fontPath, dir string, filter Filter) ([]string, error)
 	var paths []string
 	limited := filter.Limit > 0
 	var candidates []rune
+	unicodeSet := make(map[rune]struct{}, len(filter.Unicodes))
 	if len(filter.Unicodes) > 0 {
 		candidates = filter.Unicodes
+		for _, r := range filter.Unicodes {
+			unicodeSet[r] = struct{}{}
+		}
 	} else {
 		for r := rune(0); r <= 0x323AF; r++ {
 			candidates = append(candidates, r)
 		}
 	}
+	scale := 1.0
+	if f.UnitsPerEm() > 0 && f.UnitsPerEm() != 1000 {
+		scale = 1000 / float64(f.UnitsPerEm())
+	}
 	for _, r := range candidates {
 		if r >= 0xD800 && r <= 0xDFFF {
 			continue
 		}
-		if !matchFilter(r, filter) {
+		if len(unicodeSet) > 0 {
+			if _, ok := unicodeSet[r]; !ok {
+				continue
+			}
+		}
+		if !matchScripts(r, filter.Scripts) {
 			continue
 		}
 		gid, err := f.GlyphIndex(&buf, r)
@@ -72,12 +87,23 @@ func ExportGlyphsFromFont(fontPath, dir string, filter Filter) ([]string, error)
 		if len(pathData) == 0 {
 			continue
 		}
+		advance := int(math.Round(float64(adv)))
+		if scale != 1 {
+			pathData = pathData.Transformed(geom.Affine{A: scale, E: scale})
+			advance = int(math.Round(float64(advance) * scale))
+		}
 		name := fmt.Sprintf("U+%04X.svg", r)
-		file, err := os.Create(filepath.Join(dir, name))
+		target := filepath.Join(dir, name)
+		if !filter.Force {
+			if _, err := os.Stat(target); err == nil {
+				return nil, fmt.Errorf("export glyphs: refusing to overwrite %s (use --force)", target)
+			}
+		}
+		file, err := os.Create(target)
 		if err != nil {
 			return nil, err
 		}
-		err = svgout.WriteGlyph(file, fmt.Sprintf("U+%04X %c", r, r), int(math.Round(float64(adv))), pathData)
+		err = svgout.WriteGlyph(file, fmt.Sprintf("U+%04X %c", r, r), advance, pathData)
 		_ = file.Close()
 		if err != nil {
 			return nil, err
@@ -149,31 +175,15 @@ func ParseUnicodeSpec(spec string) ([]rune, error) {
 	return out, nil
 }
 
-func matchFilter(r rune, f Filter) bool {
-	if len(f.Unicodes) > 0 {
-		found := false
-		for _, u := range f.Unicodes {
-			if u == r {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
+func matchScripts(r rune, scripts []string) bool {
+	if len(scripts) == 0 {
+		return true
+	}
+	s := unicodes.ScriptOf(r)
+	for _, want := range scripts {
+		if s == want {
+			return true
 		}
 	}
-	if len(f.Scripts) > 0 {
-		s := unicodes.ScriptOf(r)
-		found := false
-		for _, want := range f.Scripts {
-			if s == want {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
+	return false
 }

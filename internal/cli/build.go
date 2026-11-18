@@ -2,9 +2,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
@@ -51,32 +51,30 @@ func (a *app) cmdBuild(args []string) int {
 		splitValue = *split
 	}
 	styleName := style.ResolveStyle(r)
-	stage, err := ws.Begin(workspace.BuildMeta{
+	meta := workspace.BuildMeta{
 		Recipe:  fs.Arg(0),
 		Family:  r.Meta.Family,
 		Style:   styleName,
 		Targets: useTargets,
-	})
-	if err != nil {
-		return a.fail("build", 1, err)
 	}
-	defer ws.Abort(stage)
 	opts := build.Options{
-		OutDir:            stage.Root,
 		Targets:           useTargets,
 		SplitCJK:          splitValue,
 		Jobs:              *jobs,
-		NoOpen:            common.noOpen || isCI(),
+		NoOpen:            common.noOpen || isCI() || a.json,
 		NoTUI:             common.noTUI,
 		NoAutoClean:       *noAutoClean,
 		AssetsDir:         *assetsDir,
 		SelfContainedHTML: *selfContained,
 	}
-	ctx := context.Background()
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	var res build.Result
 	buildFn := func(ctx context.Context, rep ui.Reporter) error {
 		var err error
-		res, err = build.Build(ctx, r, opts, rep)
+		res, _, err = build.BuildToWorkspace(ctx, ws, meta, r, opts, rep)
 		return err
 	}
 	if a.interactive(common) {
@@ -85,12 +83,11 @@ func (a *app) cmdBuild(args []string) int {
 		err = buildFn(ctx, ui.NewPlain(a.io.Err, common.quiet, common.json))
 	}
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return a.fail("build", 130, err)
+		}
 		return a.fail("build", 1, err)
 	}
-	if _, err := ws.Commit(stage); err != nil {
-		return a.fail("build", 1, err)
-	}
-	rewriteResultPaths(&res, stage.Root, ws.Dir)
 	if a.json {
 		extra := map[string]any{
 			"font":           res.FontPath,
@@ -126,31 +123,6 @@ func (a *app) cmdBuild(args []string) int {
 		}
 	}
 	return 0
-}
-
-func rewriteResultPaths(res *build.Result, stageDir, outDir string) {
-	rewrite := func(p string) string {
-		if p == "" {
-			return ""
-		}
-		rel, err := filepath.Rel(stageDir, p)
-		if err != nil {
-			return p
-		}
-		return filepath.Join(outDir, rel)
-	}
-	res.FontPath = rewrite(res.FontPath)
-	res.WOFFPath = rewrite(res.WOFFPath)
-	res.SpecimenPath = rewrite(res.SpecimenPath)
-	for i := range res.Split {
-		res.Split[i] = rewrite(res.Split[i])
-	}
-	for target, paths := range res.Targets {
-		for i := range paths {
-			paths[i] = rewrite(paths[i])
-		}
-		res.Targets[target] = paths
-	}
 }
 
 func isCI() bool {
