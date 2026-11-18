@@ -20,6 +20,7 @@ fontcreator build work/font.recipe.yaml --out dist --target all
 - **全球化**：拉丁/希腊/西里尔参数化生成，CJK/假名/谚文/符号来自内嵌 OFL 基础字库；覆盖率如实报告。
 - **真实产物**：TTF、WOFF、HTML 样张、Unity UPM + TMP 导入器、Unreal 导入脚本 + CompositeFont 范围、Web CSS、系统安装说明、应用使用包。
 - **OpenType**：`liga`、`kern`、`case`、`frac`、`tnum`、`ss01`、`smcp`、`onum`、`zero`、`sups`、`subs`、`ccmp` 和 `mark`/`mkmk` 锚点，同时生成 GPOS 与 legacy kern 表。
+- **可变字重（可选）**：`output.variable: true` 生成一条真实的 `wght` 可变轴（`fvar` + `gvar`），样张带实时字重滑杆。
 - **CLI 好看**：Bubble Tea 进度、ETA、取消；非 TTY/CI/JSON 自动降级。
 - **工作区安全**：staging + 原子提交；`clean` 只删暂存/历史或自己生成且 SHA-256 未变的文件。
 
@@ -107,7 +108,7 @@ fontcreator build examples/botanic-display.recipe.yaml --target all --no-open
 
 不支持：阿拉伯文、希伯来文、印度系文字、泰文、竖排、复杂 shaping。
 
-生成的 OpenType 覆盖 `liga`、`kern`、`case`、`frac`、`tnum`、`ss01`、`smcp`、`onum`、`zero`、`sups`、`subs`、`ccmp`、基础 top-center `mark` 锚点和 `mkmk` 堆叠标记；不生成 contextual substitution（`calt`/`cswh`）、cursive attachment、可变轴、彩色图层等高级 GSUB/GPOS。`learn` 可以解析并报告其他字体中的这些特性。
+生成的 OpenType 覆盖 `liga`、`kern`、`case`、`frac`、`tnum`、`ss01`、`smcp`、`onum`、`zero`、`sups`、`subs`、`ccmp`、基础 top-center `mark` 锚点和 `mkmk` 堆叠标记；可选生成一条 `wght` 可变轴（`fvar` + `gvar`），CJK/韩文/假名保持静态，不生成 `HVAR`/`MVAR` 或额外轴。不生成 contextual substitution（`calt`/`cswh`）、cursive attachment、彩色图层等高级 GSUB/GPOS。`learn` 可以解析并报告其他字体中的这些特性。
 
 ## 产物
 

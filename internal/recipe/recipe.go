@@ -80,6 +80,7 @@ type Output struct {
 	Targets  []string `yaml:"targets" json:"targets"`
 	Specimen bool     `yaml:"specimen" json:"specimen"`
 	Open     bool     `yaml:"open" json:"open"`
+	Variable bool     `yaml:"variable" json:"variable"`
 	SplitCJK int      `yaml:"splitCJK" json:"splitCJK"`
 	TMP      TMP      `yaml:"tmp" json:"tmp"`
 }

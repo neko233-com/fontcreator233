@@ -33,6 +33,9 @@ func buildName(cfg Config) []byte {
 	if cfg.Designer == "" {
 		values[9] = "fontcreator233"
 	}
+	if cfg.Variable {
+		values[256] = "Weight"
+	}
 	ids := make([]int, 0, len(values))
 	for id := range values {
 		ids = append(ids, int(id))

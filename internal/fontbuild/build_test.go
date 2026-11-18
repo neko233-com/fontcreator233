@@ -85,6 +85,38 @@ func TestOpenTypeLayoutTables(t *testing.T) {
 	}
 }
 
+func TestVariableFontTables(t *testing.T) {
+	cfg := testConfig()
+	cfg.Variable = true
+	data, err := Build(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tags := map[string]bool{}
+	if len(data) >= 12 {
+		n := int(binary.BigEndian.Uint16(data[4:]))
+		for i := 0; i < n; i++ {
+			rec := 12 + i*16
+			tag := string(data[rec : rec+4])
+			tags[tag] = true
+			if tag == "fvar" {
+				off := int(binary.BigEndian.Uint32(data[rec+8:]))
+				if off+16 > len(data) || binary.BigEndian.Uint16(data[off+14:off+16]) != 8 {
+					t.Fatalf("fvar instanceSize must be 8 for HarfBuzz")
+				}
+			}
+		}
+	}
+	for _, tag := range []string{"fvar", "gvar"} {
+		if !tags[tag] {
+			t.Fatalf("missing %s (tables: %v)", tag, tags)
+		}
+	}
+	if _, err := sfnt.Parse(data); err != nil {
+		t.Fatalf("parse variable font: %v", err)
+	}
+}
+
 func TestBuildTTF(t *testing.T) {
 	cfg := testConfig()
 	data, err := Build(cfg)

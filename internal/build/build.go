@@ -266,6 +266,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		if r.SourcePath != "" {
 			recipeName = filepath.Base(r.SourcePath)
 		}
+		varMin, varDef, varMax := fontbuild.VariableRange(r.Style.Weight)
 		html, err := specimen.Build(specimen.Options{
 			OutDir:        o.OutDir,
 			FontPath:      result.FontPath,
@@ -300,6 +301,10 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 				HasSubs:      hasSubstitutionFeature(substitutions, "subs"),
 				HasCcmp:      hasLigatureFeature(ligatures, "ccmp"),
 				HasMkmk:      hasMkmk,
+				HasVariable:  r.Output.Variable,
+				VarMin:       varMin,
+				VarDefault:   varDef,
+				VarMax:       varMax,
 				KernPairs:    len(kerning),
 			},
 		})
@@ -609,6 +614,7 @@ func fontConfig(r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph
 		WidthClass:  widthClass(r.Style.Width),
 		ItalicAngle: r.Style.Slant,
 		Created:     buildTime(),
+		Variable:    r.Output.Variable,
 		Glyphs:      glyphs,
 	}
 }
@@ -1085,6 +1091,8 @@ func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, gl
 		cfg := fontConfig(r, styleName, list)
 		cfg.Ligatures = ligatures
 		cfg.Kerning = kerning
+		// CJK split chunks stay static; the base CJK outlines do not vary.
+		cfg.Variable = false
 		cfg.Jobs = o.Jobs
 		data, err := fontbuild.BuildContext(ctx, cfg)
 		if err != nil {

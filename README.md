@@ -36,6 +36,8 @@ Just Go, an OFL base font, and a recipe.
 - **OpenType**: generated `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
   `smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, and `mark`/`mkmk` anchors,
   plus GPOS and legacy kern tables. See [`docs/opentype.md`](docs/opentype.md).
+- **Variable weight (opt-in)**: `output.variable: true` emits one real `wght`
+  axis with `fvar` + `gvar`; the specimen has a live weight slider.
 - **Pleasant to use**: Bubble Tea TUI with progress, ETA, cancellation, and a
   plain/JSON fallback for automation.
 - **Safe workspace**: builds stage and commit atomically; `clean` removes only
@@ -355,13 +357,14 @@ Optional cross-checks use fontTools and `fc-scan` in CI.
 ## Limits
 
 - No Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
-- No variable-font output, color fonts, emoji, or WOFF2 encoding.
+- No color fonts, emoji, or WOFF2 encoding.
 - Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
   `smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, simple top-center mark
-  anchors, and `mkmk` stacked marks. It does not generate contextual
-  substitutions (`calt`/`cswh`), cursive attachment, variable axes, color
-  layers, or advanced GPOS/GSUB. `learn` can report those features in other
-  fonts.
+  anchors, and `mkmk` stacked marks. A single opt-in `wght` variable axis is
+  emitted with `fvar` + `gvar`; CJK/Hangul/kana stay static and no `HVAR`/`MVAR`
+  or additional axes are generated. It does not generate contextual
+  substitutions (`calt`/`cswh`), cursive attachment, color layers, or advanced
+  GPOS/GSUB. `learn` can report those features in other fonts.
 - CJK/Hangul style transfer is geometric + synthetic bold, not a full redraw.
 - Unity/Unreal packages are generated; validate them in your Editor.
 - Builds are byte-identical within one tool version, OS/arch, and Go version.

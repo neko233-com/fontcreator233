@@ -12,6 +12,8 @@ HarfBuzz shaping was used for manual verification.
 | `GPOS` | Pair kerning, mark-to-base, and mark-to-mark attachment |
 | `GDEF` | Glyph classes for marks and alternates |
 | `kern` | Legacy pair kerning for older software |
+| `fvar` | Opt-in `wght` axis metadata (min/default/max) |
+| `gvar` | Per-point outline deltas for the `wght` axis |
 
 ## Generated features
 
@@ -38,6 +40,21 @@ Example:
 font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;
 ```
 
+## Variable weight
+
+Set `output.variable: true` to emit one real `wght` axis with `fvar` + `gvar`.
+The axis range is the recipe weight ±200, clamped to 100–900; the recipe weight
+is the default instance.
+
+```css
+font-variation-settings: "wght" 820;
+```
+
+Latin, Greek, Cyrillic, symbols, and generated feature glyphs interpolate.
+CJK/Hangul/kana stay at their default outlines. Advances are unchanged because
+`HVAR` is not emitted; the axis changes outlines, not metrics. Split CJK fonts
+are static.
+
 ## Verification
 
 - `go test ./...` builds fonts and asserts the GSUB/GPOS/GDEF/`kern` tags and
@@ -47,6 +64,8 @@ font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;
 - HarfBuzz shaping was run manually for `1/2`, `(A)`, `0123`, `fi`, `a`, `abc`,
   `0123456789`, `0`, `123` (sup/sub), `q́`, `a` + `◌́` (`ccmp`), and
   `q́̄` (`mkmk`).
+- fontTools asserts the `fvar` axis and non-zero `gvar` deltas for `A`; HarfBuzz
+  glyph extents were checked at `wght` 420, 620, and 820.
 - `fontcreator learn <font> --json` reports the same tags and lookup types in
   external fonts, including variable axes and color tables when present.
 
@@ -54,7 +73,8 @@ font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;
 
 Generated fonts are static and Latin-focused. They do **not** include:
 
-- variable axes (`fvar`/`gvar`/`HVAR`) or color layers (`COLR`/`CPAL`/`SVG `);
+- additional variable axes beyond `wght`, or metric variations (`HVAR`/`MVAR`);
+- color layers (`COLR`/`CPAL`/`SVG `);
 - contextual substitutions (`calt`, `cswh`) beyond the `ccmp` composition
   ligatures above;
 - cursive attachment;

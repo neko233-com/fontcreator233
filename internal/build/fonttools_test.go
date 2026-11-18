@@ -6,6 +6,42 @@ import (
 	"testing"
 )
 
+func TestFontToolsVariable(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	r.Output.Variable = true
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+if "fvar" not in f or "gvar" not in f:
+    raise SystemExit("fvar/gvar missing")
+axis = f["fvar"].axes[0]
+if axis.axisTag != "wght" or not (axis.minValue < axis.defaultValue < axis.maxValue):
+    raise SystemExit(f"bad wght axis: {axis}")
+if "A" not in f["gvar"].variations:
+    raise SystemExit("A has no gvar data")
+coords = f["gvar"].variations["A"][0].coordinates
+if not any(c is not None and (c[0] or c[1]) for c in coords):
+    raise SystemExit("A has no non-zero variation delta")
+print("ok", axis.minValue, axis.defaultValue, axis.maxValue)
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools variable: %v\n%s", err, out)
+	}
+}
+
 func TestFontToolsSample(t *testing.T) {
 	python, err := exec.LookPath("python")
 	if err != nil {

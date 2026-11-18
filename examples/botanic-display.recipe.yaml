@@ -50,6 +50,7 @@ output:
   targets: [universal, web, system, unity, unreal, apps]
   specimen: true
   open: false
+  variable: true
   splitCJK: 0
   tmp:
     population: dynamic

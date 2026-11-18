@@ -71,6 +71,7 @@ type Config struct {
 	FixedPitch    bool
 	Created       time.Time
 	Jobs          int
+	Variable      bool
 	Glyphs        []Glyph
 	Kerning       []KernPair
 	Ligatures     []Ligature
@@ -206,6 +207,16 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 			return nil, err
 		} else if len(gsub) > 0 {
 			tables = append(tables, table{"GSUB", gsub})
+		}
+	}
+	if cfg.Variable {
+		gvar, err := buildGvar(glyphs)
+		if err != nil {
+			return nil, err
+		}
+		if len(gvar) > 0 {
+			tables = append(tables, table{"fvar", buildFvar(cfg)})
+			tables = append(tables, table{"gvar", gvar})
 		}
 	}
 	sort.Slice(tables, func(i, j int) bool { return tables[i].tag < tables[j].tag })

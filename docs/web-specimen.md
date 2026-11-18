@@ -13,6 +13,9 @@ Vercel/Geist visual language and works directly from `file://` with no network.
   toggles, plus a feature grid for `smcp`, `onum`, `zero`, `sups`, `subs`,
   `ccmp`, `mark`, and `mkmk`; live `font-feature-settings` and feature-table
   metadata.
+- Variable panel: when `output.variable` is enabled, a live `wght` slider drives
+  `font-variation-settings` on a large sample and shows the min/default/max.
+  Deep-link an instance with `#wght=820`.
 - Scale waterfall from caption to poster.
 - Global coverage cards for Latin, Greek, Russian, Chinese, Japanese, Korean,
   and symbols.

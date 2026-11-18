@@ -135,6 +135,7 @@ output:
   targets: [universal, web, system, unity, apps]
   specimen: true
   open: true
+  variable: true
   splitCJK: 0
   tmp:
     population: dynamic

@@ -73,9 +73,10 @@ func Describe() map[string]any {
 		},
 		"opentype": map[string]any{
 			"generated": []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "ccmp", "mark", "mkmk"},
-			"tables":    []string{"GSUB", "GPOS", "GDEF", "kern"},
+			"tables":    []string{"GSUB", "GPOS", "GDEF", "kern", "fvar", "gvar"},
+			"variable":  "one wght axis (fvar/gvar); outlines vary for Latin/Greek/Cyrillic/symbol and generated feature glyphs, CJK/Hangul/kana stay static",
 			"unsupported": []string{
-				"variable axes (fvar/gvar/HVAR)", "color layers (COLR/CPAL/SVG )",
+				"additional variable axes (only wght; no HVAR/MVAR)", "color layers (COLR/CPAL/SVG )",
 				"contextual substitutions (calt/cswh)", "cursive attachment",
 			},
 			"note": "Generated features are deterministic and Latin-focused. `learn` reports richer GSUB/GPOS, variable axes, and color tables in external fonts without re-emitting them.",
@@ -137,6 +138,9 @@ func Markdown() string {
 	ot := Describe()["opentype"].(map[string]any)
 	b.WriteString("- generated: " + strings.Join(ot["generated"].([]string), ", ") + "\n")
 	b.WriteString("- tables: " + strings.Join(ot["tables"].([]string), ", ") + "\n")
+	if v, ok := ot["variable"].(string); ok {
+		b.WriteString("- variable: " + v + "\n")
+	}
 	b.WriteString("- unsupported: " + strings.Join(ot["unsupported"].([]string), ", ") + "\n")
 	b.WriteString("- " + ot["note"].(string) + "\n")
 	b.WriteString("\n## Targets\n\n")

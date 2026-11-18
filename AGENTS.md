@@ -29,6 +29,11 @@ fontcreator learn path/to/reference.ttf --out work/learned --json
 fontcreator status --out dist --json
 ```
 
+`output.variable: true` emits one real `wght` axis via `fvar` + `gvar`. The
+`init` template and examples enable it; set it to `false` for a static font.
+The axis varies Latin/Greek/Cyrillic/symbol and generated feature glyphs; CJK,
+Hangul, and kana stay static.
+
 Iterate at most three times: structure first, then texture, then terminals.
 
 ## What to decide from the reference

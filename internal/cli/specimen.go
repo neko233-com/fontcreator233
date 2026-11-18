@@ -2,9 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 
+	"github.com/neko233-com/fontcreator233/internal/fontlearn"
 	"github.com/neko233-com/fontcreator233/internal/inspect"
 	"github.com/neko233-com/fontcreator233/internal/specimen"
 )
@@ -49,6 +51,18 @@ func (a *app) cmdSpecimen(args []string) int {
 		}
 		return false
 	}
+	hasVariable := false
+	varMin, varDefault, varMax := 0, 0, 0
+	for _, axis := range fontlearn.Axes(data) {
+		if axis.Tag != "wght" {
+			continue
+		}
+		hasVariable = true
+		varMin = int(math.Round(axis.Min))
+		varDefault = int(math.Round(axis.Default))
+		varMax = int(math.Round(axis.Max))
+		break
+	}
 	path, err := specimen.Build(specimen.Options{
 		OutDir:        dir,
 		FontPath:      fontPath,
@@ -68,6 +82,10 @@ func (a *app) cmdSpecimen(args []string) int {
 			Coverage:     info.Coverage,
 			HasKerning:   hasTable("GPOS") || hasTable("kern"),
 			HasLigatures: hasTable("GSUB"),
+			HasVariable:  hasVariable,
+			VarMin:       varMin,
+			VarDefault:   varDefault,
+			VarMax:       varMax,
 		},
 	})
 	if err != nil {

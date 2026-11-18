@@ -24,6 +24,10 @@ Flags: `--out`, `--target` (repeatable/comma; `universal`, `web`, `system`,
 `--self-contained-html`, `--no-auto-clean`, `--force`, `--no-open`, `--plain`,
 `--no-tui`, `--json`, `--quiet`.
 
+Set `output.variable: true` in the recipe to emit one `wght` axis with
+`fvar` + `gvar`. The `init` template and examples enable it; set it to `false`
+for a static font.
+
 ## build-all
 
 ```bash

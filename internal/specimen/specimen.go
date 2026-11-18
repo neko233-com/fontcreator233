@@ -43,6 +43,10 @@ type Data struct {
 	HasSubs      bool
 	HasCcmp      bool
 	HasMkmk      bool
+	HasVariable  bool
+	VarMin       int
+	VarDefault   int
+	VarMax       int
 	KernPairs    int
 }
 

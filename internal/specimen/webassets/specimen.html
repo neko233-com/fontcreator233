@@ -110,7 +110,7 @@
         <span class="eyebrow">02 — OPENTYPE</span>
         <h2>Details you can switch on.</h2>
       </div>
-      <span class="hint">real GSUB + GPOS + kern tables</span>
+      <span class="hint">{{if .Data.HasVariable}}real GSUB + GPOS + kern + fvar/gvar{{else}}real GSUB + GPOS + kern tables{{end}}</span>
     </div>
     <div class="feature-meta">
       {{if .Data.HasLigatures}}<span><b>liga</b> fi · fl · ffi · ffl</span>{{else}}<span><b>liga</b> not present</span>{{end}}
@@ -174,6 +174,20 @@
       {{if .Data.HasCcmp}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "ccmp" 1'>á é</span><span class="feature-label"><b>ccmp</b> composed accents</span></div>{{end}}
       {{if .Data.HasMkmk}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "mark" 1, "mkmk" 1'>q́̄</span><span class="feature-label"><b>mkmk</b> stacked marks</span></div>{{end}}
     </div>
+    {{if .Data.HasVariable}}
+    <div class="variable-panel">
+      <div class="variable-head">
+        <div>
+          <span class="eyebrow">VARIABLE AXIS</span>
+          <h3>Weight, continuously.</h3>
+        </div>
+        <div class="variable-readout"><b>wght</b> <span id="var-value">{{.Data.VarDefault}}</span></div>
+      </div>
+      <input id="var-axis" type="range" min="{{.Data.VarMin}}" max="{{.Data.VarMax}}" value="{{.Data.VarDefault}}" step="1">
+      <div id="var-sample" class="variable-sample specimen-font" style='font-variation-settings: "wght" {{.Data.VarDefault}}'>Hamburgefonstiv</div>
+      <div class="variable-range mono"><span>{{.Data.VarMin}}</span><span>{{.Data.VarDefault}} default</span><span>{{.Data.VarMax}}</span></div>
+    </div>
+    {{end}}
   </section>
 
   <section id="scale" class="panel scale">

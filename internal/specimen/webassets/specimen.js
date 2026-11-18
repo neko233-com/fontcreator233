@@ -230,6 +230,15 @@
     if (code) code.textContent = "font-feature-settings: " + settings + ";";
   }
 
+  function applyVariable() {
+    var axis = document.getElementById("var-axis");
+    var sample = document.getElementById("var-sample");
+    var value = document.getElementById("var-value");
+    if (!axis || !sample) return;
+    sample.style.fontVariationSettings = '"wght" ' + axis.value;
+    if (value) value.textContent = axis.value;
+  }
+
   function wire() {
     if (document.body.dataset.accent) {
       document.documentElement.style.setProperty("--accent", document.body.dataset.accent);
@@ -291,6 +300,13 @@
       if (el) el.addEventListener("change", applyFeatures);
     });
     applyFeatures();
+    var axis = document.getElementById("var-axis");
+    if (axis) {
+      var match = (window.location.hash || "").match(/wght=(\d+)/);
+      if (match) axis.value = match[1];
+      axis.addEventListener("input", applyVariable);
+    }
+    applyVariable();
     rebuildVirtualizer();
     window.__fontcreatorBoot = true;
   }

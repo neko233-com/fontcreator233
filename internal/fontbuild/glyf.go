@@ -7,7 +7,9 @@ type glyphPoint struct {
 	on   bool
 }
 
-func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
+// flattenGlyph applies the same duplicate-point cleanup used by encodeGlyph
+// and returns the exact point order stored in glyf. gvar must use this order.
+func flattenGlyph(g Glyph) ([]glyphPoint, []uint16, glyphBox, error) {
 	var points []glyphPoint
 	var endPts []uint16
 	for _, contour := range g.Path {
@@ -15,11 +17,11 @@ func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
 		for _, n := range contour {
 			x, err := roundInt16(n.P.X)
 			if err != nil {
-				return nil, glyphBox{}, err
+				return nil, nil, glyphBox{}, err
 			}
 			y, err := roundInt16(n.P.Y)
 			if err != nil {
-				return nil, glyphBox{}, err
+				return nil, nil, glyphBox{}, err
 			}
 			p := geom.Node{P: geom.Point{X: float64(x), Y: float64(y)}, On: n.On}
 			if len(cleaned) > 0 && cleaned[len(cleaned)-1].P == p.P {
@@ -37,15 +39,15 @@ func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
 			points = append(points, glyphPoint{x: int(n.P.X), y: int(n.P.Y), on: n.On})
 		}
 		if len(points) > 65535 {
-			return nil, glyphBox{}, errIndexTooLarge
+			return nil, nil, glyphBox{}, errIndexTooLarge
 		}
 		endPts = append(endPts, uint16(len(points)-1))
 	}
 	if len(points) == 0 {
-		return nil, glyphBox{empty: true}, nil
+		return nil, nil, glyphBox{empty: true}, nil
 	}
 	if len(endPts) > 32767 {
-		return nil, glyphBox{}, errIndexTooLarge
+		return nil, nil, glyphBox{}, errIndexTooLarge
 	}
 	box := glyphBox{empty: false}
 	box.xMin, box.yMin = int16(points[0].x), int16(points[0].y)
@@ -63,6 +65,17 @@ func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
 		if int16(p.y) > box.yMax {
 			box.yMax = int16(p.y)
 		}
+	}
+	return points, endPts, box, nil
+}
+
+func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
+	points, endPts, box, err := flattenGlyph(g)
+	if err != nil {
+		return nil, glyphBox{}, err
+	}
+	if len(points) == 0 {
+		return nil, box, nil
 	}
 
 	var flags []byte

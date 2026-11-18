@@ -636,6 +636,21 @@ func dedupeStrings(in []string) []string {
 	return out
 }
 
+// Axes returns the fvar axes without scanning glyph coverage. It is used by
+// the specimen command to expose variation sliders for external fonts.
+func Axes(data []byte) []Axis {
+	tables, err := parseTables(data)
+	if err != nil {
+		return nil
+	}
+	for _, t := range tables {
+		if t.Tag == "fvar" && int(t.Offset)+int(t.Length) <= len(data) {
+			return parseFvar(data[t.Offset : t.Offset+t.Length])
+		}
+	}
+	return nil
+}
+
 // Markdown renders a human-readable learning report.
 func (r Report) Markdown() string {
 	var b strings.Builder
