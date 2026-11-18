@@ -48,19 +48,24 @@ func buildUnity(o Options, root *integration.Manifest) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	readme = replace(readme, "__PACKAGE_NAME__", packageName, "__DISPLAY_NAME__", display, "__FAMILY__", o.Family, "__STYLE__", o.Style)
+	readme = replace(readme, "__PACKAGE_NAME__", packageName, "__DISPLAY_NAME__", display, "__FAMILY__", o.Family, "__STYLE__", o.Style, "__LICENSE__", o.License)
 	editor, err := unityFS.ReadFile("unity/FontCreator233TMPImporter.cs.tmpl")
 	if err != nil {
 		return nil, err
 	}
 	editor = replace(editor, "__PACKAGE_NAME__", packageName)
 
-	for path, data := range map[string][]byte{
+	files := map[string][]byte{
 		filepath.Join(dir, "package.json"):                       pkg,
 		filepath.Join(dir, "README.md"):                          readme,
 		filepath.Join(editorDir, "FontCreator233TMPImporter.cs"): editor,
-		filepath.Join(dir, "OFL.txt"):                            assets.OFL,
-	} {
+	}
+	licenseFile := ""
+	if o.License == "OFL-1.1" {
+		licenseFile = "OFL.txt"
+		files[filepath.Join(dir, "OFL.txt")] = assets.OFL
+	}
+	for path, data := range files {
 		if err := os.WriteFile(path, data, 0o644); err != nil {
 			return nil, err
 		}
@@ -105,7 +110,7 @@ func buildUnity(o Options, root *integration.Manifest) ([]string, error) {
 	sort.Strings(charsetNames)
 
 	m := *root
-	m.LicenseFile = "OFL.txt"
+	m.LicenseFile = licenseFile
 	m.Fonts = manifestFonts
 	m.Fallbacks = fallbacks
 	m.Charsets = charsetNames
@@ -119,8 +124,10 @@ func buildUnity(o Options, root *integration.Manifest) ([]string, error) {
 		filepath.Join(dir, "package.json"),
 		filepath.Join(dir, "README.md"),
 		filepath.Join(dir, "fontcreator233.manifest.json"),
-		filepath.Join(dir, "OFL.txt"),
 		filepath.Join(editorDir, "FontCreator233TMPImporter.cs"),
+	}
+	if licenseFile != "" {
+		paths = append(paths, filepath.Join(dir, licenseFile))
 	}
 	paths = append(paths, fontPaths...)
 	for _, name := range charsetNames {

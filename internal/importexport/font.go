@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/neko233-com/fontcreator233/internal/derive"
+	"github.com/neko233-com/fontcreator233/internal/geom"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 	"github.com/neko233-com/fontcreator233/internal/svgout"
 	"github.com/neko233-com/fontcreator233/internal/unicodes"
@@ -149,12 +150,18 @@ func ImportFont(path, outDir string, extractGlyphs bool, unicodesFilter []rune) 
 			if len(pathData) == 0 {
 				continue
 			}
+			advance := int(math.Round(float64(adv26)))
+			if p.UnitsPerEm > 0 && p.UnitsPerEm != 1000 {
+				scale := 1000 / float64(p.UnitsPerEm)
+				pathData = pathData.Transformed(geom.Affine{A: scale, E: scale})
+				advance = int(math.Round(float64(advance) * scale))
+			}
 			name := fmt.Sprintf("U+%04X.svg", r)
 			file, err := os.Create(filepath.Join(dir, name))
 			if err != nil {
 				return Profile{}, err
 			}
-			err = svgout.WriteGlyph(file, fmt.Sprintf("%s U+%04X", p.Family, r), int(math.Round(float64(adv26))), pathData)
+			err = svgout.WriteGlyph(file, fmt.Sprintf("%s U+%04X", p.Family, r), advance, pathData)
 			_ = file.Close()
 			if err != nil {
 				return Profile{}, err

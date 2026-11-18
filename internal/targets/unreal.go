@@ -67,7 +67,11 @@ func buildUnreal(o Options, root *integration.Manifest) ([]string, error) {
 	sort.Strings(charsetNames)
 
 	m := *root
-	m.LicenseFile = "OFL.txt"
+	licenseFile := ""
+	if o.License == "OFL-1.1" {
+		licenseFile = "OFL.txt"
+	}
+	m.LicenseFile = licenseFile
 	m.Fonts = manifestFonts
 	m.Fallbacks = fallbacks
 	m.Charsets = charsetNames
@@ -97,7 +101,7 @@ func buildUnreal(o Options, root *integration.Manifest) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	readme = replace(readme, "__DISPLAY_NAME__", o.Family+" "+o.Style, "__FAMILY__", o.Family, "__DEFAULT_FONT__", "Fonts/"+defaultFont)
+	readme = replace(readme, "__DISPLAY_NAME__", o.Family+" "+o.Style, "__FAMILY__", o.Family, "__DEFAULT_FONT__", "Fonts/"+defaultFont, "__LICENSE__", o.License)
 	script, err := unrealFS.ReadFile("unreal/fontcreator233_import.py.tmpl")
 	if err != nil {
 		return nil, err
@@ -105,21 +109,23 @@ func buildUnreal(o Options, root *integration.Manifest) ([]string, error) {
 	script = replace(script, "__FAMILY__", o.Family)
 	readmePath := filepath.Join(dir, "README.md")
 	scriptPath := filepath.Join(scriptsDir, "fontcreator233_import.py")
-	oflPath := filepath.Join(dir, "OFL.txt")
 	if err := os.WriteFile(readmePath, readme, 0o644); err != nil {
 		return nil, err
 	}
 	if err := os.WriteFile(scriptPath, script, 0o644); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(oflPath, assets.OFL, 0o644); err != nil {
-		return nil, err
-	}
 	paths := []string{
 		readmePath,
 		scriptPath,
-		oflPath,
 		filepath.Join(dir, "fontcreator233.manifest.json"),
+	}
+	if licenseFile != "" {
+		oflPath := filepath.Join(dir, licenseFile)
+		if err := os.WriteFile(oflPath, assets.OFL, 0o644); err != nil {
+			return nil, err
+		}
+		paths = append(paths, oflPath)
 	}
 	paths = append(paths, fontPaths...)
 	for _, name := range charsetNames {

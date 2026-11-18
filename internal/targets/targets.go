@@ -303,6 +303,10 @@ func buildSystem(o Options) ([]string, error) {
 	if err := copyFile(o.Fonts[0].Path, font); err != nil {
 		return nil, err
 	}
+	licenseLine := "The font license is " + o.License + "."
+	if o.License == "OFL-1.1" {
+		licenseLine = "The font is licensed under OFL-1.1; see ../OFL.txt."
+	}
 	install := fmt.Sprintf(`# %s %s — system install
 
 ## Windows
@@ -317,8 +321,8 @@ Copy it to ~/.local/share/fonts, then run:
 fc-cache -f -v
 `+"```"+`
 
-The font is licensed under OFL-1.1; see ../OFL.txt.
-`, o.Family, o.Style, filepath.Base(font))
+%s
+`, o.Family, o.Style, filepath.Base(font), licenseLine)
 	installPath := filepath.Join(dir, "INSTALL.md")
 	if err := os.WriteFile(installPath, []byte(install), 0o644); err != nil {
 		return nil, err
