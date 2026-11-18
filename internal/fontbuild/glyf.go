@@ -79,6 +79,9 @@ func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
 			flag |= 0x10
 		} else if dx >= -255 && dx <= 255 {
 			flag |= 0x02
+			if dx > 0 {
+				flag |= 0x10
+			}
 			xData = append(xData, byte(absInt(dx)))
 		} else {
 			xData = appendI16(xData, int16(dx))
@@ -87,6 +90,9 @@ func encodeGlyph(g Glyph) ([]byte, glyphBox, error) {
 			flag |= 0x20
 		} else if dy >= -255 && dy <= 255 {
 			flag |= 0x04
+			if dy > 0 {
+				flag |= 0x20
+			}
 			yData = append(yData, byte(absInt(dy)))
 		} else {
 			yData = appendI16(yData, int16(dy))

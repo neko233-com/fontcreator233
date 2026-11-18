@@ -98,8 +98,15 @@ func glyphFrom(f *sfnt.Font, r rune) (geom.Path, int, bool, error) {
 	}
 	path := segmentsToPath(segs)
 	normalizeOrientation(path)
-	adv := int(math.Round(float64(adv26) / 64))
+	adv := int(math.Round(float64(adv26)))
 	return path, adv, true, nil
+}
+
+// SegmentsToPath converts sfnt segments (Y down) to a font-unit path with Y up.
+func SegmentsToPath(segs sfnt.Segments) geom.Path {
+	p := segmentsToPath(segs)
+	normalizeOrientation(p)
+	return p
 }
 
 func segmentsToPath(segs sfnt.Segments) geom.Path {
@@ -112,7 +119,7 @@ func segmentsToPath(segs sfnt.Segments) geom.Path {
 		}
 	}
 	toPoint := func(p fixed.Point26_6) geom.Point {
-		return geom.Point{X: float64(p.X) / 64, Y: -float64(p.Y) / 64}
+		return geom.Point{X: float64(p.X), Y: -float64(p.Y)}
 	}
 	for _, seg := range segs {
 		switch seg.Op {

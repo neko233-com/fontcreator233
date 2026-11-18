@@ -58,6 +58,17 @@ func TestYAxisIsUp(t *testing.T) {
 	if b.MaxY <= 0 || b.MinY < -50 {
 		t.Fatalf("A bounds = %#v, want y-up with positive ascender", b)
 	}
+	cjk, adv, ok, err := set.Glyph('中')
+	if err != nil || !ok {
+		t.Fatalf("中 ok=%v err=%v", ok, err)
+	}
+	cb := cjk.Bounds()
+	if cb.Width() < 700 || cb.Height() < 700 {
+		t.Fatalf("中 bounds = %#v, want a full-size CJK glyph", cb)
+	}
+	if adv < 900 || adv > 1100 {
+		t.Fatalf("中 advance = %d, want ~1000", adv)
+	}
 }
 
 func TestDeterministic(t *testing.T) {

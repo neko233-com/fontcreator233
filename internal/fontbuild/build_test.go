@@ -72,6 +72,10 @@ func TestBuildTTF(t *testing.T) {
 	if err != nil || len(segs) == 0 {
 		t.Fatalf("load A: segs=%d err=%v", len(segs), err)
 	}
+	bounds := segs.Bounds()
+	if w := int(bounds.Max.X - bounds.Min.X); w != 500 {
+		t.Fatalf("A width = %d, want 500 (coordinate sign encoding)", w)
+	}
 	metrics, err := f.Metrics(&buf, 1000, 0)
 	if err != nil {
 		t.Fatal(err)
