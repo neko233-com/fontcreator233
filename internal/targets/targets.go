@@ -270,7 +270,13 @@ func buildWeb(o Options, m *integration.Manifest) ([]string, error) {
 		return nil, err
 	}
 	var css strings.Builder
-	for _, f := range o.Fonts {
+	splitSet := map[rune]bool{}
+	for _, f := range o.Fonts[1:] {
+		for _, r := range f.Runes {
+			splitSet[r] = true
+		}
+	}
+	for i, f := range o.Fonts {
 		base := filepath.Base(f.Path)
 		if err := copyFile(f.Path, filepath.Join(dir, base)); err != nil {
 			return nil, err
@@ -288,7 +294,16 @@ func buildWeb(o Options, m *integration.Manifest) ([]string, error) {
 		fmt.Fprintf(&css, "@font-face {\n  font-family: %s;\n  src: %s;\n  font-display: swap;\n  font-weight: %d;\n",
 			cssString(o.Family), strings.Join(srcs, ",\n       "), o.Weight)
 		if len(o.Fonts) > 1 {
-			fmt.Fprintf(&css, "  unicode-range: %s;\n", unicodeRange(integration.Ranges(f.Runes)))
+			runes := f.Runes
+			if i == 0 {
+				runes = nil
+				for _, r := range f.Runes {
+					if !splitSet[r] {
+						runes = append(runes, r)
+					}
+				}
+			}
+			fmt.Fprintf(&css, "  unicode-range: %s;\n", unicodeRange(integration.Ranges(runes)))
 		}
 		css.WriteString("}\n\n")
 	}

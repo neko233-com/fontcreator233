@@ -73,6 +73,9 @@ func TestBuildWebSystemManifest(t *testing.T) {
 	if !strings.Contains(text, "unicode-range: U+4E2D, U+6587") {
 		t.Fatalf("css unicode-range missing: %s", text)
 	}
+	if strings.Count(text, "U+4E2D") != 1 {
+		t.Fatalf("primary web font still claims split CJK: %s", text)
+	}
 	if !strings.Contains(text, `url("./Test-Regular.woff") format("woff")`) {
 		t.Fatalf("css woff missing: %s", text)
 	}
