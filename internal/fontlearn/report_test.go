@@ -1,12 +1,35 @@
 package fontlearn
 
 import (
+	"encoding/binary"
 	"strings"
 	"testing"
 
 	"github.com/neko233-com/fontcreator233/internal/fontbuild"
 	"github.com/neko233-com/fontcreator233/internal/geom"
 )
+
+func TestParseFvarAxis(t *testing.T) {
+	data := make([]byte, 36)
+	binary.BigEndian.PutUint32(data[0:], 0x00010000)
+	binary.BigEndian.PutUint16(data[4:], 16) // offset to axis records
+	binary.BigEndian.PutUint16(data[6:], 2)  // countSizePairs
+	binary.BigEndian.PutUint16(data[8:], 1)  // axis count
+	binary.BigEndian.PutUint16(data[10:], 20)
+	copy(data[16:20], "wght")
+	binary.BigEndian.PutUint32(data[20:], uint32(300<<16))
+	binary.BigEndian.PutUint32(data[24:], uint32(400<<16))
+	binary.BigEndian.PutUint32(data[28:], uint32(700<<16))
+	binary.BigEndian.PutUint16(data[34:], 256)
+	axes := parseFvar(data)
+	if len(axes) != 1 {
+		t.Fatalf("axes = %#v", axes)
+	}
+	a := axes[0]
+	if a.Tag != "wght" || a.Min != 300 || a.Default != 400 || a.Max != 700 || a.NameID != 256 {
+		t.Fatalf("axis = %#v", a)
+	}
+}
 
 func TestAnalyzeOpenTypeFont(t *testing.T) {
 	cfg := fontbuild.Config{
