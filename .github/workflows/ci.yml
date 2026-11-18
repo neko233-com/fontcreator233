@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/fontcreator233]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      - name: Format
+        shell: bash
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build ./...
+
+  race:
+    name: race (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      - name: Race tests
+        run: CGO_ENABLED=1 go test -race ./internal/parallel ./internal/workspace
+
+  artifacts:
+    name: three styles + artifacts
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      - name: Install validators
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fontconfig
+          python -m pip install --quiet fonttools
+      - name: Build three example styles
+        run: |
+          for name in aurora-grotesk noir-didone botanic-display; do
+            go run . build "examples/${name}.recipe.yaml" --out "dist/${name}" --target all --no-open --plain
+          done
+      - name: Validate with fontTools
+        run: |
+          mapfile -d '' fonts < <(find dist -name '*.ttf' -print0)
+          python scripts/validate-fonts.py "${fonts[@]}"
+      - name: Validate with fontconfig
+        run: |
+          find dist -name '*-Regular.ttf' -print0 | xargs -0 -n1 fc-scan --format '%{family} %{style}\n' | sort -u
+      - name: Generated output must not be tracked
+        run: test -z "$(git ls-files dist out work build tmp)"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fontcreator233-three-styles
+          path: dist/
+          retention-days: 14
+          if-no-files-found: error

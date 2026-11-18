@@ -1,5 +1,10 @@
 # fontcreator233
 
+[![CI](https://github.com/neko233-com/fontcreator233/actions/workflows/ci.yml/badge.svg)](https://github.com/neko233-com/fontcreator233/actions/workflows/ci.yml)
+[![Go 1.27+](https://img.shields.io/badge/Go-1.27%2B-00ADD8?logo=go)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/code-MIT-black.svg)](LICENSE)
+[![Fonts: OFL-1.1](https://img.shields.io/badge/fonts-OFL--1.1-5B8CFF.svg)](assets/base/OFL.txt)
+
 **A deterministic, offline font creator built for agents.**
 
 You look at the reference image. fontcreator233 turns your visual decisions into
