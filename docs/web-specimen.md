@@ -11,7 +11,7 @@ Vercel/Geist visual language and works directly from `file://` with no network.
 - Type tester: editable headline with size, leading, and tracking controls.
 - OpenType playground: `liga`, `kern`, `frac`, `case`, `tnum`, and `ss01`
   toggles, plus a feature grid for `smcp`, `onum`, `zero`, `sups`, `subs`,
-  `ccmp`, `mark`, `mkmk`, and a COLR/CPAL color sample; live
+  `ccmp`, `calt`, `mark`, `mkmk`, and a COLR/CPAL color sample; live
   `font-feature-settings` and feature-table metadata.
 - Variable panel: when `output.variable` is enabled, a live `wght` slider drives
   `font-variation-settings` on a large sample and shows the min/default/max.

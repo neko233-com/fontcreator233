@@ -208,7 +208,7 @@ func expandTargets(in []string) ([]string, error) {
 func buildManifest(o Options) (*integration.Manifest, error) {
 	m := &integration.Manifest{
 		Schema:         "fontcreator233/integration/v1",
-		Generator:      "fontcreator233 0.1.0",
+		Generator:      "fontcreator233 0.2.0",
 		Family:         o.Family,
 		Style:          o.Style,
 		RequestedStyle: o.RequestedStyle,

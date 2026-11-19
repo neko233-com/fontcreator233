@@ -33,7 +33,8 @@ fontcreator status --out dist --json
 `init` template and examples enable it; set it to `false` for a static font.
 The axis varies Latin/Greek/Cyrillic/symbol and generated feature glyphs; CJK,
 Hangul, and kana stay static. Every font also contains one COLR/CPAL accent glyph
-at `U+E000` using `meta.accent`.
+at `U+E000` using `meta.accent`. `calt` turns the literal `->` into an arrow
+through a chain-context lookup; the specimen has a toggle for it.
 
 Iterate at most three times: structure first, then texture, then terminals.
 

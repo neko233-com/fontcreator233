@@ -126,6 +126,7 @@
       {{if .Data.HasSubs}}<span><b>subs</b> subscript</span>{{end}}
       {{if .Data.HasCcmp}}<span><b>ccmp</b> composed accents</span>{{end}}
       {{if .Data.HasMkmk}}<span><b>mkmk</b> stacked marks</span>{{end}}
+      {{if .Data.HasCalt}}<span><b>calt</b> contextual arrow</span>{{end}}
       {{if .Data.HasColor}}<span><b>COLR</b> color glyph</span>{{end}}
       <span><b>mark</b> combining accents</span>
     </div>
@@ -135,6 +136,11 @@
         <span>Ligatures</span>
         <code>liga</code>
       </label>
+      {{if .Data.HasCalt}}<label class="feature-toggle">
+        <input id="feature-calt" type="checkbox" checked>
+        <span>Contextual</span>
+        <code>calt</code>
+      </label>{{end}}
       <label class="feature-toggle">
         <input id="feature-kern" type="checkbox" checked>
         <span>Kerning</span>
@@ -163,8 +169,8 @@
       <span class="feature-sep">/</span>
       <span class="feature-note">Toggle and watch the outline reflow.</span>
     </div>
-    <div id="feature-demo" class="feature-demo specimen-font">fi fl ffi ffl<br><span class="feature-pair">AVATAR · To Wa · 1/2 3/4 1/8 · (A) [B] · 0123 · q́</span></div>
-    <pre id="feature-code" class="code feature-code">font-feature-settings: "liga" 1, "kern" 1, "frac" 1, "case" 1, "tnum" 1;</pre>
+    <div id="feature-demo" class="feature-demo specimen-font">fi fl ffi ffl<br><span class="feature-pair">AVATAR · To Wa · 1/2 3/4 1/8 · (A) [B] · 0123 · a-&gt;b · q́</span></div>
+    <pre id="feature-code" class="code feature-code">font-feature-settings: "liga" 1, "kern" 1, "calt" 1, "frac" 1, "case" 1, "tnum" 1;</pre>
     <div class="feature-grid specimen-font">
       {{if .Data.HasSmcp}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "smcp" 1'>Small Caps</span><span class="feature-label"><b>smcp</b> small caps</span></div>{{end}}
       {{if .Data.HasOnum}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "onum" 1'>0123456789</span><span class="feature-label"><b>onum</b> oldstyle figures</span></div>{{end}}
@@ -174,6 +180,7 @@
       <div class="feature-row"><span class="feature-sample" style='font-feature-settings: "mark" 1'>q́ Ä</span><span class="feature-label"><b>mark</b> anchor positioning</span></div>
       {{if .Data.HasCcmp}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "ccmp" 1'>á é</span><span class="feature-label"><b>ccmp</b> composed accents</span></div>{{end}}
       {{if .Data.HasMkmk}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "mark" 1, "mkmk" 1'>q́̄</span><span class="feature-label"><b>mkmk</b> stacked marks</span></div>{{end}}
+      {{if .Data.HasCalt}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "calt" 1'>-&gt;</span><span class="feature-label"><b>calt</b> contextual arrow</span></div>{{end}}
       {{if .Data.HasColor}}<div class="feature-row"><span class="feature-sample color-sample">&#x{{printf "%X" .Data.ColorRune}};</span><span class="feature-label"><b>COLR</b> accent color layer</span></div>{{end}}
     </div>
     {{if .Data.HasVariable}}

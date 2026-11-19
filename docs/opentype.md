@@ -8,7 +8,7 @@ HarfBuzz shaping was used for manual verification.
 
 | Table | Purpose |
 |---|---|
-| `GSUB` | Ligatures and one-for-one substitutions |
+| `GSUB` | Ligatures, contextual substitutions, and one-for-one substitutions |
 | `GPOS` | Pair kerning, mark-to-base, and mark-to-mark attachment |
 | `GDEF` | Glyph classes for marks and alternates |
 | `kern` | Legacy pair kerning for older software |
@@ -33,6 +33,7 @@ HarfBuzz shaping was used for manual verification.
 | `sups` | GSUB 1 | `x2` | Superscript figures |
 | `subs` | GSUB 1 | `H2O` | Subscript figures |
 | `ccmp` | GSUB 4 | `a` + `◌́` | Composes base+mark to an existing precomposed glyph |
+| `calt` | GSUB 6 | `->` | Chain-context arrow substitution |
 | `mark` | GPOS 4 | `q́` | Top-center mark-to-base anchors |
 | `mkmk` | GPOS 6 | `q́̄` | Stacks a second combining mark above the first |
 
@@ -73,6 +74,18 @@ demonstration color glyph, not arbitrary color-font authoring.
 <span style="font-family: MyTypeface">&#xE000;</span>
 ```
 
+## Contextual arrows
+
+`calt` is a real GSUB chaining-context lookup (type 6, format 3), not a plain
+ligature:
+
+- input coverages: `hyphen`, `greater`
+- substitution record: sequence index 0, nested ligature lookup (type 4)
+- nested ligature: `hyphen` + `greater` → arrow
+
+Without `calt`, `a->b` keeps three glyphs; with `calt`, it becomes `a`, arrow,
+`b`.
+
 ## Verification
 
 - `go test ./...` builds fonts and asserts the GSUB/GPOS/GDEF/`kern` tags and
@@ -86,6 +99,9 @@ demonstration color glyph, not arbitrary color-font authoring.
   glyph extents were checked at `wght` 420, 620, and 820.
 - fontTools asserts the `COLR` base/layer records and the `CPAL` accent/white
   palette; the specimen screenshot was rendered in Chrome.
+- fontTools asserts the `calt` chain-context format, input coverages, nested
+  ligature lookup, and `-`/`>` components; HarfBuzz confirms the arrow only
+  appears with `calt` enabled.
 - `fontcreator learn <font> --json` reports the same tags and lookup types in
   external fonts, including variable axes and color tables when present.
 
@@ -96,8 +112,8 @@ Generated fonts are static and Latin-focused. They do **not** include:
 - additional variable axes beyond `wght`, or metric variations (`HVAR`/`MVAR`);
 - arbitrary color glyph authoring beyond the `U+E000` COLR/CPAL demo, or SVG /
   `sbix` / CBDT color tables;
-- contextual substitutions (`calt`, `cswh`) beyond the `ccmp` composition
-  ligatures above;
+- general contextual substitutions beyond the fixed `calt` arrow rule
+  (`cswh`, arbitrary chaining rules);
 - cursive attachment;
 - Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
 

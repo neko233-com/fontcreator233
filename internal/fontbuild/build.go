@@ -47,6 +47,14 @@ type Substitution struct {
 	To      string
 }
 
+// ContextualRule invokes a ligature only when the exact input sequence is
+// present. It is emitted as a real GSUB chaining-context lookup (type 6).
+type ContextualRule struct {
+	Feature string
+	Input   []string
+	Glyph   string
+}
+
 // Config is the complete font metadata and glyph set.
 type Config struct {
 	Family      string
@@ -78,6 +86,7 @@ type Config struct {
 	Kerning       []KernPair
 	Ligatures     []Ligature
 	Substitutions []Substitution
+	Contextual    []ContextualRule
 }
 
 type glyphBox struct {
@@ -204,8 +213,8 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 	if hasMarkGlyphs(glyphs) {
 		tables = append(tables, table{"GDEF", buildGDEF(glyphs)})
 	}
-	if len(cfg.Ligatures) > 0 || len(cfg.Substitutions) > 0 {
-		if gsub, err := buildGSUBTable(glyphs, cfg.Ligatures, cfg.Substitutions); err != nil {
+	if len(cfg.Ligatures) > 0 || len(cfg.Substitutions) > 0 || len(cfg.Contextual) > 0 {
+		if gsub, err := buildGSUBTable(glyphs, cfg.Ligatures, cfg.Substitutions, cfg.Contextual); err != nil {
 			return nil, err
 		} else if len(gsub) > 0 {
 			tables = append(tables, table{"GSUB", gsub})

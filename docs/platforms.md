@@ -12,8 +12,8 @@ Generated fonts include OpenType features for Latin text: `liga`
 (`fi`/`fl`/`ff`/`ffi`/`ffl`), `kern` pair positioning in both GPOS and a legacy
 `kern` table, `case` punctuation, `frac` fractions, `tnum` tabular figures,
 `ss01` alternate `a`, `smcp` small caps, `onum` oldstyle figures, `zero` slashed
-zero, `sups`/`subs` figures, `ccmp` base+mark composition, basic top-center
-`mark` anchors, and `mkmk` stacked marks. With `output.variable: true` the font
+zero, `sups`/`subs` figures, `ccmp` base+mark composition, `calt` `->` contextual arrows,
+basic top-center `mark` anchors, and `mkmk` stacked marks. With `output.variable: true` the font
 also carries one `wght` axis via `fvar` + `gvar`; the specimen exposes a live
 weight slider. Every font includes one COLR/CPAL accent glyph at `U+E000` using
 the recipe accent color. Imported fonts may expose richer GSUB/GPOS data, which

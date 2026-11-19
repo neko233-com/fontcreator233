@@ -42,6 +42,52 @@ print("ok", axis.minValue, axis.defaultValue, axis.maxValue)
 	}
 }
 
+func TestFontToolsCalt(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+gsub = f["GSUB"].table
+calt = [r for r in gsub.FeatureList.FeatureRecord if r.FeatureTag == "calt"]
+if not calt or not calt[0].Feature.LookupListIndex:
+    raise SystemExit("calt feature missing")
+lookup = gsub.LookupList.Lookup[calt[0].Feature.LookupListIndex[0]]
+if lookup.LookupType != 6:
+    raise SystemExit(f"calt lookup type {lookup.LookupType}, want 6")
+st = lookup.SubTable[0]
+if st.Format != 3 or st.InputGlyphCount != 2 or st.SubstCount != 1:
+    raise SystemExit(f"bad chain context: {st.Format} {st.InputGlyphCount} {st.SubstCount}")
+if [c.glyphs for c in st.InputCoverage] != [["hyphen"], ["greater"]]:
+    raise SystemExit(f"bad input coverages: {[c.glyphs for c in st.InputCoverage]}")
+rec = st.SubstLookupRecord[0]
+if rec.SequenceIndex != 0:
+    raise SystemExit(f"bad sequence index: {rec.SequenceIndex}")
+nested = gsub.LookupList.Lookup[rec.LookupListIndex]
+if nested.LookupType != 4:
+    raise SystemExit(f"nested lookup type {nested.LookupType}, want 4")
+lig = nested.SubTable[0].ligatures["hyphen"][0]
+if lig.Component != ["greater"]:
+    raise SystemExit(f"bad ligature components: {lig.Component}")
+print("ok", lookup.LookupType, rec.LookupListIndex)
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools calt: %v\n%s", err, out)
+	}
+}
+
 func TestFontToolsColor(t *testing.T) {
 	python, err := exec.LookPath("python")
 	if err != nil {

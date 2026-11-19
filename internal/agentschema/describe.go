@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the public CLI contract version.
-const Version = "0.1.0"
+const Version = "0.2.0"
 
 // Describe returns the complete JSON-friendly contract.
 func Describe() map[string]any {
@@ -72,13 +72,13 @@ func Describe() map[string]any {
 			"note":     "Counts are actual cmap coverage, not a promise of every Unicode block.",
 		},
 		"opentype": map[string]any{
-			"generated": []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "ccmp", "mark", "mkmk"},
+			"generated": []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "ccmp", "calt", "mark", "mkmk"},
 			"tables":    []string{"GSUB", "GPOS", "GDEF", "kern", "fvar", "gvar", "COLR", "CPAL"},
 			"variable":  "one wght axis (fvar/gvar); outlines vary for Latin/Greek/Cyrillic/symbol and generated feature glyphs, CJK/Hangul/kana stay static",
 			"color":     "one COLR v0/CPAL accent glyph at U+E000 using the recipe accent; not arbitrary color-font authoring",
 			"unsupported": []string{
 				"additional variable axes (only wght; no HVAR/MVAR)", "arbitrary color glyph authoring (only the U+E000 demo; no SVG/sbix/CBDT)",
-				"contextual substitutions (calt/cswh)", "cursive attachment",
+				"general contextual substitutions beyond the fixed calt arrow (cswh/chaining rules)", "cursive attachment",
 			},
 			"note": "Generated features are deterministic and Latin-focused. `learn` reports richer GSUB/GPOS, variable axes, and color tables in external fonts without re-emitting them.",
 		},

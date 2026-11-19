@@ -188,10 +188,12 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	featureGlyphs, substitutions := makeSubstitutions(merged, int(math.Round(r.Metrics.CapHeight*1000)), int(math.Round(r.Metrics.XHeight*1000)))
 	fractionGlyphs, fractionLigatures := makeFractions(merged)
 	colorGlyphs, colorSpec := makeColorGlyph(merged)
+	arrowGlyphs, contextual := makeArrowRule(merged)
 	glyphs = append(glyphs, extraGlyphs...)
 	glyphs = append(glyphs, featureGlyphs...)
 	glyphs = append(glyphs, fractionGlyphs...)
 	glyphs = append(glyphs, colorGlyphs...)
+	glyphs = append(glyphs, arrowGlyphs...)
 	ligatures = append(ligatures, fractionLigatures...)
 	ligatures = append(ligatures, makeComposedLigatures(merged)...)
 	kerning := makeKerning(merged, r.Style.Weight)
@@ -211,6 +213,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	cfg := fontConfig(r, resolvedStyle, glyphs)
 	cfg.Ligatures = ligatures
 	cfg.Substitutions = substitutions
+	cfg.Contextual = contextual
 	cfg.Kerning = kerning
 	cfg.Color = colorSpec
 	if usedBase {
@@ -308,6 +311,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 				HasSubs:      hasSubstitutionFeature(substitutions, "subs"),
 				HasCcmp:      hasLigatureFeature(ligatures, "ccmp"),
 				HasMkmk:      hasMkmk,
+				HasCalt:      len(contextual) > 0,
 				HasColor:     colorSpec != nil,
 				ColorRune:    colorRune,
 				HasVariable:  r.Output.Variable,
@@ -930,6 +934,33 @@ func makeSubstitutions(glyphs map[rune]fontbuild.Glyph, capHeight, xHeight int) 
 		}
 	}
 	return out, subs
+}
+
+func arrowPath() geom.Path {
+	shaft := geom.RectPath(120, 430, 480, 510)
+	head := geom.Path{geom.Contour{
+		{P: geom.Point{X: 400, Y: 360}, On: true},
+		{P: geom.Point{X: 590, Y: 470}, On: true},
+		{P: geom.Point{X: 400, Y: 580}, On: true},
+	}}
+	return append(shaft, head...)
+}
+
+// makeArrowRule adds a real contextual `calt` rule: the exact sequence
+// hyphen + greater is replaced by an arrow only when that context is present.
+func makeArrowRule(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbuild.ContextualRule) {
+	dash, okDash := glyphs['-']
+	greater, okGreater := glyphs['>']
+	if !okDash || !okGreater || len(dash.Path) == 0 || len(greater.Path) == 0 {
+		return nil, nil
+	}
+	arrow := fontbuild.Glyph{Name: "context.arrow", NoCmap: true, Advance: 600, Path: arrowPath()}
+	rule := fontbuild.ContextualRule{
+		Feature: "calt",
+		Input:   []string{glyphName('-'), glyphName('>')},
+		Glyph:   "context.arrow",
+	}
+	return []fontbuild.Glyph{arrow}, []fontbuild.ContextualRule{rule}
 }
 
 // makeColorGlyph adds a self-contained COLR/CPAL accent glyph. It is a

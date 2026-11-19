@@ -260,7 +260,17 @@ func buildGPOS(glyphs []Glyph, pairs []KernPair) ([]byte, error) {
 	return out, nil
 }
 
-func buildGSUBTable(glyphs []Glyph, ligatures []Ligature, substitutions []Substitution) ([]byte, error) {
+type gsubLookup struct {
+	typ      uint16
+	subtable []byte
+}
+
+type gsubFeature struct {
+	tag     string
+	lookups []uint16
+}
+
+func buildGSUBTable(glyphs []Glyph, ligatures []Ligature, substitutions []Substitution, contextual []ContextualRule) ([]byte, error) {
 	byFeature := map[string][]Ligature{}
 	for _, lig := range ligatures {
 		feature := lig.Feature
@@ -277,7 +287,7 @@ func buildGSUBTable(glyphs []Glyph, ligatures []Ligature, substitutions []Substi
 		}
 		subsByFeature[feature] = append(subsByFeature[feature], sub)
 	}
-	tags := make([]string, 0, len(byFeature)+len(subsByFeature))
+	tags := make([]string, 0, len(byFeature)+len(subsByFeature)+len(contextual))
 	seen := map[string]bool{}
 	for tag := range byFeature {
 		seen[tag] = true
@@ -285,11 +295,29 @@ func buildGSUBTable(glyphs []Glyph, ligatures []Ligature, substitutions []Substi
 	}
 	for tag := range subsByFeature {
 		if !seen[tag] {
+			seen[tag] = true
+			tags = append(tags, tag)
+		}
+	}
+	for _, rule := range contextual {
+		tag := rule.Feature
+		if tag == "" {
+			tag = "calt"
+		}
+		if !seen[tag] {
+			seen[tag] = true
 			tags = append(tags, tag)
 		}
 	}
 	sort.Strings(tags)
-	var features []layoutFeatureSpec
+
+	var lookups []gsubLookup
+	featureLookups := map[string][]uint16{}
+	addLookup := func(typ uint16, sub []byte) uint16 {
+		idx := uint16(len(lookups))
+		lookups = append(lookups, gsubLookup{typ: typ, subtable: sub})
+		return idx
+	}
 	for _, tag := range tags {
 		if ligs := byFeature[tag]; len(ligs) > 0 {
 			sub, err := buildLigatureSubtable(glyphs, ligs)
@@ -297,20 +325,158 @@ func buildGSUBTable(glyphs []Glyph, ligatures []Ligature, substitutions []Substi
 				return nil, err
 			}
 			if len(sub) > 0 {
-				features = append(features, layoutFeatureSpec{Tag: tag, LookupType: 4, Subtable: sub})
+				featureLookups[tag] = append(featureLookups[tag], addLookup(4, sub))
 			}
 		}
 		if subs := subsByFeature[tag]; len(subs) > 0 {
 			sub := buildSingleSubtable(glyphs, subs)
 			if len(sub) > 0 {
-				features = append(features, layoutFeatureSpec{Tag: tag, LookupType: 1, Subtable: sub})
+				featureLookups[tag] = append(featureLookups[tag], addLookup(1, sub))
 			}
+		}
+	}
+	// Contextual rules use a nested ligature lookup referenced from a chaining
+	// contextual lookup (GSUB 6). The nested lookup is not referenced directly
+	// by a feature; that is valid and keeps `calt` genuinely contextual.
+	for _, rule := range contextual {
+		tag := rule.Feature
+		if tag == "" {
+			tag = "calt"
+		}
+		ligSub, err := buildLigatureSubtable(glyphs, []Ligature{{
+			Feature:    tag,
+			Components: rule.Input,
+			Glyph:      rule.Glyph,
+		}})
+		if err != nil {
+			return nil, err
+		}
+		if len(ligSub) == 0 {
+			continue
+		}
+		ligIdx := addLookup(4, ligSub)
+		ctx := buildChainContextSubtable(glyphs, rule.Input, ligIdx)
+		if len(ctx) == 0 {
+			continue
+		}
+		featureLookups[tag] = append(featureLookups[tag], addLookup(6, ctx))
+	}
+	if len(lookups) == 0 {
+		return nil, nil
+	}
+	features := make([]gsubFeature, 0, len(featureLookups))
+	for _, tag := range tags {
+		if indices := featureLookups[tag]; len(indices) > 0 {
+			features = append(features, gsubFeature{tag: tag, lookups: indices})
 		}
 	}
 	if len(features) == 0 {
 		return nil, nil
 	}
-	return layoutTableMulti(features), nil
+	return layoutTableGSUB(features, lookups), nil
+}
+
+func layoutTableGSUB(features []gsubFeature, lookups []gsubLookup) []byte {
+	scriptList := buildScriptList([]string{"DFLT", "latn"}, len(features))
+	featureList := buildFeatureListCustom(features)
+	lookupList := buildLookupListCustom(lookups)
+	headerLen := 10
+	scriptOff := headerLen
+	featureOff := scriptOff + len(scriptList)
+	lookupOff := featureOff + len(featureList)
+	out := make([]byte, headerLen+len(scriptList)+len(featureList)+len(lookupList))
+	putU32(out, 0, 0x00010000)
+	putU16(out, 4, uint16(scriptOff))
+	putU16(out, 6, uint16(featureOff))
+	putU16(out, 8, uint16(lookupOff))
+	copy(out[scriptOff:], scriptList)
+	copy(out[featureOff:], featureList)
+	copy(out[lookupOff:], lookupList)
+	return out
+}
+
+func buildFeatureListCustom(features []gsubFeature) []byte {
+	header := 2 + 6*len(features)
+	total := header
+	for _, f := range features {
+		total += 4 + 2*len(f.lookups)
+	}
+	out := make([]byte, total)
+	putU16(out, 0, uint16(len(features)))
+	off := header
+	for i, f := range features {
+		rec := 2 + i*6
+		copy(out[rec:rec+4], f.tag)
+		putU16(out, rec+4, uint16(off))
+		putU16(out, off, 0) // FeatureParams
+		putU16(out, off+2, uint16(len(f.lookups)))
+		for j, idx := range f.lookups {
+			putU16(out, off+4+2*j, idx)
+		}
+		off += 4 + 2*len(f.lookups)
+	}
+	return out
+}
+
+func buildLookupListCustom(lookups []gsubLookup) []byte {
+	header := 2 + 2*len(lookups)
+	total := header
+	for _, l := range lookups {
+		total += 8 + len(l.subtable)
+	}
+	out := make([]byte, total)
+	putU16(out, 0, uint16(len(lookups)))
+	off := header
+	for i, l := range lookups {
+		putU16(out, 2+2*i, uint16(off))
+		putU16(out, off, l.typ)
+		putU16(out, off+2, 0)
+		putU16(out, off+4, 1)
+		putU16(out, off+6, 8)
+		copy(out[off+8:], l.subtable)
+		off += 8 + len(l.subtable)
+	}
+	return out
+}
+
+func buildChainContextSubtable(glyphs []Glyph, input []string, lookupIndex uint16) []byte {
+	if len(input) == 0 {
+		return nil
+	}
+	ids := glyphIDs(glyphs)
+	gids := make([]uint16, len(input))
+	covs := make([][]byte, len(input))
+	for i, name := range input {
+		gid, ok := ids[name]
+		if !ok {
+			return nil
+		}
+		gids[i] = gid
+		covs[i] = buildCoverage([]uint16{gid})
+	}
+	header := 10 + 2*len(gids) + 4 // one SubstLookupRecord
+	offsets := make([]int, len(gids))
+	off := header
+	for i, c := range covs {
+		offsets[i] = off
+		off += len(c)
+	}
+	out := make([]byte, off)
+	putU16(out, 0, 3) // ChainContextSubst format 3
+	putU16(out, 2, 0) // backtrack glyph count
+	putU16(out, 4, uint16(len(gids)))
+	for i, o := range offsets {
+		putU16(out, 6+2*i, uint16(o))
+	}
+	pos := 6 + 2*len(gids)
+	putU16(out, pos, 0)   // lookahead glyph count
+	putU16(out, pos+2, 1) // substitution count
+	putU16(out, pos+4, 0) // sequence index
+	putU16(out, pos+6, lookupIndex)
+	for i, c := range covs {
+		copy(out[offsets[i]:], c)
+	}
+	return out
 }
 
 func buildSingleSubtable(glyphs []Glyph, subs []Substitution) []byte {

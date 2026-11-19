@@ -8,7 +8,7 @@ import (
 func TestDescribeOpenTypeContract(t *testing.T) {
 	ot := Describe()["opentype"].(map[string]any)
 	generated := strings.Join(ot["generated"].([]string), " ")
-	for _, tag := range []string{"liga", "kern", "ccmp", "mark", "mkmk", "smcp", "onum", "zero", "sups", "subs"} {
+	for _, tag := range []string{"liga", "kern", "ccmp", "calt", "mark", "mkmk", "smcp", "onum", "zero", "sups", "subs"} {
 		if !strings.Contains(generated, tag) {
 			t.Fatalf("generated features missing %q: %s", tag, generated)
 		}
