@@ -40,8 +40,12 @@ func TestDescribeOpenTypeContract(t *testing.T) {
 	if strings.Contains(unsupported, "cursive") {
 		t.Fatalf("cursive must no longer be unsupported: %s", unsupported)
 	}
+	platforms := Describe()["platforms"].(map[string]any)
+	if bm, ok := platforms["bmfont"].(string); !ok || !strings.Contains(bm, "BMFont") {
+		t.Fatalf("bmfont platform contract missing: %#v", platforms["bmfont"])
+	}
 	md := Markdown()
-	for _, want := range []string{"## OpenType", "unsupported", "ccmp", "mkmk"} {
+	for _, want := range []string{"## OpenType", "unsupported", "ccmp", "mkmk", "bmfont"} {
 		if !strings.Contains(md, want) {
 			t.Fatalf("markdown missing %q", want)
 		}

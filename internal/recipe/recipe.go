@@ -117,14 +117,23 @@ type ColorLayerRule struct {
 
 // Output selects formats, platform targets, and specimen behavior.
 type Output struct {
-	Formats  []string `yaml:"formats" json:"formats"`
-	Targets  []string `yaml:"targets" json:"targets"`
-	Specimen bool     `yaml:"specimen" json:"specimen"`
-	Open     bool     `yaml:"open" json:"open"`
-	Variable bool     `yaml:"variable" json:"variable"`
-	Cursive  bool     `yaml:"cursive" json:"cursive"`
-	SplitCJK int      `yaml:"splitCJK" json:"splitCJK"`
-	TMP      TMP      `yaml:"tmp" json:"tmp"`
+	Formats  []string      `yaml:"formats" json:"formats"`
+	Targets  []string      `yaml:"targets" json:"targets"`
+	Specimen bool          `yaml:"specimen" json:"specimen"`
+	Open     bool          `yaml:"open" json:"open"`
+	Variable bool          `yaml:"variable" json:"variable"`
+	Cursive  bool          `yaml:"cursive" json:"cursive"`
+	BMFont   *BMFontConfig `yaml:"bmfont" json:"bmfont"`
+	SplitCJK int           `yaml:"splitCJK" json:"splitCJK"`
+	TMP      TMP           `yaml:"tmp" json:"tmp"`
+}
+
+// BMFontConfig controls AngelCode BMFont (.fnt + PNG atlas) output.
+type BMFontConfig struct {
+	Size      int    `yaml:"size" json:"size"`
+	Padding   int    `yaml:"padding" json:"padding"`
+	AtlasSize int    `yaml:"atlasSize" json:"atlasSize"`
+	Charset   string `yaml:"charset" json:"charset"`
 }
 
 // TMP is the default Unity TextMeshPro font asset configuration.

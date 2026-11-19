@@ -275,8 +275,20 @@ func validateOutput(o *Output) error {
 		return fail("output.targets", "must not be empty", o.Targets)
 	}
 	for _, t := range o.Targets {
-		if err := oneOf("output.targets", t, "universal", "web", "system", "unity", "unreal", "apps", "all"); err != nil {
+		if err := oneOf("output.targets", t, "universal", "web", "system", "unity", "unreal", "apps", "bmfont", "all"); err != nil {
 			return err
+		}
+	}
+	if o.BMFont != nil {
+		b := o.BMFont
+		if b.Size != 0 && (b.Size < 8 || b.Size > 256) {
+			return fail("output.bmfont.size", "must be between 8 and 256", b.Size)
+		}
+		if b.Padding < 0 || b.Padding > 16 {
+			return fail("output.bmfont.padding", "must be between 0 and 16", b.Padding)
+		}
+		if b.AtlasSize != 0 && (b.AtlasSize < 64 || b.AtlasSize > 4096) {
+			return fail("output.bmfont.atlasSize", "must be between 64 and 4096", b.AtlasSize)
 		}
 	}
 	if o.SplitCJK < 0 {

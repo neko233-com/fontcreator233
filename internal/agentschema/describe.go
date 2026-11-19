@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the public CLI contract version.
-const Version = "0.4.0"
+const Version = "0.5.0"
 
 // Describe returns the complete JSON-friendly contract.
 func Describe() map[string]any {
@@ -91,6 +91,7 @@ func Describe() map[string]any {
 			"unity":     "UPM package + Editor TMP importer + charsets + manifest (generation only, no Unity test)",
 			"unreal":    "TTF + Editor Python import script + CompositeFont ranges",
 			"apps":      "App handoff pack: Photoshop/剪映/CapCut/Premiere/Figma/Office guides + SRT/ASS caption samples",
+			"bmfont":    "AngelCode BMFont v3 .fnt (chars + kerning) with PNG atlas pages, configured under output.bmfont",
 		},
 		"limits": map[string]any{
 			"unitsPerEm": 1000,

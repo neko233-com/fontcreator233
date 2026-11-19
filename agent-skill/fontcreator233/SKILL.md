@@ -52,7 +52,9 @@ Always use the agent's own vision. Do not ask the CLI to analyze an image.
 
 ## Package targets
 
-- `--target all` writes `universal`, `web`, `system`, `unity`, `unreal`, `apps`.
+- `--target all` writes `universal`, `web`, `system`, `unity`, `unreal`, `apps`,
+  `bmfont`. `output.bmfont` sets size/padding/atlasSize/charset for AngelCode
+  `.fnt` + PNG atlas output.
 - `output.variable: true` emits one real `wght` axis with `fvar` + `gvar` plus
   `HVAR` advance and `MVAR` metric deltas; the `init` template and examples
   enable it. The specimen gets a live weight slider. CJK/Hangul/kana outlines

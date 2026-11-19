@@ -41,6 +41,10 @@ Set `output.cursive: true` to emit a GPOS `curs` cursive attachment lookup with
 entry/exit anchors on lowercase letters. The `init` template and examples enable
 it; omit it or set it to `false` to skip cursive positioning.
 
+`--target bmfont` writes an AngelCode BMFont `.fnt` and PNG atlas pages. Configure
+it under `output.bmfont` with `size`, `padding`, `atlasSize`, and `charset`
+(`latin`, `latin-ext`, `all`, or an explicit string). It is included in `--target all`.
+
 ## build-all
 
 ```bash

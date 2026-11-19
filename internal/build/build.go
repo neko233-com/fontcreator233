@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/neko233-com/fontcreator233/internal/bmfont"
 	"github.com/neko233-com/fontcreator233/internal/compose"
 	"github.com/neko233-com/fontcreator233/internal/derive"
 	"github.com/neko233-com/fontcreator233/internal/fontbuild"
@@ -104,6 +105,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		CoverageReport: map[string]CoverageStat{},
 		Targets:        map[string][]string{},
 	}
+	var bmfontPaths []string
 	rep.Event(ui.Event{Kind: ui.EvPhase, Phase: "generate"})
 	gen, err := buildGenerated(ctx, r, params, o.Jobs, rep)
 	if err != nil {
@@ -209,6 +211,16 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	ligatures = append(ligatures, fractionLigatures...)
 	ligatures = append(ligatures, makeComposedLigatures(merged)...)
 	kerning := makeKerning(merged, r.Style.Weight)
+	if wantsBMFont(o, r) {
+		cfg := recipe.BMFontConfig{}
+		if r.Output.BMFont != nil {
+			cfg = *r.Output.BMFont
+		}
+		bmfontPaths, err = makeBMFont(o.OutDir, cfg, r, resolvedStyle, glyphs, kerning)
+		if err != nil {
+			warnings = append(warnings, "bmfont: "+err.Error())
+		}
+	}
 	usedBase := len(derived) > 0
 	hasMkmk := hasCombiningMarks(merged)
 	splitSet := map[rune]bool{}
@@ -386,6 +398,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			Targets:        targetList,
 			Fonts:          inputs,
 			SpecimenPath:   result.SpecimenPath,
+			BMFontPaths:    bmfontPaths,
 			AssetsDir:      o.AssetsDir,
 			FinalOutDir:    o.FinalOutDir,
 			TMP:            r.Output.TMP,
@@ -1024,6 +1037,58 @@ func makeArrowRule(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbu
 		Glyph:   "context.arrow",
 	}
 	return []fontbuild.Glyph{arrow}, []fontbuild.ContextualRule{rule}
+}
+
+func wantsBMFont(o Options, r *recipe.Recipe) bool {
+	if r.Output.BMFont != nil {
+		return true
+	}
+	list := o.Targets
+	if len(list) == 0 {
+		list = r.Output.Targets
+	}
+	for _, t := range list {
+		if t == "bmfont" || t == "all" {
+			return true
+		}
+	}
+	return false
+}
+
+func makeBMFont(outDir string, cfg recipe.BMFontConfig, r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph, kern []fontbuild.KernPair) ([]string, error) {
+	base := strings.Map(func(ch rune) rune {
+		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' {
+			return ch
+		}
+		return -1
+	}, r.Meta.Family+"-"+resolvedStyle)
+	if base == "" {
+		base = "Font"
+	}
+	src := make([]bmfont.Glyph, 0, len(glyphs))
+	for _, g := range glyphs {
+		if g.Rune == 0 {
+			continue
+		}
+		src = append(src, bmfont.Glyph{Rune: g.Rune, Name: g.Name, Advance: g.Advance, Path: g.Path})
+	}
+	pairs := make([]bmfont.KernPair, 0, len(kern))
+	for _, k := range kern {
+		pairs = append(pairs, bmfont.KernPair{Left: k.Left, Right: k.Right, Value: k.Value})
+	}
+	return bmfont.Build(bmfont.Options{
+		OutDir:    outDir,
+		BaseName:  base,
+		Size:      cfg.Size,
+		Padding:   cfg.Padding,
+		AtlasSize: cfg.AtlasSize,
+		Charset:   cfg.Charset,
+		Ascender:  r.Metrics.Ascender,
+		Descender: r.Metrics.Descender,
+		LineGap:   r.Metrics.LineGap,
+		Weight:    r.Style.Weight,
+		Italic:    math.Abs(r.Style.Slant) > 0.01,
+	}, src, pairs)
 }
 
 // colorShapePath builds a primitive outline at the standard color-glyph center.

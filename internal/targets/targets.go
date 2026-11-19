@@ -40,6 +40,7 @@ type Options struct {
 	Targets        []string
 	Fonts          []FontInput
 	SpecimenPath   string
+	BMFontPaths    []string
 	AssetsDir      string
 	FinalOutDir    string
 	TMP            recipe.TMP
@@ -158,6 +159,8 @@ func Build(ctx context.Context, o Options) (map[string][]string, error) {
 				return nil, err
 			}
 			result["apps"] = paths
+		case "bmfont":
+			result["bmfont"] = o.BMFontPaths
 		}
 		select {
 		case <-ctx.Done():
@@ -181,12 +184,12 @@ func expandTargets(in []string) ([]string, error) {
 	if len(in) == 0 {
 		return []string{"universal"}, nil
 	}
-	allowed := map[string]bool{"universal": true, "web": true, "system": true, "unity": true, "unreal": true, "apps": true}
+	allowed := map[string]bool{"universal": true, "web": true, "system": true, "unity": true, "unreal": true, "apps": true, "bmfont": true}
 	seen := map[string]bool{}
 	var out []string
 	for _, t := range in {
 		if t == "all" {
-			for _, a := range []string{"universal", "web", "system", "unity", "unreal", "apps"} {
+			for _, a := range []string{"universal", "web", "system", "unity", "unreal", "apps", "bmfont"} {
 				if !seen[a] {
 					seen[a] = true
 					out = append(out, a)
@@ -208,7 +211,7 @@ func expandTargets(in []string) ([]string, error) {
 func buildManifest(o Options) (*integration.Manifest, error) {
 	m := &integration.Manifest{
 		Schema:         "fontcreator233/integration/v1",
-		Generator:      "fontcreator233 0.4.0",
+		Generator:      "fontcreator233 0.5.0",
 		Family:         o.Family,
 		Style:          o.Style,
 		RequestedStyle: o.RequestedStyle,

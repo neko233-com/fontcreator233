@@ -126,12 +126,18 @@ func Schema() map[string]any {
 		},
 		"targets": map[string]any{
 			"type":  "array",
-			"items": enum("Platform target", "universal", "web", "system", "unity", "unreal", "apps", "all"),
+			"items": enum("Platform target", "universal", "web", "system", "unity", "unreal", "apps", "bmfont", "all"),
 		},
 		"specimen": boolean("Generate the HTML specimen"),
 		"open":     boolean("Open the specimen when the build completes"),
 		"variable": boolean("Emit a wght variable axis with fvar/gvar for Latin and symbol glyphs"),
 		"cursive":  boolean("Emit GPOS cursive attachment anchors for lowercase letters"),
+		"bmfont": obj(map[string]any{
+			"size":      integer("BMFont pixel size of the em square", 8, 256),
+			"padding":   integer("BMFont per-glyph atlas padding in pixels", 0, 16),
+			"atlasSize": integer("BMFont atlas page size in pixels", 64, 4096),
+			"charset":   str("BMFont charset: latin, latin-ext, all, or an explicit string"),
+		}),
 		"splitCJK": integer("Split CJK/Hangul into chunks of this many codepoints; 0 disables", 0, 100000),
 		"tmp": obj(map[string]any{
 			"population":        enum("TMP atlas population mode", "dynamic", "static"),
@@ -142,7 +148,7 @@ func Schema() map[string]any {
 			"multiAtlas":        boolean("Enable TMP multi-atlas"),
 			"renderMode":        enum("TMP render mode", "SDFAA", "SDF8", "SDF16", "SDF32"),
 		}, "population", "samplingPointSize", "padding", "atlasWidth", "atlasHeight", "multiAtlas", "renderMode"),
-	}, "formats", "targets", "specimen", "open", "variable", "cursive", "splitCJK", "tmp")
+	}, "formats", "targets", "specimen", "open", "variable", "cursive", "bmfont", "splitCJK", "tmp")
 
 	s := obj(map[string]any{
 		"apiVersion": map[string]any{"type": "string", "const": "fontcreator233/v1"},

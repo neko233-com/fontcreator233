@@ -29,6 +29,10 @@ fontcreator learn path/to/reference.ttf --out work/learned --json
 fontcreator status --out dist --json
 ```
 
+`--target bmfont` (included in `all`) writes an AngelCode BMFont `.fnt` and PNG
+atlas pages from the generated outlines; configure size/padding/atlasSize/charset
+under `output.bmfont`.
+
 `output.variable: true` emits one real `wght` axis via `fvar` + `gvar` plus
 `HVAR` advance and `MVAR` metric deltas. The `init` template and examples enable
 it; set it to `false` for a static font. The axis varies Latin/Greek/Cyrillic/

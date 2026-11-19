@@ -72,7 +72,7 @@ func (a *app) cmdExportBundle(args []string) int {
 	out := fs.String("out", "", "output zip path")
 	force := fs.Bool("force", false, "overwrite an existing zip")
 	var targets stringList
-	fs.Var(&targets, "target", "universal|web|system|unity|unreal|apps|all")
+	fs.Var(&targets, "target", "universal|web|system|unity|unreal|apps|bmfont|all")
 	values := map[string]bool{"out": true, "target": true}
 	if err := parseFlexible(fs, args, values); err != nil {
 		a.json = common.json

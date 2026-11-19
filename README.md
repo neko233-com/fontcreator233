@@ -30,9 +30,10 @@ Just Go, an OFL base font, and a recipe.
   SHA-256 verification. `--jobs 1` and `--jobs 8` match on the same platform.
 - **Multilingual**: parametric Latin/Greek/Cyrillic plus embedded OFL
   CJK/kana/Hangul/symbols. Global coverage is reported honestly, not claimed.
-- **Real outputs**: TTF, WOFF, local HTML specimen, Unity UPM + TMP importer,
-  Unreal import script + CompositeFont ranges, Web CSS with `unicode-range`,
-  system install notes, and app handoff guides.
+- **Real outputs**: TTF, WOFF, local HTML specimen, AngelCode BMFont `.fnt` +
+  PNG atlas, Unity UPM + TMP importer, Unreal import script + CompositeFont
+  ranges, Web CSS with `unicode-range`, system install notes, and app handoff
+  guides.
 - **OpenType**: generated `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
   `smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, `calt`, and `mark`/`mkmk`
   anchors, plus GPOS and legacy kern tables. See

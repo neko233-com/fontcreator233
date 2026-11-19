@@ -203,8 +203,11 @@ func TestWebSpecimenWithExternalAssets(t *testing.T) {
 
 func TestExpandTargets(t *testing.T) {
 	all, err := expandTargets([]string{"all"})
-	if err != nil || len(all) != 6 {
+	if err != nil || len(all) != 7 {
 		t.Fatalf("all = %v err=%v", all, err)
+	}
+	if !targetSelected(all, "bmfont") {
+		t.Fatalf("all should include bmfont: %v", all)
 	}
 	if _, err := expandTargets([]string{"nope"}); err == nil {
 		t.Fatal("expected unknown target error")

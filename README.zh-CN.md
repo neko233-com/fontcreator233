@@ -18,7 +18,7 @@ fontcreator build work/font.recipe.yaml --out dist --target all
 - **Agent 原生**：视觉理解交给 agent；CLI 提供严格 JSON、JSON Schema 和 MCP server。
 - **确定性**：固定时间戳、seed 驱动随机、排序输出、SHA-256 校验；同一平台 `--jobs 1` 与 `--jobs 8` 字节一致。
 - **全球化**：拉丁/希腊/西里尔参数化生成，CJK/假名/谚文/符号来自内嵌 OFL 基础字库；覆盖率如实报告。
-- **真实产物**：TTF、WOFF、HTML 样张、Unity UPM + TMP 导入器、Unreal 导入脚本 + CompositeFont 范围、Web CSS、系统安装说明、应用使用包。
+- **真实产物**：TTF、WOFF、HTML 样张、AngelCode BMFont `.fnt` + PNG 图集、Unity UPM + TMP 导入器、Unreal 导入脚本 + CompositeFont 范围、Web CSS、系统安装说明、应用使用包。
 - **OpenType**：`liga`、`kern`、`case`、`frac`、`tnum`、`ss01`、`smcp`、`onum`、`zero`、`sups`、`subs`、`ccmp`、`calt` 和 `mark`/`mkmk` 锚点，同时生成 GPOS 与 legacy kern 表。
 - **可变字重（可选）**：`output.variable: true` 生成一条真实的 `wght` 可变轴（`fvar` + `gvar`），并写入 `HVAR` 字宽与 `MVAR` 度量变化；样张带实时字重滑杆。
 - **上下文替换**：`openType.contextual` 通过真实 GSUB chain-context lookup 把任意已存在的字形序列映射到任意已存在的目标字形。

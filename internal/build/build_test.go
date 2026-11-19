@@ -30,6 +30,36 @@ func sampleRecipe(t *testing.T) *recipe.Recipe {
 	return r
 }
 
+func TestBuildBMFontTarget(t *testing.T) {
+	r := sampleRecipe(t)
+	r.Output.BMFont = &recipe.BMFontConfig{Size: 24, AtlasSize: 128, Charset: "latin"}
+	r.Output.Targets = []string{"universal", "bmfont"}
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := res.Targets["bmfont"]
+	if len(paths) < 2 {
+		t.Fatalf("bmfont paths = %v", paths)
+	}
+	for _, p := range paths {
+		if _, err := os.Stat(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fnt := filepath.Join(filepath.Dir(paths[0]), "BuildTest-Regular.fnt")
+	if _, err := os.Stat(fnt); err != nil {
+		t.Fatalf("expected named .fnt: %v", err)
+	}
+	data, err := os.ReadFile(fnt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data[:4]) != "BMF\x03" {
+		t.Fatalf("bad fnt magic: %q", data[:4])
+	}
+}
+
 func readFile(path string) ([]byte, error) { return os.ReadFile(path) }
 
 func TestBuildSample(t *testing.T) {
