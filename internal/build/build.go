@@ -1000,25 +1000,37 @@ func recipeContextualRules(rules []recipe.ContextualRule, glyphs map[rune]fontbu
 			*warnings = append(*warnings, fmt.Sprintf("contextual target %U is not in the font; rule skipped", target[0]))
 			continue
 		}
-		input := []rune(rule.Input)
-		components := make([]string, 0, len(input))
-		valid := true
-		for _, rn := range input {
-			name := glyphName(rn)
-			if _, ok := glyphs[rn]; !ok {
-				*warnings = append(*warnings, fmt.Sprintf("contextual input %U is not in the font; rule skipped", rn))
-				valid = false
-				break
+		toGlyphs := func(text string, field string) ([]string, bool) {
+			runes := []rune(text)
+			out := make([]string, 0, len(runes))
+			for _, rn := range runes {
+				name := glyphName(rn)
+				if _, ok := glyphs[rn]; !ok {
+					*warnings = append(*warnings, fmt.Sprintf("contextual %s %U is not in the font; rule skipped", field, rn))
+					return nil, false
+				}
+				out = append(out, name)
 			}
-			components = append(components, name)
+			return out, true
 		}
-		if !valid || len(components) < 2 {
+		components, okInput := toGlyphs(rule.Input, "input")
+		if !okInput || len(components) < 2 {
+			continue
+		}
+		backtrack, okBack := toGlyphs(rule.Backtrack, "backtrack")
+		if !okBack {
+			continue
+		}
+		lookahead, okLook := toGlyphs(rule.Lookahead, "lookahead")
+		if !okLook {
 			continue
 		}
 		out = append(out, fontbuild.ContextualRule{
-			Feature: feature,
-			Input:   components,
-			Glyph:   targetName,
+			Feature:   feature,
+			Backtrack: backtrack,
+			Input:     components,
+			Lookahead: lookahead,
+			Glyph:     targetName,
 		})
 	}
 	return out

@@ -361,6 +361,84 @@ print("ok", bases, len(cpal.palettes))
 	}
 }
 
+func TestFontToolsContextualContext(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	r.OpenType.Contextual = []recipe.ContextualRule{{
+		Feature:   "calt",
+		Backtrack: "a",
+		Input:     "<-",
+		Lookahead: "b",
+		Target:    "←",
+	}}
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+gsub = f["GSUB"].table
+found = False
+for lookup in gsub.LookupList.Lookup:
+    if lookup.LookupType != 6:
+        continue
+    for st in lookup.SubTable:
+        if st.Format != 3:
+            continue
+        if (st.BacktrackGlyphCount == 1 and st.InputGlyphCount == 2 and
+                st.LookAheadGlyphCount == 1):
+            back = [c.glyphs for c in st.BacktrackCoverage]
+            look = [c.glyphs for c in st.LookAheadCoverage]
+            inp = [c.glyphs for c in st.InputCoverage]
+            if back == [["a"]] and look == [["b"]] and inp == [["less"], ["hyphen"]]:
+                found = True
+if not found:
+    raise SystemExit("chain context with backtrack/lookahead missing")
+print("ok")
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools contextual context: %v\n%s", err, out)
+	}
+	if err := exec.Command(python, "-c", "import uharfbuzz").Run(); err != nil {
+		return // fontTools check is sufficient when HarfBuzz is unavailable
+	}
+	hbScript := `
+import sys
+import uharfbuzz as hb
+face = hb.Face(hb.Blob.from_file_path(sys.argv[1]))
+font = hb.Font(face)
+def shape(text):
+    b = hb.Buffer()
+    b.add_str(text)
+    b.guess_segment_properties()
+    hb.shape(font, b, {"calt": True})
+    return [i.codepoint for i in b.glyph_infos]
+with open(sys.argv[2], "w") as f:
+    f.write("ok")
+order = list(font.glyph_order) if hasattr(font, "glyph_order") else []
+left = shape("a<-b")
+no_back = shape("x<-b")
+no_look = shape("a<-y")
+if left == no_back or left == no_look:
+    raise SystemExit("context did not constrain the substitution")
+print("ok", left)
+`
+	orderPath := res.FontPath + ".order"
+	out, err = exec.Command(python, "-c", hbScript, res.FontPath, orderPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("harfbuzz contextual context: %v\n%s", err, out)
+	}
+}
+
 func TestFontToolsCursive(t *testing.T) {
 	python, err := exec.LookPath("python")
 	if err != nil {

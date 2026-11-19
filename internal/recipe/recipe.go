@@ -84,9 +84,11 @@ type OpenType struct {
 // ContextualRule maps an input character sequence to an existing glyph when
 // the sequence appears in text. Feature defaults to calt.
 type ContextualRule struct {
-	Feature string `yaml:"feature" json:"feature"`
-	Input   string `yaml:"input" json:"input"`
-	Target  string `yaml:"target" json:"target"`
+	Feature   string `yaml:"feature" json:"feature"`
+	Backtrack string `yaml:"backtrack" json:"backtrack"`
+	Input     string `yaml:"input" json:"input"`
+	Lookahead string `yaml:"lookahead" json:"lookahead"`
+	Target    string `yaml:"target" json:"target"`
 }
 
 // ColorConfig describes recipe-driven COLR/CPAL color glyphs. Every palette

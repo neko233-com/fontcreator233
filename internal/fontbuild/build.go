@@ -49,10 +49,13 @@ type Substitution struct {
 
 // ContextualRule invokes a ligature only when the exact input sequence is
 // present. It is emitted as a real GSUB chaining-context lookup (type 6).
+// Backtrack and lookahead glyph sequences optionally constrain the context.
 type ContextualRule struct {
-	Feature string
-	Input   []string
-	Glyph   string
+	Feature   string
+	Backtrack []string
+	Input     []string
+	Lookahead []string
+	Glyph     string
 }
 
 // Config is the complete font metadata and glyph set.

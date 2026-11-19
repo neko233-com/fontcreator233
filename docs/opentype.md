@@ -132,6 +132,25 @@ openType:
 
 This emits another chain-context lookup; `a<-b` becomes `a`, `←`, `b`.
 
+Rules can be constrained with `backtrack` (characters that must precede the
+input) and `lookahead` (characters that must follow). Both are optional and use
+coverage sets in the GSUB chaining-context subtable:
+
+```yaml
+openType:
+  contextual:
+    - feature: calt
+      backtrack: "a"
+      input: "<-"
+      lookahead: "b"
+      target: "←"
+```
+
+Here `a<-b` substitutes the arrow, while `x<-b` and `a<-y` do not. The `feature`
+tag is free-form, so `cswh`-style contextual swaps can be authored with the same
+mechanism. Format-2 glyph *classes* are not generated — rules use format-3
+coverage — but multiple glyphs per position are expressible by chaining rules.
+
 ## Cursive attachment
 
 Set `output.cursive: true` to emit a GPOS `curs` feature backed by a real

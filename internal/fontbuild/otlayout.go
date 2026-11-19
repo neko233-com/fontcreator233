@@ -355,7 +355,7 @@ func buildGSUBTable(glyphs []Glyph, ligatures []Ligature, substitutions []Substi
 			continue
 		}
 		ligIdx := addLookup(4, ligSub)
-		ctx := buildChainContextSubtable(glyphs, rule.Input, ligIdx)
+		ctx := buildChainContextSubtable(glyphs, rule.Backtrack, rule.Input, rule.Lookahead, ligIdx)
 		if len(ctx) == 0 {
 			continue
 		}
@@ -439,42 +439,70 @@ func buildLookupListCustom(lookups []gsubLookup) []byte {
 	return out
 }
 
-func buildChainContextSubtable(glyphs []Glyph, input []string, lookupIndex uint16) []byte {
+// buildChainContextSubtable writes a GSUB ChainContextSubst format 3 subtable.
+// Backtrack, input, and lookahead sequences are matched by coverage; a single
+// substitution is applied at input position 0 via lookupIndex.
+func buildChainContextSubtable(glyphs []Glyph, backtrack, input, lookahead []string, lookupIndex uint16) []byte {
 	if len(input) == 0 {
 		return nil
 	}
 	ids := glyphIDs(glyphs)
-	gids := make([]uint16, len(input))
-	covs := make([][]byte, len(input))
-	for i, name := range input {
-		gid, ok := ids[name]
-		if !ok {
-			return nil
+	covs := func(seq []string) [][]byte {
+		out := make([][]byte, len(seq))
+		for i, name := range seq {
+			gid, ok := ids[name]
+			if !ok {
+				return nil
+			}
+			out[i] = buildCoverage([]uint16{gid})
 		}
-		gids[i] = gid
-		covs[i] = buildCoverage([]uint16{gid})
+		return out
 	}
-	header := 10 + 2*len(gids) + 4 // one SubstLookupRecord
-	offsets := make([]int, len(gids))
+	back := covs(backtrack)
+	inp := covs(input)
+	look := covs(lookahead)
+	if back == nil || inp == nil || look == nil {
+		return nil
+	}
+	// Header: format(2) + backtrackCount(2) + backOffsets + inputCount(2) +
+	// inputOffsets + lookaheadCount(2) + lookOffsets + substCount(2) +
+	// one SubstLookupRecord(4).
+	bPos := 4
+	iPos := bPos + 2*len(back) + 2
+	lPos := iPos + 2*len(inp) + 2
+	substPos := lPos + 2*len(look) + 2
+	header := substPos + 4
+	all := [][][]byte{back, inp, look}
 	off := header
-	for i, c := range covs {
-		offsets[i] = off
-		off += len(c)
+	offsets := make([][]int, 3)
+	for k, group := range all {
+		offsets[k] = make([]int, len(group))
+		for i, c := range group {
+			offsets[k][i] = off
+			off += len(c)
+		}
 	}
 	out := make([]byte, off)
-	putU16(out, 0, 3) // ChainContextSubst format 3
-	putU16(out, 2, 0) // backtrack glyph count
-	putU16(out, 4, uint16(len(gids)))
-	for i, o := range offsets {
-		putU16(out, 6+2*i, uint16(o))
+	putU16(out, 0, 3) // format 3
+	putU16(out, 2, uint16(len(back)))
+	for i, o := range offsets[0] {
+		putU16(out, bPos+2*i, uint16(o))
 	}
-	pos := 6 + 2*len(gids)
-	putU16(out, pos, 0)   // lookahead glyph count
-	putU16(out, pos+2, 1) // substitution count
-	putU16(out, pos+4, 0) // sequence index
-	putU16(out, pos+6, lookupIndex)
-	for i, c := range covs {
-		copy(out[offsets[i]:], c)
+	putU16(out, bPos+2*len(back), uint16(len(inp)))
+	for i, o := range offsets[1] {
+		putU16(out, iPos+2*i, uint16(o))
+	}
+	putU16(out, iPos+2*len(inp), uint16(len(look)))
+	for i, o := range offsets[2] {
+		putU16(out, lPos+2*i, uint16(o))
+	}
+	putU16(out, lPos+2*len(look), 1) // substitution count
+	putU16(out, substPos, 0)         // sequence index
+	putU16(out, substPos+2, lookupIndex)
+	for k, group := range all {
+		for i, c := range group {
+			copy(out[offsets[k][i]:], c)
+		}
 	}
 	return out
 }

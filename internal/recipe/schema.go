@@ -85,9 +85,11 @@ func Schema() map[string]any {
 		"contextual": map[string]any{
 			"type": "array",
 			"items": obj(map[string]any{
-				"feature": str("OpenType feature tag; defaults to calt"),
-				"input":   str("Input character sequence, for example ->"),
-				"target":  str("Single target character, for example →"),
+				"feature":   str("OpenType feature tag; defaults to calt"),
+				"backtrack": str("Optional characters that must precede the input"),
+				"input":     str("Input character sequence, for example ->"),
+				"lookahead": str("Optional characters that must follow the input"),
+				"target":    str("Single target character, for example →"),
 			}, "input", "target"),
 		},
 		"color": obj(map[string]any{
