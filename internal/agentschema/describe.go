@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the public CLI contract version.
-const Version = "0.7.0"
+const Version = "0.8.0"
 
 // Describe returns the complete JSON-friendly contract.
 func Describe() map[string]any {
