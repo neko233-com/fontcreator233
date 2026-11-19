@@ -8,7 +8,8 @@
 {{if not .SelfContained}}<link rel="stylesheet" href="./{{.AssetRel}}/specimen.css">{{end}}
 <style>
 {{.FontFaceCSS}}
-{{if .SelfContained}}{{.CSS}}{{end}}
+{{range .Data.ColorPalettes}}@font-palette-values --fcp{{.}} { font-family: "Specimen"; base-palette: {{.}}; }
+{{end}}{{if .SelfContained}}{{.CSS}}{{end}}
 </style>
 </head>
 <body data-accent="{{.Data.Accent}}">
@@ -189,6 +190,8 @@
       {{if .Data.HasCalt}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "calt" 1'>-&gt;</span><span class="feature-label"><b>calt</b> contextual arrow</span></div>{{end}}
       {{if .Data.HasCursive}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "curs" 1'>abcgolf</span><span class="feature-label"><b>curs</b> cursive joining anchors</span></div>{{end}}
       {{if .Data.HasColor}}<div class="feature-row"><span class="feature-sample color-sample">&#x{{printf "%X" .Data.ColorRune}};</span><span class="feature-label"><b>COLR</b> accent color layer</span></div>{{end}}
+      {{range $i, $r := .Data.ColorRunes}}{{if gt $i 0}}<div class="feature-row"><span class="feature-sample color-sample">&#x{{printf "%X" $r}};</span><span class="feature-label"><b>COLR</b> palette glyph {{$i}}</span></div>{{end}}{{end}}
+      {{if gt (len .Data.ColorPalettes) 1}}<div class="feature-row palette-controls"><span class="feature-label"><b>COLR</b> palette</span>{{range .Data.ColorPalettes}}<button type="button" class="palette-btn" data-palette="{{.}}">{{if eq . 0}}default{{else}}P{{.}}{{end}}</button>{{end}}</div>{{end}}
     </div>
     {{if .Data.HasVariable}}
     <div class="variable-panel">

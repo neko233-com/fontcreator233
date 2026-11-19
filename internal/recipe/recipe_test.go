@@ -68,6 +68,25 @@ func TestParseContextualRules(t *testing.T) {
 	}
 }
 
+func TestParseColorConfig(t *testing.T) {
+	data := []byte(`{"apiVersion":"fontcreator233/v1","meta":{"family":"Color Font"},"openType":{"color":{"palettes":[["#5B8CFF","#FFFFFF"],["#FF6B4A","#FFF3E0"]],"glyphs":[{"codepoint":"E000","advance":700,"layers":[{"shape":"circle","color":0},{"shape":"star","color":1,"scale":0.5}]}]}}}`)
+	r, err := Parse(data, "test.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.OpenType.Color == nil || len(r.OpenType.Color.Palettes) != 2 || len(r.OpenType.Color.Glyphs) != 1 {
+		t.Fatalf("color config = %#v", r.OpenType.Color)
+	}
+	if r.OpenType.Color.Glyphs[0].Layers[1].Shape != "star" || r.OpenType.Color.Glyphs[0].Layers[1].Scale != 0.5 {
+		t.Fatalf("layer = %#v", r.OpenType.Color.Glyphs[0].Layers[1])
+	}
+	// Palettes with different lengths must fail validation.
+	_, err = Parse([]byte(`{"apiVersion":"fontcreator233/v1","meta":{"family":"Bad"},"openType":{"color":{"palettes":[["#fff","#000"],["#fff"]],"glyphs":[{"codepoint":"E000","layers":[{"shape":"circle","color":0}]}]}}}`), "bad.json")
+	if err == nil || !strings.Contains(err.Error(), "same number of colors") {
+		t.Fatalf("error = %v, want palette length validation", err)
+	}
+}
+
 func TestParseJSON(t *testing.T) {
 	data := []byte(`{"apiVersion":"fontcreator233/v1","meta":{"family":"JSON Font"},"style":{"weight":500}}`)
 	r, err := Parse(data, "test.json")

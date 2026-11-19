@@ -187,7 +187,18 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	extraGlyphs, ligatures := makeLigatures(merged)
 	featureGlyphs, substitutions := makeSubstitutions(merged, int(math.Round(r.Metrics.CapHeight*1000)), int(math.Round(r.Metrics.XHeight*1000)))
 	fractionGlyphs, fractionLigatures := makeFractions(merged)
-	colorGlyphs, colorSpec := makeColorGlyph(merged)
+	var colorGlyphs []fontbuild.Glyph
+	var colorSpec *fontbuild.ColorGlyph
+	var colorSet *fontbuild.ColorSet
+	var colorRunes []int
+	if r.OpenType.Color != nil {
+		colorGlyphs, colorSet, colorRunes = recipeColorGlyphs(r.OpenType.Color, merged, &warnings)
+	} else {
+		colorGlyphs, colorSpec = makeColorGlyph(merged)
+		if colorSpec != nil {
+			colorRunes = []int{int(colorSpec.Rune)}
+		}
+	}
 	arrowGlyphs, contextual := makeArrowRule(merged)
 	contextual = append(contextual, recipeContextualRules(r.OpenType.Contextual, merged, &warnings)...)
 	glyphs = append(glyphs, extraGlyphs...)
@@ -217,6 +228,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	cfg.Contextual = contextual
 	cfg.Kerning = kerning
 	cfg.Color = colorSpec
+	cfg.ColorSet = colorSet
 	if usedBase {
 		designer := strings.TrimSpace(r.Meta.Designer)
 		if designer == "" {
@@ -275,8 +287,14 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 		}
 		varMin, varDef, varMax := fontbuild.VariableRange(r.Style.Weight)
 		colorRune := 0
-		if colorSpec != nil {
-			colorRune = int(colorSpec.Rune)
+		if len(colorRunes) > 0 {
+			colorRune = colorRunes[0]
+		}
+		var colorPalettes []int
+		if colorSet != nil {
+			for i := range colorSet.Palettes {
+				colorPalettes = append(colorPalettes, i)
+			}
 		}
 		html, err := specimen.Build(specimen.Options{
 			OutDir:        o.OutDir,
@@ -289,38 +307,40 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			// path; opening a stage file would leave a dead tab.
 			Open: false,
 			Data: specimen.Data{
-				Family:       r.Meta.Family,
-				Style:        resolvedStyle,
-				Description:  r.Meta.Description,
-				Version:      r.Meta.Version,
-				SHA256:       result.SHA256,
-				RecipeName:   recipeName,
-				Accent:       r.Meta.Accent,
-				SampleText:   r.Meta.SampleText,
-				Glyphs:       glyphInfo,
-				Coverage:     result.Coverage,
-				HasKerning:   len(kerning) > 0,
-				HasLigatures: hasLigatureFeature(ligatures, "liga"),
-				HasFractions: hasLigatureFeature(ligatures, "frac"),
-				HasCase:      hasSubstitutionFeature(substitutions, "case"),
-				HasTnum:      hasSubstitutionFeature(substitutions, "tnum"),
-				HasSS01:      hasSubstitutionFeature(substitutions, "ss01"),
-				HasSmcp:      hasSubstitutionFeature(substitutions, "smcp"),
-				HasOnum:      hasSubstitutionFeature(substitutions, "onum"),
-				HasZero:      hasSubstitutionFeature(substitutions, "zero"),
-				HasSups:      hasSubstitutionFeature(substitutions, "sups"),
-				HasSubs:      hasSubstitutionFeature(substitutions, "subs"),
-				HasCcmp:      hasLigatureFeature(ligatures, "ccmp"),
-				HasMkmk:      hasMkmk,
-				HasCalt:      len(contextual) > 0,
-				HasCursive:   r.Output.Cursive,
-				HasColor:     colorSpec != nil,
-				ColorRune:    colorRune,
-				HasVariable:  r.Output.Variable,
-				VarMin:       varMin,
-				VarDefault:   varDef,
-				VarMax:       varMax,
-				KernPairs:    len(kerning),
+				Family:        r.Meta.Family,
+				Style:         resolvedStyle,
+				Description:   r.Meta.Description,
+				Version:       r.Meta.Version,
+				SHA256:        result.SHA256,
+				RecipeName:    recipeName,
+				Accent:        r.Meta.Accent,
+				SampleText:    r.Meta.SampleText,
+				Glyphs:        glyphInfo,
+				Coverage:      result.Coverage,
+				HasKerning:    len(kerning) > 0,
+				HasLigatures:  hasLigatureFeature(ligatures, "liga"),
+				HasFractions:  hasLigatureFeature(ligatures, "frac"),
+				HasCase:       hasSubstitutionFeature(substitutions, "case"),
+				HasTnum:       hasSubstitutionFeature(substitutions, "tnum"),
+				HasSS01:       hasSubstitutionFeature(substitutions, "ss01"),
+				HasSmcp:       hasSubstitutionFeature(substitutions, "smcp"),
+				HasOnum:       hasSubstitutionFeature(substitutions, "onum"),
+				HasZero:       hasSubstitutionFeature(substitutions, "zero"),
+				HasSups:       hasSubstitutionFeature(substitutions, "sups"),
+				HasSubs:       hasSubstitutionFeature(substitutions, "subs"),
+				HasCcmp:       hasLigatureFeature(ligatures, "ccmp"),
+				HasMkmk:       hasMkmk,
+				HasCalt:       len(contextual) > 0,
+				HasCursive:    r.Output.Cursive,
+				HasColor:      colorSpec != nil || colorSet != nil,
+				ColorRune:     colorRune,
+				ColorRunes:    colorRunes,
+				ColorPalettes: colorPalettes,
+				HasVariable:   r.Output.Variable,
+				VarMin:        varMin,
+				VarDefault:    varDef,
+				VarMax:        varMax,
+				KernPairs:     len(kerning),
 			},
 		})
 		if err != nil {
@@ -1004,6 +1024,99 @@ func makeArrowRule(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbu
 		Glyph:   "context.arrow",
 	}
 	return []fontbuild.Glyph{arrow}, []fontbuild.ContextualRule{rule}
+}
+
+// colorShapePath builds a primitive outline at the standard color-glyph center.
+func colorShapePath(shape string, scale float64, x, y float64) geom.Path {
+	const cx, cy, r = 300.0, 350.0, 250.0
+	var p geom.Path
+	switch shape {
+	case "square":
+		p = geom.RectPath(cx-r, cy-r, cx+r, cy+r)
+	case "triangle":
+		p = geom.Path{{
+			{P: geom.Point{X: cx, Y: cy + r}, On: true},
+			{P: geom.Point{X: cx - r, Y: cy - r}, On: true},
+			{P: geom.Point{X: cx + r, Y: cy - r}, On: true},
+		}}
+	case "star":
+		contour := make(geom.Contour, 10)
+		for i := range contour {
+			angle := math.Pi/2 + float64(i)*math.Pi/5
+			radius := r
+			if i%2 == 1 {
+				radius = r * 0.42
+			}
+			contour[i] = geom.Node{P: geom.Point{X: cx + radius*math.Cos(angle), Y: cy + radius*math.Sin(angle)}, On: true}
+		}
+		p = geom.Path{contour}
+	case "ring":
+		p = append(geom.Circle(cx, cy, r), geom.Circle(cx, cy, r*0.6).Reverse(0)...)
+	case "circle", "":
+		p = geom.Circle(cx, cy, r)
+	default:
+		p = geom.Circle(cx, cy, r)
+	}
+	if scale <= 0 {
+		scale = 1
+	}
+	return p.Transformed(geom.Translate(-cx, -cy)).
+		Transformed(geom.Scale(scale, scale)).
+		Transformed(geom.Translate(cx+x, cy+y))
+}
+
+// recipeColorGlyphs turns openType.color into a real multi-glyph, multi-palette
+// COLR/CPAL payload. It returns the generated layer/base glyphs, the ColorSet,
+// and the codepoints that should be shown in the specimen.
+func recipeColorGlyphs(cfg *recipe.ColorConfig, glyphs map[rune]fontbuild.Glyph, warnings *[]string) ([]fontbuild.Glyph, *fontbuild.ColorSet, []int) {
+	if cfg == nil || len(cfg.Glyphs) == 0 || len(cfg.Palettes) == 0 {
+		return nil, nil, nil
+	}
+	set := &fontbuild.ColorSet{}
+	for _, palette := range cfg.Palettes {
+		record := make([][4]byte, len(palette))
+		for i, col := range palette {
+			record[i] = fontbuild.ParseColorRecord(col)
+		}
+		set.Palettes = append(set.Palettes, record)
+	}
+	var out []fontbuild.Glyph
+	var runes []int
+	for gi, rule := range cfg.Glyphs {
+		cp, err := strconv.ParseUint(strings.TrimPrefix(strings.TrimSpace(rule.Codepoint), "U+"), 16, 32)
+		if err != nil {
+			*warnings = append(*warnings, fmt.Sprintf("color glyph %d has invalid codepoint %q; skipped", gi, rule.Codepoint))
+			continue
+		}
+		rn := rune(cp)
+		if _, exists := glyphs[rn]; exists {
+			*warnings = append(*warnings, fmt.Sprintf("color glyph U+%04X already exists; skipped", rn))
+			continue
+		}
+		name := glyphName(rn)
+		advance := rule.Advance
+		if advance == 0 {
+			advance = 600
+		}
+		var base geom.Path
+		var layers []fontbuild.ColorLayer
+		for li, layerRule := range rule.Layers {
+			path := colorShapePath(layerRule.Shape, layerRule.Scale, layerRule.X, layerRule.Y)
+			if li == 0 {
+				base = path
+			}
+			layerName := fmt.Sprintf("color.g%d.l%d", gi, li)
+			out = append(out, fontbuild.Glyph{Name: layerName, NoCmap: true, Advance: advance, Path: path})
+			layers = append(layers, fontbuild.ColorLayer{Glyph: layerName, PaletteIndex: uint16(layerRule.Color)})
+		}
+		out = append(out, fontbuild.Glyph{Rune: rn, Name: name, Advance: advance, Path: base})
+		set.Glyphs = append(set.Glyphs, fontbuild.ColorGlyph{Base: name, Rune: rn, Layers: layers})
+		runes = append(runes, int(rn))
+	}
+	if len(set.Glyphs) == 0 {
+		return nil, nil, nil
+	}
+	return out, set, runes
 }
 
 // makeColorGlyph adds a self-contained COLR/CPAL accent glyph. It is a

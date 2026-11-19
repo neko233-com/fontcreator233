@@ -174,6 +174,153 @@ print("ok", len(layers["uniE000"]), len(palette))
 	}
 }
 
+func TestFontToolsVariableMetrics(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	r.Output.Variable = true
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+for tag in ("fvar", "gvar", "HVAR", "MVAR"):
+    if tag not in f:
+        raise SystemExit(f"missing {tag}")
+h = f["HVAR"].table
+if h.VarStore.VarRegionList.RegionCount != 2:
+    raise SystemExit("HVAR region count")
+if len(h.VarStore.VarData[0].Item) < 100:
+    raise SystemExit("HVAR item count too small")
+a = h.VarStore.VarData[0].Item[f.getGlyphID("A")]
+if a[0] >= 0 or a[1] <= 0:
+    raise SystemExit(f"bad HVAR A deltas: {a}")
+m = f["MVAR"].table
+tags = [r.ValueTag for r in m.ValueRecord]
+for want in ("hasc", "hdsc", "xhgt", "cpht"):
+    if want not in tags:
+        raise SystemExit(f"MVAR missing {want}: {tags}")
+if [r.VarIdx for r in m.ValueRecord] != list(range(len(tags))):
+    raise SystemExit("MVAR VarIdx not sequential")
+if not any(x.Item for x in m.VarStore.VarData):
+    raise SystemExit("MVAR deltas empty")
+print("ok", a, tags)
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools variable metrics: %v\n%s", err, out)
+	}
+}
+
+func TestHarfBuzzVariableMetrics(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import uharfbuzz").Run(); err != nil {
+		t.Skip("uharfbuzz not available")
+	}
+	r := sampleRecipe(t)
+	r.Output.Variable = true
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+import uharfbuzz as hb
+face = hb.Face(hb.Blob.from_file_path(sys.argv[1]))
+font = hb.Font(face)
+def first_advance(w):
+    font.set_variations({"wght": w})
+    b = hb.Buffer()
+    b.add_str("H")
+    b.guess_segment_properties()
+    hb.shape(font, b)
+    return b.glyph_positions[0].x_advance
+lo, hi = first_advance(400), first_advance(820)
+if not lo < hi:
+    raise SystemExit(f"wght did not change advance: {lo} -> {hi}")
+print("ok", lo, hi)
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("harfbuzz variable metrics: %v\n%s", err, out)
+	}
+}
+
+func TestFontToolsRecipeColor(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	r.OpenType.Color = &recipe.ColorConfig{
+		Palettes: [][]string{
+			{"#5B8CFF", "#FFFFFF", "#0B1020"},
+			{"#FF6B4A", "#FFF3E0", "#2A0B00"},
+		},
+		Glyphs: []recipe.ColorGlyphRule{
+			{Codepoint: "E000", Advance: 700, Layers: []recipe.ColorLayerRule{
+				{Shape: "circle", Color: 0},
+				{Shape: "star", Color: 1, Scale: 0.55},
+			}},
+			{Codepoint: "E001", Advance: 700, Layers: []recipe.ColorLayerRule{
+				{Shape: "square", Color: 2},
+				{Shape: "ring", Color: 1, Scale: 0.7},
+			}},
+		},
+	}
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+cmap = f.getBestCmap()
+for cp in (0xE000, 0xE001):
+    if cp not in cmap:
+        raise SystemExit(f"missing color glyph U+{cp:04X}")
+colr = f["COLR"]
+if colr.version != 0:
+    raise SystemExit(f"COLR version {colr.version}")
+bases = list(colr.ColorLayers.keys())
+if len(bases) != 2 or len(colr.ColorLayers[bases[0]]) != 2 or len(colr.ColorLayers[bases[1]]) != 2:
+    raise SystemExit(f"bad COLR glyphs/layers: {bases}")
+if [x.colorID for x in colr.ColorLayers[bases[0]]] != [0, 1]:
+    raise SystemExit("bad first glyph palette indices")
+if [x.colorID for x in colr.ColorLayers[bases[1]]] != [2, 1]:
+    raise SystemExit("bad second glyph palette indices")
+cpal = f["CPAL"]
+if len(cpal.palettes) != 2 or len(cpal.palettes[0]) != 3:
+    raise SystemExit(f"bad CPAL palettes: {cpal.palettes}")
+p0 = cpal.palettes[0]
+if (p0[0].red, p0[0].green, p0[0].blue) != (0x5B, 0x8C, 0xFF):
+    raise SystemExit(f"bad palette 0 color: {p0[0].red},{p0[0].green},{p0[0].blue}")
+p1 = cpal.palettes[1]
+if (p1[0].red, p1[0].green, p1[0].blue) != (0xFF, 0x6B, 0x4A):
+    raise SystemExit(f"bad palette 1 color: {p1[0].red},{p1[0].green},{p1[0].blue}")
+print("ok", bases, len(cpal.palettes))
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools recipe color: %v\n%s", err, out)
+	}
+}
+
 func TestFontToolsCursive(t *testing.T) {
 	python, err := exec.LookPath("python")
 	if err != nil {

@@ -300,6 +300,21 @@
       if (el) el.addEventListener("change", applyFeatures);
     });
     applyFeatures();
+    var paletteButtons = document.querySelectorAll(".palette-btn");
+    if (paletteButtons.length) {
+      var activePalette = document.querySelector(".palette-btn[data-palette='0']");
+      if (activePalette) activePalette.classList.add("active");
+      paletteButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var name = "--fcp" + btn.getAttribute("data-palette");
+          document.querySelectorAll(".color-sample").forEach(function (el) {
+            el.style.fontPalette = name;
+          });
+          paletteButtons.forEach(function (b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+        });
+      });
+    }
     var axis = document.getElementById("var-axis");
     if (axis) {
       var match = (window.location.hash || "").match(/wght=(\d+)/);

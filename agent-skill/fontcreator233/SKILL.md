@@ -53,10 +53,12 @@ Always use the agent's own vision. Do not ask the CLI to analyze an image.
 ## Package targets
 
 - `--target all` writes `universal`, `web`, `system`, `unity`, `unreal`, `apps`.
-- `output.variable: true` emits one real `wght` axis with `fvar` + `gvar`; the
-  `init` template and examples enable it. The specimen gets a live weight
-  slider. CJK/Hangul/kana outlines stay static. Every font also has one
-  COLR/CPAL accent glyph at `U+E000` using `meta.accent`. `calt` maps `->` to an
+- `output.variable: true` emits one real `wght` axis with `fvar` + `gvar` plus
+  `HVAR` advance and `MVAR` metric deltas; the `init` template and examples
+  enable it. The specimen gets a live weight slider. CJK/Hangul/kana outlines
+  stay static. `openType.color` emits recipe-driven multi-glyph COLR v0 with
+  multiple CPAL palettes; otherwise one COLR/CPAL accent glyph at `U+E000`
+  using `meta.accent`. `calt` maps `->` to an
   arrow via a real chain-context lookup; the specimen has a toggle. Add more
   exact-sequence rules under `openType.contextual`. `output.cursive: true` emits
   a real GPOS `curs` cursive attachment lookup (type 3 entry/exit anchors on

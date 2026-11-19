@@ -14,15 +14,15 @@ func TestDescribeOpenTypeContract(t *testing.T) {
 		}
 	}
 	tables := strings.Join(ot["tables"].([]string), " ")
-	for _, want := range []string{"fvar", "gvar", "COLR", "CPAL"} {
+	for _, want := range []string{"fvar", "gvar", "HVAR", "MVAR", "COLR", "CPAL"} {
 		if !strings.Contains(tables, want) {
 			t.Fatalf("tables missing %q: %s", want, tables)
 		}
 	}
-	if variable, ok := ot["variable"].(string); !ok || !strings.Contains(variable, "wght") {
+	if variable, ok := ot["variable"].(string); !ok || !strings.Contains(variable, "wght") || !strings.Contains(variable, "HVAR") || !strings.Contains(variable, "MVAR") {
 		t.Fatalf("variable axis contract missing: %#v", ot["variable"])
 	}
-	if color, ok := ot["color"].(string); !ok || !strings.Contains(color, "COLR") {
+	if color, ok := ot["color"].(string); !ok || !strings.Contains(color, "COLR") || !strings.Contains(color, "openType.color") {
 		t.Fatalf("color contract missing: %#v", ot["color"])
 	}
 	if contextual, ok := ot["contextual"].(string); !ok || !strings.Contains(contextual, "openType.contextual") {

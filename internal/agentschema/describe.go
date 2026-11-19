@@ -73,13 +73,13 @@ func Describe() map[string]any {
 		},
 		"opentype": map[string]any{
 			"generated":  []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "ccmp", "calt", "mark", "mkmk", "curs"},
-			"tables":     []string{"GSUB", "GPOS", "GDEF", "kern", "fvar", "gvar", "COLR", "CPAL"},
-			"variable":   "one wght axis (fvar/gvar); outlines vary for Latin/Greek/Cyrillic/symbol and generated feature glyphs, CJK/Hangul/kana stay static",
-			"color":      "one COLR v0/CPAL accent glyph at U+E000 using the recipe accent; not arbitrary color-font authoring",
+			"tables":     []string{"GSUB", "GPOS", "GDEF", "kern", "fvar", "gvar", "HVAR", "MVAR", "COLR", "CPAL"},
+			"variable":   "one wght axis (fvar/gvar) with HVAR advance and MVAR metric deltas; outlines vary for Latin/Greek/Cyrillic/symbol and generated feature glyphs, CJK/Hangul/kana stay static",
+			"color":      "recipe openType.color emits multi-glyph COLR v0 with multiple CPAL palettes; without it, a single U+E000 accent demo glyph is emitted",
 			"contextual": "recipe openType.contextual maps any sequence of existing glyphs to an existing target via GSUB chain context",
 			"cursive":    "output.cursive emits a real GPOS cursive attachment lookup (type 3, format 1) with entry/exit anchors on lowercase letters",
 			"unsupported": []string{
-				"additional variable axes (only wght; no HVAR/MVAR)", "arbitrary color glyph authoring (only the U+E000 demo; no SVG/sbix/CBDT)",
+				"additional variable axes beyond wght (opsz/wdth/etc.); no SVG/sbix/CBDT color tables",
 				"contextual classes, backtrack/lookahead rules, and cswh beyond recipe-defined sequences",
 			},
 			"note": "Generated features are deterministic and Latin-focused. `learn` reports richer GSUB/GPOS, variable axes, and color tables in external fonts without re-emitting them.",

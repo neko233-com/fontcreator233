@@ -83,6 +83,7 @@ type Config struct {
 	Cursive       bool
 	Accent        string
 	Color         *ColorGlyph
+	ColorSet      *ColorSet
 	Glyphs        []Glyph
 	Kerning       []KernPair
 	Ligatures     []Ligature
@@ -224,7 +225,12 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 			tables = append(tables, table{"GSUB", gsub})
 		}
 	}
-	if cfg.Color != nil {
+	if cfg.ColorSet != nil && len(cfg.ColorSet.Glyphs) > 0 {
+		if colr := buildCOLRMulti(glyphs, cfg.ColorSet.Glyphs); len(colr) > 0 {
+			tables = append(tables, table{"COLR", colr})
+			tables = append(tables, table{"CPAL", buildCPALMulti(cfg.ColorSet.Palettes)})
+		}
+	} else if cfg.Color != nil {
 		if colr := buildCOLR(glyphs, cfg.Color); len(colr) > 0 {
 			tables = append(tables, table{"COLR", colr})
 			tables = append(tables, table{"CPAL", buildCPAL(cfg.Accent)})
@@ -238,6 +244,12 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 		if len(gvar) > 0 {
 			tables = append(tables, table{"fvar", buildFvar(cfg)})
 			tables = append(tables, table{"gvar", gvar})
+			if hvar := buildHVAR(glyphs); len(hvar) > 0 {
+				tables = append(tables, table{"HVAR", hvar})
+			}
+			if mvar := buildMVAR(cfg); len(mvar) > 0 {
+				tables = append(tables, table{"MVAR", mvar})
+			}
 		}
 	}
 	sort.Slice(tables, func(i, j int) bool { return tables[i].tag < tables[j].tag })

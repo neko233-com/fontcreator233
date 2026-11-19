@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -195,6 +196,67 @@ func validateOpenType(o *OpenType) error {
 		}
 		if len(feature) != 4 || strings.TrimSpace(feature) != feature {
 			return fail(path+".feature", "must be a four-character OpenType tag", rule.Feature)
+		}
+	}
+	if o.Color != nil {
+		if err := validateColor(o.Color); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateColor(c *ColorConfig) error {
+	if len(c.Palettes) == 0 {
+		return fail("openType.color.palettes", "must not be empty", c.Palettes)
+	}
+	if len(c.Palettes[0]) < 2 {
+		return fail("openType.color.palettes[0]", "must have at least two colors", c.Palettes[0])
+	}
+	entries := len(c.Palettes[0])
+	for pi, palette := range c.Palettes {
+		ppath := fmt.Sprintf("openType.color.palettes[%d]", pi)
+		if len(palette) != entries {
+			return fail(ppath, "must have the same number of colors as palette 0", len(palette))
+		}
+		for ci, col := range palette {
+			if !accentRE.MatchString(col) {
+				return fail(fmt.Sprintf("%s[%d]", ppath, ci), "must be #RGB or #RRGGBB", col)
+			}
+		}
+	}
+	if len(c.Glyphs) == 0 {
+		return fail("openType.color.glyphs", "must not be empty", c.Glyphs)
+	}
+	seen := map[rune]bool{}
+	for gi, g := range c.Glyphs {
+		path := fmt.Sprintf("openType.color.glyphs[%d]", gi)
+		cp, err := strconv.ParseUint(strings.TrimPrefix(strings.TrimSpace(g.Codepoint), "U+"), 16, 32)
+		if err != nil || cp > 0x10FFFF {
+			return fail(path+".codepoint", "must be a hex codepoint", g.Codepoint)
+		}
+		rn := rune(cp)
+		if seen[rn] {
+			return fail(path+".codepoint", "duplicated codepoint", g.Codepoint)
+		}
+		seen[rn] = true
+		if g.Advance != 0 && (g.Advance < 100 || g.Advance > 4000) {
+			return fail(path+".advance", "must be between 100 and 4000", g.Advance)
+		}
+		if len(g.Layers) == 0 {
+			return fail(path+".layers", "must not be empty", g.Layers)
+		}
+		for li, layer := range g.Layers {
+			lpath := fmt.Sprintf("%s.layers[%d]", path, li)
+			if err := oneOf(lpath+".shape", layer.Shape, "circle", "square", "triangle", "star", "ring"); err != nil {
+				return err
+			}
+			if layer.Color < 0 || layer.Color >= entries {
+				return fail(lpath+".color", "out of palette range", layer.Color)
+			}
+			if layer.Scale < 0 || layer.Scale > 2 {
+				return fail(lpath+".scale", "must be between 0 and 2", layer.Scale)
+			}
 		}
 	}
 	return nil

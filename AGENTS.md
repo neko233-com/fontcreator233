@@ -29,11 +29,13 @@ fontcreator learn path/to/reference.ttf --out work/learned --json
 fontcreator status --out dist --json
 ```
 
-`output.variable: true` emits one real `wght` axis via `fvar` + `gvar`. The
-`init` template and examples enable it; set it to `false` for a static font.
-The axis varies Latin/Greek/Cyrillic/symbol and generated feature glyphs; CJK,
-Hangul, and kana stay static. Every font also contains one COLR/CPAL accent glyph
-at `U+E000` using `meta.accent`. `calt` turns the literal `->` into an arrow
+`output.variable: true` emits one real `wght` axis via `fvar` + `gvar` plus
+`HVAR` advance and `MVAR` metric deltas. The `init` template and examples enable
+it; set it to `false` for a static font. The axis varies Latin/Greek/Cyrillic/
+symbol and generated feature glyphs; CJK, Hangul, and kana stay static.
+`openType.color` emits recipe-driven multi-glyph COLR v0 with multiple CPAL
+palettes; without it one COLR/CPAL accent glyph is emitted at `U+E000` using
+`meta.accent`. `calt` turns the literal `->` into an arrow
 through a chain-context lookup; the specimen has a toggle for it. Add further
 exact-sequence rules under `openType.contextual`. `output.cursive: true` emits a
 real GPOS `curs` cursive attachment lookup (type 3 entry/exit anchors on `a`–`z`);

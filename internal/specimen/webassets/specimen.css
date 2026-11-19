@@ -414,6 +414,9 @@ button { cursor: pointer; }
 .color-sample { font-size: 40px; line-height: 1; }
 .feature-label { color: var(--muted); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .04em; }
 .feature-label b { color: var(--ink); font-weight: 500; }
+.palette-controls { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 8px; }
+.palette-btn { padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-family: "Geist Mono", monospace; font-size: 10px; cursor: pointer; }
+.palette-btn:hover, .palette-btn.active { border-color: var(--accent); color: var(--ink); background: var(--soft); }
 .variable-panel { margin-top: 22px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
 .variable-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .variable-head h3 { margin: 6px 0 0; font-size: 22px; line-height: 1.05; letter-spacing: -.04em; font-weight: 560; }

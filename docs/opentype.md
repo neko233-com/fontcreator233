@@ -9,13 +9,15 @@ HarfBuzz shaping was used for manual verification.
 | Table | Purpose |
 |---|---|
 | `GSUB` | Ligatures, contextual substitutions, and one-for-one substitutions |
-| `GPOS` | Pair kerning, mark-to-base, and mark-to-mark attachment |
+| `GPOS` | Pair kerning, mark-to-base, mark-to-mark, and cursive attachment |
 | `GDEF` | Glyph classes for marks and alternates |
 | `kern` | Legacy pair kerning for older software |
 | `fvar` | Opt-in `wght` axis metadata (min/default/max) |
 | `gvar` | Per-point outline deltas for the `wght` axis |
-| `COLR` | Color glyph layers (v0) |
-| `CPAL` | Color palette used by `COLR` |
+| `HVAR` | Advance-width deltas for the `wght` axis |
+| `MVAR` | Font-wide metric deltas (ascender, descender, line gap, x-height, cap height) |
+| `COLR` | Color glyph layers (v0), multiple base glyphs |
+| `CPAL` | Multiple color palettes used by `COLR` |
 
 ## Generated features
 
@@ -55,24 +57,54 @@ font-variation-settings: "wght" 820;
 ```
 
 Latin, Greek, Cyrillic, symbols, and generated feature glyphs interpolate.
-CJK/Hangul/kana stay at their default outlines. Advances are unchanged because
-`HVAR` is not emitted; the axis changes outlines, not metrics. Split CJK fonts
-are static.
+CJK/Hangul/kana stay at their default outlines. The variable build also emits
+`HVAR` advance-width deltas and `MVAR` metric deltas, so advances and global
+metrics (ascender, descender, line gap, x-height, cap height) interpolate too.
+Split CJK fonts are static.
 
-## Color glyph
+## Color glyphs
 
-Every generated font includes one COLR v0 / CPAL color glyph at `U+E000`:
+With no `openType.color` recipe, every font includes one COLR v0 / CPAL color
+glyph at `U+E000`: palette 0 is the recipe accent, palette 1 white, and palette
+2 black. It has an accent outer layer and a white inner layer; a black base
+outline is kept as a fallback for software without COLR support.
 
-- palette 0: the recipe accent color (BGRA)
-- palette 1: white
-- palette 2: black fallback
+To author color glyphs, add `openType.color`. Each glyph has a codepoint, an
+advance, and layers made from primitive shapes (`circle`, `square`, `triangle`,
+`star`, `ring`) with a palette color, optional scale, and optional X/Y offset.
+Every palette must list the same number of colors.
 
-The glyph has an accent outer layer and a white inner layer. A black base
-outline is kept as a fallback for software without COLR support. This is a
-demonstration color glyph, not arbitrary color-font authoring.
+```yaml
+openType:
+  color:
+    palettes:
+      - ["#5B8CFF", "#FFFFFF", "#0B1020"]
+      - ["#FF6B4A", "#FFF3E0", "#2A0B00"]
+    glyphs:
+      - codepoint: "E000"
+        advance: 700
+        layers:
+          - shape: circle
+            color: 0
+          - shape: star
+            color: 1
+            scale: 0.55
+      - codepoint: "E001"
+        advance: 700
+        layers:
+          - shape: square
+            color: 2
+          - shape: ring
+            color: 1
+            scale: 0.7
+```
+
+This emits several COLR v0 base glyphs and several CPAL palettes. The specimen
+renders every color glyph and adds palette-switch buttons backed by
+`@font-palette-values`. SVG/sbix/CBDT color tables are not generated.
 
 ```html
-<span style="font-family: MyTypeface">&#xE000;</span>
+<span style="font-family: MyTypeface">&#xE000;&#xE001;</span>
 ```
 
 ## Contextual arrows
@@ -128,8 +160,14 @@ a `curs` toggle and a joined `abcgolf` sample.
   `q́̄` (`mkmk`).
 - fontTools asserts the `fvar` axis and non-zero `gvar` deltas for `A`; HarfBuzz
   glyph extents were checked at `wght` 420, 620, and 820.
+- fontTools asserts `HVAR` advance deltas and `MVAR` metric records (`hasc`,
+  `hdsc`, `xhgt`, `cpht`); HarfBuzz confirms `H` advance grows from `wght` 400
+  to 820, and the fontTools instancer confirms ascender/x-height interpolation.
 - fontTools asserts the `COLR` base/layer records and the `CPAL` accent/white
   palette; the specimen screenshot was rendered in Chrome.
+- fontTools asserts recipe color output: three COLR base glyphs with two layers
+  each and three CPAL palettes of three colors; the specimen palette buttons
+  are generated from the palette count.
 - fontTools asserts the GPOS `curs` feature, the CursivePos type 3 subtable, and
   its entry/exit anchors; HarfBuzz confirms `abc` advances change with `curs`
   enabled while uppercase `H` is unaffected.
@@ -143,9 +181,8 @@ a `curs` toggle and a joined `abcgolf` sample.
 
 Generated fonts are static and Latin-focused. They do **not** include:
 
-- additional variable axes beyond `wght`, or metric variations (`HVAR`/`MVAR`);
-- arbitrary color glyph authoring beyond the `U+E000` COLR/CPAL demo, or SVG /
-  `sbix` / CBDT color tables;
+- additional variable axes beyond `wght` (such as `opsz` or `wdth`);
+- SVG / `sbix` / CBDT color tables or emoji;
 - contextual classes, backtrack/lookahead rules, and `cswh` beyond the
   recipe-defined exact-sequence rules;
 - Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
@@ -156,7 +193,7 @@ lowercase letters `a`–`z` get an entry anchor at the left edge and an exit
 anchor slightly inside the right edge, both at mid x-height. A shaper aligns the
 exit anchor of one glyph with the entry anchor of the next, so adjacent lowercase
 glyphs join like a connecting script. Uppercase letters are outside the cursive
-coverage and keep their normal advances.`
+coverage and keep their normal advances.
 
 `fontcreator learn` still reports those structures when it finds them in an
 external font, so the report is useful even when the generator cannot reproduce

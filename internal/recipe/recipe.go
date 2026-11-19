@@ -75,9 +75,10 @@ type Glyphs struct {
 	Overrides string `yaml:"overrides" json:"overrides"`
 }
 
-// OpenType holds optional, agent-authored layout rules.
+// OpenType holds optional, agent-authored layout and color rules.
 type OpenType struct {
 	Contextual []ContextualRule `yaml:"contextual" json:"contextual"`
+	Color      *ColorConfig     `yaml:"color" json:"color"`
 }
 
 // ContextualRule maps an input character sequence to an existing glyph when
@@ -86,6 +87,32 @@ type ContextualRule struct {
 	Feature string `yaml:"feature" json:"feature"`
 	Input   string `yaml:"input" json:"input"`
 	Target  string `yaml:"target" json:"target"`
+}
+
+// ColorConfig describes recipe-driven COLR/CPAL color glyphs. Every palette
+// must list the same number of #RRGGBB colors.
+type ColorConfig struct {
+	Palettes [][]string       `yaml:"palettes" json:"palettes"`
+	Glyphs   []ColorGlyphRule `yaml:"glyphs" json:"glyphs"`
+}
+
+// ColorGlyphRule defines one color glyph at a Unicode codepoint. Each layer is
+// a generated primitive shape filled with a palette color.
+type ColorGlyphRule struct {
+	Codepoint string           `yaml:"codepoint" json:"codepoint"`
+	Advance   int              `yaml:"advance" json:"advance"`
+	Layers    []ColorLayerRule `yaml:"layers" json:"layers"`
+}
+
+// ColorLayerRule is one layer of a recipe color glyph. Shape is one of circle,
+// square, triangle, star, or ring; Color is a palette entry index; Scale and
+// X/Y offset the shape around the glyph center.
+type ColorLayerRule struct {
+	Shape string  `yaml:"shape" json:"shape"`
+	Color int     `yaml:"color" json:"color"`
+	Scale float64 `yaml:"scale" json:"scale"`
+	X     float64 `yaml:"x" json:"x"`
+	Y     float64 `yaml:"y" json:"y"`
 }
 
 // Output selects formats, platform targets, and specimen behavior.

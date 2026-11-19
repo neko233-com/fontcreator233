@@ -135,13 +135,14 @@ fontcreator inspect dist/<font>.ttf --json
 ## 7. Limits to state honestly
 
 The font does not support Arabic, Hebrew, Indic scripts, Thai, vertical layout,
-complex shaping, color fonts, or variable axes other than one `wght` axis.
-Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
-`smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, simple top-center `mark`
+complex shaping, SVG/sbix/CBDT color tables, or variable axes other than one
+`wght` axis. Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`,
+`ss01`, `smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, simple top-center `mark`
 anchors, and `mkmk` stacked marks. With `output.variable: true`, one real `wght`
-axis is written via `fvar` + `gvar` for Latin/Greek/Cyrillic/symbol glyphs; CJK,
-Hangul, and kana stay static, and no `HVAR`/`MVAR` or additional axes are
-generated. Recipe-defined `calt` exact-sequence rules and opt-in `curs`
+axis is written via `fvar` + `gvar` with `HVAR`/`MVAR` deltas for
+Latin/Greek/Cyrillic/symbol glyphs; CJK, Hangul, and kana stay static, and no
+additional axes are generated. `openType.color` emits multi-glyph COLR/CPAL.
+Recipe-defined `calt` exact-sequence rules and opt-in `curs`
 cursive attachment (`output.cursive: true`) are real GPOS/GSUB lookups; advanced
 `cswh` and contextual classes are not generated. CJK/Hangul outlines come from the embedded OFL
 bases and receive geometric restyling and synthetic bold, not a full redraw.

@@ -20,38 +20,40 @@ type GlyphInfo struct {
 
 // Data is everything the specimen needs besides the font file.
 type Data struct {
-	Family       string
-	Style        string
-	Description  string
-	Version      string
-	SHA256       string
-	RecipeName   string
-	Accent       string
-	SampleText   string
-	Glyphs       []GlyphInfo
-	Coverage     map[string]int
-	HasKerning   bool
-	HasLigatures bool
-	HasFractions bool
-	HasCase      bool
-	HasTnum      bool
-	HasSS01      bool
-	HasSmcp      bool
-	HasOnum      bool
-	HasZero      bool
-	HasSups      bool
-	HasSubs      bool
-	HasCcmp      bool
-	HasMkmk      bool
-	HasCalt      bool
-	HasCursive   bool
-	HasColor     bool
-	ColorRune    int
-	HasVariable  bool
-	VarMin       int
-	VarDefault   int
-	VarMax       int
-	KernPairs    int
+	Family        string
+	Style         string
+	Description   string
+	Version       string
+	SHA256        string
+	RecipeName    string
+	Accent        string
+	SampleText    string
+	Glyphs        []GlyphInfo
+	Coverage      map[string]int
+	HasKerning    bool
+	HasLigatures  bool
+	HasFractions  bool
+	HasCase       bool
+	HasTnum       bool
+	HasSS01       bool
+	HasSmcp       bool
+	HasOnum       bool
+	HasZero       bool
+	HasSups       bool
+	HasSubs       bool
+	HasCcmp       bool
+	HasMkmk       bool
+	HasCalt       bool
+	HasCursive    bool
+	HasColor      bool
+	ColorRune     int
+	ColorRunes    []int
+	ColorPalettes []int
+	HasVariable   bool
+	VarMin        int
+	VarDefault    int
+	VarMax        int
+	KernPairs     int
 }
 
 // OpenFunc opens a path in the desktop browser. Tests inject a recorder.

@@ -25,8 +25,13 @@ Flags: `--out`, `--target` (repeatable/comma; `universal`, `web`, `system`,
 `--no-tui`, `--json`, `--quiet`.
 
 Set `output.variable: true` in the recipe to emit one `wght` axis with
-`fvar` + `gvar`. The `init` template and examples enable it; set it to `false`
-for a static font.
+`fvar` + `gvar`, `HVAR` advance deltas, and `MVAR` metric deltas. The `init`
+template and examples enable it; set it to `false` for a static font.
+
+`openType.color` defines recipe-driven COLR/CPAL color glyphs. `palettes` lists
+same-length arrays of `#RRGGBB` colors; `glyphs` lists codepoints with layers of
+`circle`/`square`/`triangle`/`star`/`ring` shapes, a palette color index, and
+optional `scale`/`x`/`y`. Without it, one `U+E000` demo glyph is emitted.
 
 `openType.contextual` adds exact-sequence GSUB rules. Each rule has a `feature`
 (default `calt`), an `input` string, and a single-character `target`; input and

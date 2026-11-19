@@ -90,6 +90,33 @@ func Schema() map[string]any {
 				"target":  str("Single target character, for example →"),
 			}, "input", "target"),
 		},
+		"color": obj(map[string]any{
+			"palettes": map[string]any{
+				"type":        "array",
+				"description": "CPAL palettes; every palette has the same number of #RRGGBB colors",
+				"items": map[string]any{
+					"type":  "array",
+					"items": str("Palette color as #RGB or #RRGGBB"),
+				},
+			},
+			"glyphs": map[string]any{
+				"type": "array",
+				"items": obj(map[string]any{
+					"codepoint": str("Unicode codepoint as hex, for example E000"),
+					"advance":   integer("Glyph advance width in font units", 100, 4000),
+					"layers": map[string]any{
+						"type": "array",
+						"items": obj(map[string]any{
+							"shape": enum("Primitive shape", "circle", "square", "triangle", "star", "ring"),
+							"color": integer("Palette entry index", 0, 63),
+							"scale": num("Shape scale around glyph center", 0.1, 2),
+							"x":     num("Horizontal offset from glyph center", -400, 400),
+							"y":     num("Vertical offset from glyph center", -400, 400),
+						}, "shape", "color"),
+					},
+				}, "codepoint", "layers"),
+			},
+		}, "palettes", "glyphs"),
 	})
 
 	output := obj(map[string]any{
