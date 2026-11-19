@@ -55,6 +55,9 @@ func (r *Recipe) Validate() error {
 	if err := validateCoverage(&r.Coverage); err != nil {
 		return err
 	}
+	if err := validateOpenType(&r.OpenType); err != nil {
+		return err
+	}
 	if err := validateOutput(&r.Output); err != nil {
 		return err
 	}
@@ -173,6 +176,26 @@ func validateCoverage(c *Coverage) error {
 	}
 	if len(c.Generated) == 0 && c.Base.CJK == "none" && !c.Base.Kana && !c.Base.Hangul && !c.Base.Symbols {
 		return fail("coverage", "must enable at least one generated or base script", nil)
+	}
+	return nil
+}
+
+func validateOpenType(o *OpenType) error {
+	for i, rule := range o.Contextual {
+		path := fmt.Sprintf("openType.contextual[%d]", i)
+		if len([]rune(rule.Input)) < 2 {
+			return fail(path+".input", "must contain at least two characters", rule.Input)
+		}
+		if len([]rune(rule.Target)) != 1 {
+			return fail(path+".target", "must be exactly one character", rule.Target)
+		}
+		feature := rule.Feature
+		if feature == "" {
+			feature = "calt"
+		}
+		if len(feature) != 4 || strings.TrimSpace(feature) != feature {
+			return fail(path+".feature", "must be a four-character OpenType tag", rule.Feature)
+		}
 	}
 	return nil
 }

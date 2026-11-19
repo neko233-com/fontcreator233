@@ -39,6 +39,8 @@ Just Go, an OFL base font, and a recipe.
   [`docs/opentype.md`](docs/opentype.md).
 - **Variable weight (opt-in)**: `output.variable: true` emits one real `wght`
   axis with `fvar` + `gvar`; the specimen has a live weight slider.
+- **Contextual rules**: `openType.contextual` maps any existing glyph sequence
+  to any existing target glyph via a real GSUB chain-context lookup.
 - **Color glyph**: every font ships one COLR/CPAL accent glyph at `U+E000`,
   using the recipe accent and a white inner layer.
 - **Pleasant to use**: Bubble Tea TUI with progress, ETA, cancellation, and a
@@ -366,8 +368,8 @@ Optional cross-checks use fontTools and `fc-scan` in CI.
   `smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, simple top-center mark
   anchors, and `mkmk` stacked marks. A single opt-in `wght` variable axis is
   emitted with `fvar` + `gvar`; CJK/Hangul/kana stay static and no `HVAR`/`MVAR`
-  or additional axes are generated. It does not generate arbitrary contextual
-  rules beyond the fixed `calt` arrow, cursive attachment, or color authoring
+  or additional axes are generated. It does not generate contextual classes,
+  backtrack/lookahead rules, `cswh`, cursive attachment, or color authoring
   beyond the `U+E000` demo. `learn` can report those features in other fonts.
 - CJK/Hangul style transfer is geometric + synthetic bold, not a full redraw.
 - Unity/Unreal packages are generated; validate them in your Editor.

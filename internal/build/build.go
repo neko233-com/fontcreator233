@@ -189,6 +189,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	fractionGlyphs, fractionLigatures := makeFractions(merged)
 	colorGlyphs, colorSpec := makeColorGlyph(merged)
 	arrowGlyphs, contextual := makeArrowRule(merged)
+	contextual = append(contextual, recipeContextualRules(r.OpenType.Contextual, merged, &warnings)...)
 	glyphs = append(glyphs, extraGlyphs...)
 	glyphs = append(glyphs, featureGlyphs...)
 	glyphs = append(glyphs, fractionGlyphs...)
@@ -934,6 +935,46 @@ func makeSubstitutions(glyphs map[rune]fontbuild.Glyph, capHeight, xHeight int) 
 		}
 	}
 	return out, subs
+}
+
+func recipeContextualRules(rules []recipe.ContextualRule, glyphs map[rune]fontbuild.Glyph, warnings *[]string) []fontbuild.ContextualRule {
+	var out []fontbuild.ContextualRule
+	for _, rule := range rules {
+		feature := rule.Feature
+		if feature == "" {
+			feature = "calt"
+		}
+		target := []rune(rule.Target)
+		if len(target) != 1 {
+			continue
+		}
+		targetName := glyphName(target[0])
+		if _, ok := glyphs[target[0]]; !ok {
+			*warnings = append(*warnings, fmt.Sprintf("contextual target %U is not in the font; rule skipped", target[0]))
+			continue
+		}
+		input := []rune(rule.Input)
+		components := make([]string, 0, len(input))
+		valid := true
+		for _, rn := range input {
+			name := glyphName(rn)
+			if _, ok := glyphs[rn]; !ok {
+				*warnings = append(*warnings, fmt.Sprintf("contextual input %U is not in the font; rule skipped", rn))
+				valid = false
+				break
+			}
+			components = append(components, name)
+		}
+		if !valid || len(components) < 2 {
+			continue
+		}
+		out = append(out, fontbuild.ContextualRule{
+			Feature: feature,
+			Input:   components,
+			Glyph:   targetName,
+		})
+	}
+	return out
 }
 
 func arrowPath() geom.Path {

@@ -81,6 +81,17 @@ func Schema() map[string]any {
 		"overrides": str("Directory of U+XXXX.svg glyph overrides"),
 	})
 
+	openType := obj(map[string]any{
+		"contextual": map[string]any{
+			"type": "array",
+			"items": obj(map[string]any{
+				"feature": str("OpenType feature tag; defaults to calt"),
+				"input":   str("Input character sequence, for example ->"),
+				"target":  str("Single target character, for example →"),
+			}, "input", "target"),
+		},
+	})
+
 	output := obj(map[string]any{
 		"formats": map[string]any{
 			"type":  "array",
@@ -112,6 +123,7 @@ func Schema() map[string]any {
 		"style":      style,
 		"coverage":   coverage,
 		"glyphs":     glyphs,
+		"openType":   openType,
 		"output":     output,
 	}, "apiVersion", "meta", "metrics", "style", "coverage", "glyphs", "output")
 	s["$schema"] = "https://json-schema.org/draft/2020-12/schema"

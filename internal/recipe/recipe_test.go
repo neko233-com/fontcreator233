@@ -49,6 +49,25 @@ func TestParseDuplicateJSONKey(t *testing.T) {
 	}
 }
 
+func TestParseContextualRules(t *testing.T) {
+	data := []byte(`{"apiVersion":"fontcreator233/v1","meta":{"family":"Contextual Font"},"openType":{"contextual":[{"feature":"calt","input":"<-","target":"←"}]}}`)
+	r, err := Parse(data, "test.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.OpenType.Contextual) != 1 {
+		t.Fatalf("contextual = %#v", r.OpenType.Contextual)
+	}
+	rule := r.OpenType.Contextual[0]
+	if rule.Feature != "calt" || rule.Input != "<-" || rule.Target != "←" {
+		t.Fatalf("rule = %#v", rule)
+	}
+	_, err = Parse([]byte(`{"apiVersion":"fontcreator233/v1","meta":{"family":"Bad"},"openType":{"contextual":[{"input":"<-","target":"ab"}]}}`), "bad.json")
+	if err == nil || !strings.Contains(err.Error(), "exactly one character") {
+		t.Fatalf("error = %v, want target validation", err)
+	}
+}
+
 func TestParseJSON(t *testing.T) {
 	data := []byte(`{"apiVersion":"fontcreator233/v1","meta":{"family":"JSON Font"},"style":{"weight":500}}`)
 	r, err := Parse(data, "test.json")

@@ -86,6 +86,19 @@ ligature:
 Without `calt`, `a->b` keeps three glyphs; with `calt`, it becomes `a`, arrow,
 `b`.
 
+Recipes can add arbitrary sequence rules through `openType.contextual`. The
+input characters and target character must already exist in the font:
+
+```yaml
+openType:
+  contextual:
+    - feature: calt
+      input: "<-"
+      target: "←"
+```
+
+This emits another chain-context lookup; `a<-b` becomes `a`, `←`, `b`.
+
 ## Verification
 
 - `go test ./...` builds fonts and asserts the GSUB/GPOS/GDEF/`kern` tags and
@@ -112,8 +125,8 @@ Generated fonts are static and Latin-focused. They do **not** include:
 - additional variable axes beyond `wght`, or metric variations (`HVAR`/`MVAR`);
 - arbitrary color glyph authoring beyond the `U+E000` COLR/CPAL demo, or SVG /
   `sbix` / CBDT color tables;
-- general contextual substitutions beyond the fixed `calt` arrow rule
-  (`cswh`, arbitrary chaining rules);
+- contextual classes, backtrack/lookahead rules, and `cswh` beyond the
+  recipe-defined exact-sequence rules;
 - cursive attachment;
 - Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
 

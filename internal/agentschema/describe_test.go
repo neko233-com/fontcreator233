@@ -25,6 +25,9 @@ func TestDescribeOpenTypeContract(t *testing.T) {
 	if color, ok := ot["color"].(string); !ok || !strings.Contains(color, "COLR") {
 		t.Fatalf("color contract missing: %#v", ot["color"])
 	}
+	if contextual, ok := ot["contextual"].(string); !ok || !strings.Contains(contextual, "openType.contextual") {
+		t.Fatalf("contextual contract missing: %#v", ot["contextual"])
+	}
 	unsupported := strings.Join(ot["unsupported"].([]string), " ")
 	for _, want := range []string{"variable", "color", "contextual", "cursive"} {
 		if !strings.Contains(unsupported, want) {

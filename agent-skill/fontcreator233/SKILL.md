@@ -57,7 +57,8 @@ Always use the agent's own vision. Do not ask the CLI to analyze an image.
   `init` template and examples enable it. The specimen gets a live weight
   slider. CJK/Hangul/kana outlines stay static. Every font also has one
   COLR/CPAL accent glyph at `U+E000` using `meta.accent`. `calt` maps `->` to an
-  arrow via a real chain-context lookup; the specimen has a toggle.
+  arrow via a real chain-context lookup; the specimen has a toggle. Add more
+  exact-sequence rules under `openType.contextual`.
 - Apps: `apps/` contains per-app guides for Photoshop, Illustrator, InDesign,
   剪映/CapCut, Premiere, After Effects, DaVinci, Final Cut, Figma, Canva,
   Office, OBS, Blender, Godot, Unity, and Unreal, plus SRT/ASS caption samples.

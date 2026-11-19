@@ -28,6 +28,10 @@ Set `output.variable: true` in the recipe to emit one `wght` axis with
 `fvar` + `gvar`. The `init` template and examples enable it; set it to `false`
 for a static font.
 
+`openType.contextual` adds exact-sequence GSUB rules. Each rule has a `feature`
+(default `calt`), an `input` string, and a single-character `target`; input and
+target glyphs must already exist in the font.
+
 ## build-all
 
 ```bash

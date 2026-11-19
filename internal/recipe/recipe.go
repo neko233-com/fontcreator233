@@ -9,6 +9,7 @@ type Recipe struct {
 	Style      Style    `yaml:"style" json:"style"`
 	Coverage   Coverage `yaml:"coverage" json:"coverage"`
 	Glyphs     Glyphs   `yaml:"glyphs" json:"glyphs"`
+	OpenType   OpenType `yaml:"openType" json:"openType"`
 	Output     Output   `yaml:"output" json:"output"`
 
 	// SourcePath is the recipe file path when loaded from disk. It is not part
@@ -72,6 +73,19 @@ type BaseCoverage struct {
 // Glyphs points at optional SVG overrides.
 type Glyphs struct {
 	Overrides string `yaml:"overrides" json:"overrides"`
+}
+
+// OpenType holds optional, agent-authored layout rules.
+type OpenType struct {
+	Contextual []ContextualRule `yaml:"contextual" json:"contextual"`
+}
+
+// ContextualRule maps an input character sequence to an existing glyph when
+// the sequence appears in text. Feature defaults to calt.
+type ContextualRule struct {
+	Feature string `yaml:"feature" json:"feature"`
+	Input   string `yaml:"input" json:"input"`
+	Target  string `yaml:"target" json:"target"`
 }
 
 // Output selects formats, platform targets, and specimen behavior.

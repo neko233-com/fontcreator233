@@ -4,6 +4,8 @@ import (
 	"context"
 	"os/exec"
 	"testing"
+
+	"github.com/neko233-com/fontcreator233/internal/recipe"
 )
 
 func TestFontToolsVariable(t *testing.T) {
@@ -85,6 +87,52 @@ print("ok", lookup.LookupType, rec.LookupListIndex)
 	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
 	if err != nil {
 		t.Fatalf("fontTools calt: %v\n%s", err, out)
+	}
+}
+
+func TestFontToolsContextualRecipe(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	r.OpenType.Contextual = []recipe.ContextualRule{{
+		Feature: "calt",
+		Input:   "<-",
+		Target:  "←",
+	}}
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+gsub = f["GSUB"].table
+calt = next(r for r in gsub.FeatureList.FeatureRecord if r.FeatureTag == "calt")
+found = False
+for li in calt.Feature.LookupListIndex:
+    lookup = gsub.LookupList.Lookup[li]
+    if lookup.LookupType != 6:
+        continue
+    st = lookup.SubTable[0]
+    if [c.glyphs for c in st.InputCoverage] != [["less"], ["hyphen"]]:
+        continue
+    nested = gsub.LookupList.Lookup[st.SubstLookupRecord[0].LookupListIndex]
+    lig = nested.SubTable[0].ligatures["less"][0]
+    if lig.Component == ["hyphen"] and lig.LigGlyph == "arrowleft":
+        found = True
+if not found:
+    raise SystemExit("recipe contextual rule missing")
+print("ok", calt.Feature.LookupListIndex)
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools contextual recipe: %v\n%s", err, out)
 	}
 }
 
