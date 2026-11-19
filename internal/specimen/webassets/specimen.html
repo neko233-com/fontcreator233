@@ -127,6 +127,7 @@
       {{if .Data.HasCcmp}}<span><b>ccmp</b> composed accents</span>{{end}}
       {{if .Data.HasMkmk}}<span><b>mkmk</b> stacked marks</span>{{end}}
       {{if .Data.HasCalt}}<span><b>calt</b> contextual arrow</span>{{end}}
+      {{if .Data.HasCursive}}<span><b>curs</b> cursive joining</span>{{end}}
       {{if .Data.HasColor}}<span><b>COLR</b> color glyph</span>{{end}}
       <span><b>mark</b> combining accents</span>
     </div>
@@ -140,6 +141,11 @@
         <input id="feature-calt" type="checkbox" checked>
         <span>Contextual</span>
         <code>calt</code>
+      </label>{{end}}
+      {{if .Data.HasCursive}}<label class="feature-toggle">
+        <input id="feature-curs" type="checkbox" checked>
+        <span>Cursive</span>
+        <code>curs</code>
       </label>{{end}}
       <label class="feature-toggle">
         <input id="feature-kern" type="checkbox" checked>
@@ -181,6 +187,7 @@
       {{if .Data.HasCcmp}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "ccmp" 1'>á é</span><span class="feature-label"><b>ccmp</b> composed accents</span></div>{{end}}
       {{if .Data.HasMkmk}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "mark" 1, "mkmk" 1'>q́̄</span><span class="feature-label"><b>mkmk</b> stacked marks</span></div>{{end}}
       {{if .Data.HasCalt}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "calt" 1'>-&gt;</span><span class="feature-label"><b>calt</b> contextual arrow</span></div>{{end}}
+      {{if .Data.HasCursive}}<div class="feature-row"><span class="feature-sample" style='font-feature-settings: "curs" 1'>abcgolf</span><span class="feature-label"><b>curs</b> cursive joining anchors</span></div>{{end}}
       {{if .Data.HasColor}}<div class="feature-row"><span class="feature-sample color-sample">&#x{{printf "%X" .Data.ColorRune}};</span><span class="feature-label"><b>COLR</b> accent color layer</span></div>{{end}}
     </div>
     {{if .Data.HasVariable}}

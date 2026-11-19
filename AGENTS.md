@@ -35,7 +35,9 @@ The axis varies Latin/Greek/Cyrillic/symbol and generated feature glyphs; CJK,
 Hangul, and kana stay static. Every font also contains one COLR/CPAL accent glyph
 at `U+E000` using `meta.accent`. `calt` turns the literal `->` into an arrow
 through a chain-context lookup; the specimen has a toggle for it. Add further
-exact-sequence rules under `openType.contextual`.
+exact-sequence rules under `openType.contextual`. `output.cursive: true` emits a
+real GPOS `curs` cursive attachment lookup (type 3 entry/exit anchors on `a`–`z`);
+the specimen has a toggle for it too.
 
 Iterate at most three times: structure first, then texture, then terminals.
 

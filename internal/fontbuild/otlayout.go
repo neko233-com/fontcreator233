@@ -510,8 +510,13 @@ func buildSingleSubtable(glyphs []Glyph, subs []Substitution) []byte {
 	return out
 }
 
-func buildGPOSTable(glyphs []Glyph, pairs []KernPair, capHeight, xHeight int) ([]byte, error) {
+func buildGPOSTable(glyphs []Glyph, pairs []KernPair, capHeight, xHeight int, cursive bool) ([]byte, error) {
 	var features []layoutFeatureSpec
+	if cursive {
+		if sub := buildCursiveSubtable(glyphs, xHeight); len(sub) > 0 {
+			features = append(features, layoutFeatureSpec{Tag: "curs", LookupType: 3, Subtable: sub})
+		}
+	}
 	if sub, err := buildGPOS(glyphs, pairs); err != nil {
 		return nil, err
 	} else if len(sub) > 0 {

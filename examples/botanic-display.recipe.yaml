@@ -51,6 +51,7 @@ output:
   specimen: true
   open: false
   variable: true
+  cursive: true
   splitCJK: 0
   tmp:
     population: dynamic

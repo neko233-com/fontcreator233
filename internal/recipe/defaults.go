@@ -7,7 +7,7 @@ func Default() *Recipe {
 		Meta: Meta{
 			Family:      "New Font",
 			Style:       "Regular",
-			Version:     "0.3.0",
+			Version:     "0.4.0",
 			Designer:    "",
 			Description: "Generated with fontcreator233.",
 			License:     "OFL-1.1",

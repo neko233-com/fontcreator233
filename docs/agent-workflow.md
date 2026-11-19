@@ -141,8 +141,9 @@ Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
 anchors, and `mkmk` stacked marks. With `output.variable: true`, one real `wght`
 axis is written via `fvar` + `gvar` for Latin/Greek/Cyrillic/symbol glyphs; CJK,
 Hangul, and kana stay static, and no `HVAR`/`MVAR` or additional axes are
-generated. Advanced contextual substitutions (`calt`/`cswh`) and cursive
-attachment are not generated. CJK/Hangul outlines come from the embedded OFL
+generated. Recipe-defined `calt` exact-sequence rules and opt-in `curs`
+cursive attachment (`output.cursive: true`) are real GPOS/GSUB lookups; advanced
+`cswh` and contextual classes are not generated. CJK/Hangul outlines come from the embedded OFL
 bases and receive geometric restyling and synthetic bold, not a full redraw.
 `full` coverage means “all glyphs present in the embedded bases”, not every
 Unicode block.

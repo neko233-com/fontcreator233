@@ -221,7 +221,7 @@
   function applyFeatures() {
     var demo = document.getElementById("feature-demo");
     var code = document.getElementById("feature-code");
-    var ids = ["liga", "kern", "calt", "frac", "case", "tnum", "ss01"];
+    var ids = ["liga", "kern", "calt", "curs", "frac", "case", "tnum", "ss01"];
     var settings = ids.map(function (id) {
       var el = document.getElementById("feature-" + id);
       return '"' + id + '" ' + (el && el.checked ? 1 : 0);
@@ -295,7 +295,7 @@
     }
     if (search) search.addEventListener("input", applyFilter);
     if (scriptSelect) scriptSelect.addEventListener("change", applyFilter);
-    ["feature-liga", "feature-kern", "feature-calt", "feature-frac", "feature-case", "feature-tnum", "feature-ss01"].forEach(function (id) {
+    ["feature-liga", "feature-kern", "feature-calt", "feature-curs", "feature-frac", "feature-case", "feature-tnum", "feature-ss01"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener("change", applyFeatures);
     });

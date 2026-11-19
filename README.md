@@ -41,6 +41,9 @@ Just Go, an OFL base font, and a recipe.
   axis with `fvar` + `gvar`; the specimen has a live weight slider.
 - **Contextual rules**: `openType.contextual` maps any existing glyph sequence
   to any existing target glyph via a real GSUB chain-context lookup.
+- **Cursive attachment (opt-in)**: `output.cursive: true` emits a real GPOS
+  cursive attachment lookup (`curs`) with entry/exit anchors on lowercase
+  letters; the specimen has a toggle and joined-glyph sample.
 - **Color glyph**: every font ships one COLR/CPAL accent glyph at `U+E000`,
   using the recipe accent and a white inner layer.
 - **Pleasant to use**: Bubble Tea TUI with progress, ETA, cancellation, and a
@@ -366,11 +369,13 @@ Optional cross-checks use fontTools and `fc-scan` in CI.
   emoji or WOFF2 encoding.
 - Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
   `smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, simple top-center mark
-  anchors, and `mkmk` stacked marks. A single opt-in `wght` variable axis is
-  emitted with `fvar` + `gvar`; CJK/Hangul/kana stay static and no `HVAR`/`MVAR`
+  anchors, `mkmk` stacked marks, recipe-defined `calt` contextual rules, and
+  opt-in `curs` cursive attachment (`output.cursive: true`, real GPOS type 3
+  entry/exit anchors on lowercase letters). A single opt-in `wght` variable axis
+  is emitted with `fvar` + `gvar`; CJK/Hangul/kana stay static and no `HVAR`/`MVAR`
   or additional axes are generated. It does not generate contextual classes,
-  backtrack/lookahead rules, `cswh`, cursive attachment, or color authoring
-  beyond the `U+E000` demo. `learn` can report those features in other fonts.
+  backtrack/lookahead rules, `cswh`, or color authoring beyond the `U+E000`
+  demo. `learn` can report those features in other fonts.
 - CJK/Hangul style transfer is geometric + synthetic bold, not a full redraw.
 - Unity/Unreal packages are generated; validate them in your Editor.
 - Builds are byte-identical within one tool version, OS/arch, and Go version.

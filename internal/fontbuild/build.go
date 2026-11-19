@@ -80,6 +80,7 @@ type Config struct {
 	Created       time.Time
 	Jobs          int
 	Variable      bool
+	Cursive       bool
 	Accent        string
 	Color         *ColorGlyph
 	Glyphs        []Glyph
@@ -198,20 +199,23 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 		{"name", buildName(cfg)},
 		{"post", buildPost(cfg)},
 	}
+	hasMarks := hasMarkGlyphs(glyphs)
+	if hasMarks {
+		tables = append(tables, table{"GDEF", buildGDEF(glyphs)})
+	}
 	if len(cfg.Kerning) > 0 {
 		if kern, err := buildKernTable(glyphs, cfg.Kerning); err != nil {
 			return nil, err
 		} else if len(kern) > 0 {
 			tables = append(tables, table{"kern", kern})
 		}
-		if gpos, err := buildGPOSTable(glyphs, cfg.Kerning, cfg.CapHeight, cfg.XHeight); err != nil {
+	}
+	if len(cfg.Kerning) > 0 || hasMarks || cfg.Cursive {
+		if gpos, err := buildGPOSTable(glyphs, cfg.Kerning, cfg.CapHeight, cfg.XHeight, cfg.Cursive); err != nil {
 			return nil, err
 		} else if len(gpos) > 0 {
 			tables = append(tables, table{"GPOS", gpos})
 		}
-	}
-	if hasMarkGlyphs(glyphs) {
-		tables = append(tables, table{"GDEF", buildGDEF(glyphs)})
 	}
 	if len(cfg.Ligatures) > 0 || len(cfg.Substitutions) > 0 || len(cfg.Contextual) > 0 {
 		if gsub, err := buildGSUBTable(glyphs, cfg.Ligatures, cfg.Substitutions, cfg.Contextual); err != nil {

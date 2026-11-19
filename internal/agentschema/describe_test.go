@@ -8,7 +8,7 @@ import (
 func TestDescribeOpenTypeContract(t *testing.T) {
 	ot := Describe()["opentype"].(map[string]any)
 	generated := strings.Join(ot["generated"].([]string), " ")
-	for _, tag := range []string{"liga", "kern", "ccmp", "calt", "mark", "mkmk", "smcp", "onum", "zero", "sups", "subs"} {
+	for _, tag := range []string{"liga", "kern", "ccmp", "calt", "curs", "mark", "mkmk", "smcp", "onum", "zero", "sups", "subs"} {
 		if !strings.Contains(generated, tag) {
 			t.Fatalf("generated features missing %q: %s", tag, generated)
 		}
@@ -28,11 +28,17 @@ func TestDescribeOpenTypeContract(t *testing.T) {
 	if contextual, ok := ot["contextual"].(string); !ok || !strings.Contains(contextual, "openType.contextual") {
 		t.Fatalf("contextual contract missing: %#v", ot["contextual"])
 	}
+	if cursive, ok := ot["cursive"].(string); !ok || !strings.Contains(cursive, "GPOS") {
+		t.Fatalf("cursive contract missing: %#v", ot["cursive"])
+	}
 	unsupported := strings.Join(ot["unsupported"].([]string), " ")
-	for _, want := range []string{"variable", "color", "contextual", "cursive"} {
+	for _, want := range []string{"variable", "color", "contextual"} {
 		if !strings.Contains(unsupported, want) {
 			t.Fatalf("unsupported list missing %q: %s", want, unsupported)
 		}
+	}
+	if strings.Contains(unsupported, "cursive") {
+		t.Fatalf("cursive must no longer be unsupported: %s", unsupported)
 	}
 	md := Markdown()
 	for _, want := range []string{"## OpenType", "unsupported", "ccmp", "mkmk"} {

@@ -79,6 +79,48 @@ func buildMarkBaseSubtable(glyphs []Glyph, capHeight, xHeight int) []byte {
 	return out
 }
 
+// buildCursiveSubtable creates a GPOS CursivePos (type 3, format 1) subtable.
+// Entry anchors sit on the left edge of lowercase letters and exit anchors
+// slightly inside the right edge, both at mid x-height, so adjacent glyphs
+// overlap and join like a connecting script.
+func buildCursiveSubtable(glyphs []Glyph, xHeight int) []byte {
+	var gids []uint16
+	for i, g := range glyphs {
+		if g.NoCmap || g.Rune < 'a' || g.Rune > 'z' || len(g.Path) == 0 || g.Advance <= 0 {
+			continue
+		}
+		gids = append(gids, uint16(i))
+	}
+	if len(gids) < 2 {
+		return nil
+	}
+	sort.Slice(gids, func(i, j int) bool { return gids[i] < gids[j] })
+	coverage := buildCoverage(gids)
+
+	covOff := 6 + 4*len(gids)
+	anchorOff := covOff + len(coverage)
+	out := make([]byte, anchorOff+12*len(gids))
+	putU16(out, 0, 1)
+	putU16(out, 2, uint16(covOff))
+	putU16(out, 4, uint16(len(gids)))
+	copy(out[covOff:], coverage)
+	y := int16(xHeight / 2)
+	off := anchorOff
+	for i, gid := range gids {
+		rec := 6 + 4*i
+		putU16(out, rec, uint16(off))
+		putU16(out, rec+2, uint16(off+6))
+		copy(out[off:], makeAnchor(0, y))
+		// Pull the exit anchor slightly inside the advance width so adjacent
+		// lowercase glyphs overlap at mid x-height, like a connecting script.
+		// This makes the cursive adjustment observable in a shaper.
+		adv := int16(glyphs[gid].Advance)
+		copy(out[off+6:], makeAnchor(adv-adv/10, y))
+		off += 12
+	}
+	return out
+}
+
 // buildMarkMarkSubtable creates a GPOS MarkMarkPos subtable so a second
 // combining mark stacks on top of the first. Anchors are deliberately simple:
 // mark-to-mark uses the top of mark 1 and the origin of mark 2.

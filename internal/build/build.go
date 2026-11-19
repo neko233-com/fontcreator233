@@ -313,6 +313,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 				HasCcmp:      hasLigatureFeature(ligatures, "ccmp"),
 				HasMkmk:      hasMkmk,
 				HasCalt:      len(contextual) > 0,
+				HasCursive:   r.Output.Cursive,
 				HasColor:     colorSpec != nil,
 				ColorRune:    colorRune,
 				HasVariable:  r.Output.Variable,
@@ -629,6 +630,7 @@ func fontConfig(r *recipe.Recipe, resolvedStyle string, glyphs []fontbuild.Glyph
 		ItalicAngle: r.Style.Slant,
 		Created:     buildTime(),
 		Variable:    r.Output.Variable,
+		Cursive:     r.Output.Cursive,
 		Accent:      r.Meta.Accent,
 		Glyphs:      glyphs,
 	}

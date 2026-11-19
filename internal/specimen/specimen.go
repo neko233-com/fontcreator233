@@ -44,6 +44,7 @@ type Data struct {
 	HasCcmp      bool
 	HasMkmk      bool
 	HasCalt      bool
+	HasCursive   bool
 	HasColor     bool
 	ColorRune    int
 	HasVariable  bool

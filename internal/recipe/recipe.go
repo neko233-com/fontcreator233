@@ -95,6 +95,7 @@ type Output struct {
 	Specimen bool     `yaml:"specimen" json:"specimen"`
 	Open     bool     `yaml:"open" json:"open"`
 	Variable bool     `yaml:"variable" json:"variable"`
+	Cursive  bool     `yaml:"cursive" json:"cursive"`
 	SplitCJK int      `yaml:"splitCJK" json:"splitCJK"`
 	TMP      TMP      `yaml:"tmp" json:"tmp"`
 }

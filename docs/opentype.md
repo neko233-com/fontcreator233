@@ -36,6 +36,7 @@ HarfBuzz shaping was used for manual verification.
 | `calt` | GSUB 6 | `->` | Chain-context arrow substitution |
 | `mark` | GPOS 4 | `q́` | Top-center mark-to-base anchors |
 | `mkmk` | GPOS 6 | `q́̄` | Stacks a second combining mark above the first |
+| `curs` | GPOS 3 | `abcgolf` | Opt-in (`output.cursive: true`) cursive joining anchors on `a`–`z` |
 
 Example:
 
@@ -99,6 +100,23 @@ openType:
 
 This emits another chain-context lookup; `a<-b` becomes `a`, `←`, `b`.
 
+## Cursive attachment
+
+Set `output.cursive: true` to emit a GPOS `curs` feature backed by a real
+CursivePos (type 3, format 1) subtable:
+
+```yaml
+output:
+  cursive: true
+```
+
+Every lowercase letter `a`–`z` gets an entry anchor at the left edge (X = 0)
+and an exit anchor slightly inside the right edge (X = advance − 10%), both at
+mid x-height. A shaper such as HarfBuzz aligns each glyph's entry anchor with
+the previous glyph's exit anchor, so `abc` is pulled together at the connection
+point while uppercase letters keep their normal advances. The specimen exposes
+a `curs` toggle and a joined `abcgolf` sample.
+
 ## Verification
 
 - `go test ./...` builds fonts and asserts the GSUB/GPOS/GDEF/`kern` tags and
@@ -112,6 +130,9 @@ This emits another chain-context lookup; `a<-b` becomes `a`, `←`, `b`.
   glyph extents were checked at `wght` 420, 620, and 820.
 - fontTools asserts the `COLR` base/layer records and the `CPAL` accent/white
   palette; the specimen screenshot was rendered in Chrome.
+- fontTools asserts the GPOS `curs` feature, the CursivePos type 3 subtable, and
+  its entry/exit anchors; HarfBuzz confirms `abc` advances change with `curs`
+  enabled while uppercase `H` is unaffected.
 - fontTools asserts the `calt` chain-context format, input coverages, nested
   ligature lookup, and `-`/`>` components; HarfBuzz confirms the arrow only
   appears with `calt` enabled.
@@ -127,8 +148,15 @@ Generated fonts are static and Latin-focused. They do **not** include:
   `sbix` / CBDT color tables;
 - contextual classes, backtrack/lookahead rules, and `cswh` beyond the
   recipe-defined exact-sequence rules;
-- cursive attachment;
 - Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
+
+Cursive attachment **is** generated when `output.cursive: true` is set. It is a
+GPOS `curs` feature backed by a real CursivePos (type 3, format 1) subtable:
+lowercase letters `a`–`z` get an entry anchor at the left edge and an exit
+anchor slightly inside the right edge, both at mid x-height. A shaper aligns the
+exit anchor of one glyph with the entry anchor of the next, so adjacent lowercase
+glyphs join like a connecting script. Uppercase letters are outside the cursive
+coverage and keep their normal advances.`
 
 `fontcreator learn` still reports those structures when it finds them in an
 external font, so the report is useful even when the generator cannot reproduce

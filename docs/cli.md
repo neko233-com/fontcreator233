@@ -32,6 +32,10 @@ for a static font.
 (default `calt`), an `input` string, and a single-character `target`; input and
 target glyphs must already exist in the font.
 
+Set `output.cursive: true` to emit a GPOS `curs` cursive attachment lookup with
+entry/exit anchors on lowercase letters. The `init` template and examples enable
+it; omit it or set it to `false` to skip cursive positioning.
+
 ## build-all
 
 ```bash

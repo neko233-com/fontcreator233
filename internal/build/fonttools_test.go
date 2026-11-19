@@ -174,6 +174,95 @@ print("ok", len(layers["uniE000"]), len(palette))
 	}
 }
 
+func TestFontToolsCursive(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	r.Output.Cursive = true
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+tags = [r.FeatureTag for r in f["GPOS"].table.FeatureList.FeatureRecord]
+if "curs" not in tags:
+    raise SystemExit(f"curs feature missing: {tags}")
+curs = [l for l in f["GPOS"].table.LookupList.Lookup if l.LookupType == 3]
+if len(curs) != 1:
+    raise SystemExit(f"expected one cursive lookup, got {len(curs)}")
+st = curs[0].SubTable[0]
+if st.Format != 1 or st.EntryExitCount < 2:
+    raise SystemExit(f"bad cursive subtable: format {st.Format}, count {st.EntryExitCount}")
+glyphs = st.Coverage.glyphs
+if "a" not in glyphs or "z" not in glyphs:
+    raise SystemExit(f"cursive coverage incomplete: {glyphs[:5]}...{glyphs[-5:]}")
+rec = st.EntryExitRecord[0]
+entry, exit = rec.EntryAnchor, rec.ExitAnchor
+if entry.Format != 1 or exit.Format != 1:
+    raise SystemExit("expected format 1 anchors")
+if entry.XCoordinate != 0 or entry.YCoordinate <= 0:
+    raise SystemExit(f"bad entry anchor: {entry.XCoordinate},{entry.YCoordinate}")
+if exit.XCoordinate <= 0 or exit.XCoordinate >= 1000 or exit.YCoordinate != entry.YCoordinate:
+    raise SystemExit(f"bad exit anchor: {exit.XCoordinate},{exit.YCoordinate}")
+print("ok", st.EntryExitCount, exit.XCoordinate, entry.YCoordinate)
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools cursive: %v\n%s", err, out)
+	}
+}
+
+func TestHarfBuzzCursive(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import uharfbuzz").Run(); err != nil {
+		t.Skip("uharfbuzz not available")
+	}
+	r := sampleRecipe(t)
+	r.Output.Cursive = true
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+import uharfbuzz as hb
+p = sys.argv[1]
+face = hb.Face(hb.Blob.from_file_path(p))
+font = hb.Font(face)
+def shape(text, curs):
+    b = hb.Buffer()
+    b.add_str(text)
+    b.guess_segment_properties()
+    hb.shape(font, b, {"curs": curs})
+    return [(i.codepoint, pos.x_advance) for i, pos in zip(b.glyph_infos, b.glyph_positions)]
+off = shape("abc", False)
+on = shape("abc", True)
+if on == off:
+    raise SystemExit("curs feature had no shaping effect")
+# Uppercase is outside cursive coverage and must keep its advance.
+h_off = shape("H", False)
+h_on = shape("H", True)
+if h_off != h_on:
+    raise SystemExit("curs unexpectedly changed uncovered glyph")
+print("ok", off, on)
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("harfbuzz cursive: %v\n%s", err, out)
+	}
+}
+
 func TestFontToolsSample(t *testing.T) {
 	python, err := exec.LookPath("python")
 	if err != nil {

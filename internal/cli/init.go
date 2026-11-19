@@ -102,7 +102,7 @@ apiVersion: fontcreator233/v1
 meta:
   family: %q
   style: Regular
-  version: 0.3.0
+  version: 0.4.0
   designer: ""
   description: "Describe the reference and the intended mood."
   license: OFL-1.1
@@ -136,6 +136,7 @@ output:
   specimen: true
   open: true
   variable: true
+  cursive: true
   splitCJK: 0
   tmp:
     population: dynamic
