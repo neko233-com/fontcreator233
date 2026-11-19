@@ -14,7 +14,7 @@ func TestDescribeOpenTypeContract(t *testing.T) {
 		}
 	}
 	tables := strings.Join(ot["tables"].([]string), " ")
-	for _, want := range []string{"fvar", "gvar", "HVAR", "MVAR", "COLR", "CPAL"} {
+	for _, want := range []string{"fvar", "gvar", "HVAR", "MVAR", "COLR", "CPAL", "SVG "} {
 		if !strings.Contains(tables, want) {
 			t.Fatalf("tables missing %q: %s", want, tables)
 		}

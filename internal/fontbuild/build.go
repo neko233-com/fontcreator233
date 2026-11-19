@@ -87,6 +87,7 @@ type Config struct {
 	Accent        string
 	Color         *ColorGlyph
 	ColorSet      *ColorSet
+	SVG           []SVGColorGlyph
 	Glyphs        []Glyph
 	Kerning       []KernPair
 	Ligatures     []Ligature
@@ -238,6 +239,9 @@ func BuildContext(ctx context.Context, cfg Config) ([]byte, error) {
 			tables = append(tables, table{"COLR", colr})
 			tables = append(tables, table{"CPAL", buildCPAL(cfg.Accent)})
 		}
+	}
+	if svg := buildSVG(glyphs, cfg.SVG); len(svg) > 0 {
+		tables = append(tables, table{"SVG ", svg})
 	}
 	if cfg.Variable {
 		gvar, err := buildGvar(glyphs)

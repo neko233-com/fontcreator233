@@ -242,6 +242,7 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	cfg.Kerning = kerning
 	cfg.Color = colorSpec
 	cfg.ColorSet = colorSet
+	cfg.SVG = makeSVGGlyphs(glyphs, colorSet, colorSpec, r.Meta.Accent)
 	if usedBase {
 		designer := strings.TrimSpace(r.Meta.Designer)
 		if designer == "" {
@@ -1061,6 +1062,71 @@ func makeArrowRule(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbu
 		Glyph:   "context.arrow",
 	}
 	return []fontbuild.Glyph{arrow}, []fontbuild.ContextualRule{rule}
+}
+
+// makeSVGGlyphs derives SVG color glyph documents from the recipe color set or
+// the single demo glyph. The first palette supplies the layer colors.
+func makeSVGGlyphs(all []fontbuild.Glyph, set *fontbuild.ColorSet, demo *fontbuild.ColorGlyph, accent string) []fontbuild.SVGColorGlyph {
+	byName := make(map[string]fontbuild.Glyph, len(all))
+	for _, g := range all {
+		byName[g.Name] = g
+	}
+	var out []fontbuild.SVGColorGlyph
+	if set != nil && len(set.Glyphs) > 0 && len(set.Palettes) > 0 {
+		pal := set.Palettes[0]
+		for _, cg := range set.Glyphs {
+			entry := fontbuild.SVGColorGlyph{Base: cg.Base}
+			for _, layer := range cg.Layers {
+				g, ok := byName[layer.Glyph]
+				if !ok || int(layer.PaletteIndex) >= len(pal) {
+					continue
+				}
+				c := pal[layer.PaletteIndex]
+				entry.Layers = append(entry.Layers, fontbuild.SVGColorLayer{
+					Path:  g.Path,
+					Color: [3]byte{c[2], c[1], c[0]}, // BGRA -> RGB
+				})
+			}
+			if len(entry.Layers) > 0 {
+				out = append(out, entry)
+			}
+		}
+	} else if demo != nil {
+		colors := [][3]byte{
+			accentRGBLocal(accent),
+			{0xFF, 0xFF, 0xFF},
+			{0x00, 0x00, 0x00},
+		}
+		entry := fontbuild.SVGColorGlyph{Base: demo.Base}
+		for _, layer := range demo.Layers {
+			g, ok := byName[layer.Glyph]
+			if !ok || int(layer.PaletteIndex) >= len(colors) {
+				continue
+			}
+			entry.Layers = append(entry.Layers, fontbuild.SVGColorLayer{
+				Path: g.Path, Color: colors[layer.PaletteIndex],
+			})
+		}
+		if len(entry.Layers) > 0 {
+			out = append(out, entry)
+		}
+	}
+	return out
+}
+
+func accentRGBLocal(s string) [3]byte {
+	s = strings.TrimSpace(strings.TrimPrefix(s, "#"))
+	if len(s) == 3 {
+		s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2]})
+	}
+	if len(s) != 6 {
+		return [3]byte{0x5B, 0x8C, 0xFF}
+	}
+	v, err := strconv.ParseUint(s, 16, 32)
+	if err != nil {
+		return [3]byte{0x5B, 0x8C, 0xFF}
+	}
+	return [3]byte{byte(v >> 16), byte(v >> 8), byte(v)}
 }
 
 func wantsBMFont(o Options, r *recipe.Recipe) bool {

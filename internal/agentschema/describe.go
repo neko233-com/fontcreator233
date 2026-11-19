@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the public CLI contract version.
-const Version = "0.8.0"
+const Version = "0.9.0"
 
 // Describe returns the complete JSON-friendly contract.
 func Describe() map[string]any {
@@ -73,13 +73,13 @@ func Describe() map[string]any {
 		},
 		"opentype": map[string]any{
 			"generated":  []string{"liga", "kern", "case", "frac", "tnum", "ss01", "smcp", "onum", "zero", "sups", "subs", "ccmp", "calt", "mark", "mkmk", "curs"},
-			"tables":     []string{"GSUB", "GPOS", "GDEF", "kern", "fvar", "gvar", "HVAR", "MVAR", "COLR", "CPAL"},
+			"tables":     []string{"GSUB", "GPOS", "GDEF", "kern", "fvar", "gvar", "HVAR", "MVAR", "COLR", "CPAL", "SVG "},
 			"variable":   "one wght axis (fvar/gvar) with HVAR advance and MVAR metric deltas; outlines vary for Latin/Greek/Cyrillic/symbol and generated feature glyphs, CJK/Hangul/kana stay static",
-			"color":      "recipe openType.color emits multi-glyph COLR v0 with multiple CPAL palettes; without it, a single U+E000 accent demo glyph is emitted",
+			"color":      "recipe openType.color emits multi-glyph COLR v0 with multiple CPAL palettes plus an SVG color table; without it, a single U+E000 accent demo glyph is emitted",
 			"contextual": "recipe openType.contextual maps existing glyph sequences to a target via GSUB chain context (type 6 format 3) with optional backtrack/lookahead; any 4-char feature tag including cswh is accepted",
 			"cursive":    "output.cursive emits a real GPOS cursive attachment lookup (type 3, format 1) with entry/exit anchors on lowercase letters",
 			"unsupported": []string{
-				"additional variable axes beyond wght (opsz/wdth/etc.); no SVG/sbix/CBDT color tables",
+				"additional variable axes beyond wght (opsz/wdth/etc.); no sbix/CBDT bitmap color tables (SVG is generated)",
 				"contextual format-2 glyph classes; recipe rules use format-3 coverage with optional backtrack/lookahead",
 				"complex shaping for Arabic, Hebrew, Indic, and Thai (reported by learn, never claimed as generated)",
 			},

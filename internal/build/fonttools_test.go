@@ -8,6 +8,42 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 )
 
+func TestFontToolsSVGColor(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools").Run(); err != nil {
+		t.Skip("fontTools not available")
+	}
+	r := sampleRecipe(t)
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+if "SVG " not in f:
+    raise SystemExit("SVG table missing")
+d = f["SVG "]
+if d.version != 0 or d.numEntries < 1:
+    raise SystemExit("bad SVG header")
+doc = d.docList[0]
+if doc.startGlyphID != doc.endGlyphID:
+    raise SystemExit("expected one glyph per SVG doc")
+data = doc.data if isinstance(doc.data, str) else doc.data.decode("utf-8")
+if "<svg" not in data or "<path" not in data or "fill=\"#" not in data:
+    raise SystemExit("bad SVG document")
+print("ok", d.numEntries, doc.startGlyphID)
+`
+	out, err := exec.Command(python, "-c", script, res.FontPath).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools SVG color: %v\n%s", err, out)
+	}
+}
+
 func TestFontToolsWOFF2(t *testing.T) {
 	python, err := exec.LookPath("python")
 	if err != nil {
