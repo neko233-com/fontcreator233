@@ -142,8 +142,9 @@ for your project and cook the font assets.
 ```
 
 Split fonts are emitted with `unicode-range` on each `@font-face`, so the
-browser selects the right file automatically. WOFF2 is not generated; run
-`woff2_compress` externally if needed and update the CSS.
+browser selects the right file automatically. WOFF2 is generated too when
+`output.formats` includes `woff2` (it is on by default); add it to the CSS with
+`format("woff2")` first so modern browsers pick it up.
 
 ## System
 

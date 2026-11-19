@@ -122,7 +122,7 @@ func Schema() map[string]any {
 	output := obj(map[string]any{
 		"formats": map[string]any{
 			"type":  "array",
-			"items": enum("Output format", "ttf", "woff"),
+			"items": enum("Output format", "ttf", "woff", "woff2"),
 		},
 		"targets": map[string]any{
 			"type":  "array",

@@ -303,8 +303,9 @@ setup. No Unreal Editor test is run.
 
 ### Web
 
-`web/font.css` uses local font files. Split fonts get `unicode-range`. WOFF2 is
-not generated; run `woff2_compress` externally if you need it.
+`web/font.css` uses local font files. Split fonts get `unicode-range`. WOFF 2.0
+is generated too (`output.formats: [ttf, woff, woff2]`, on by default) with a
+real Brotli-compressed WOFF2 payload and no external post-processing.
 
 ### System
 
@@ -387,7 +388,7 @@ Optional cross-checks use fontTools and `fc-scan` in CI.
 ## Limits
 
 - No Arabic, Hebrew, Indic, Thai, vertical layout, or complex shaping.
-- No SVG/sbix/CBDT color tables, emoji, or WOFF2 encoding.
+- No SVG/sbix/CBDT color tables or emoji glyphs. WOFF 2.0 encoding is generated (Brotli).
 - Generated OpenType covers `liga`, `kern`, `case`, `frac`, `tnum`, `ss01`,
   `smcp`, `onum`, `zero`, `sups`, `subs`, `ccmp`, simple top-center mark
   anchors, `mkmk` stacked marks, recipe-defined `calt` contextual rules, and

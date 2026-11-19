@@ -8,6 +8,46 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 )
 
+func TestFontToolsWOFF2(t *testing.T) {
+	python, err := exec.LookPath("python")
+	if err != nil {
+		t.Skip("python not available")
+	}
+	if err := exec.Command(python, "-c", "import fontTools, brotli").Run(); err != nil {
+		t.Skip("fontTools/brotli not available")
+	}
+	r := sampleRecipe(t)
+	r.Output.Formats = []string{"woff2"}
+	r.Output.Variable = true
+	res, err := Build(context.Background(), r, Options{OutDir: t.TempDir()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.WOFF2Path == "" {
+		t.Fatal("no WOFF2 path in result")
+	}
+	script := `
+import sys
+from fontTools.ttLib import TTFont
+p = sys.argv[1]
+with open(p, "rb") as f:
+    sig = f.read(4)
+if sig != b"wOF2":
+    raise SystemExit(f"bad WOFF2 signature: {sig}")
+f = TTFont(p)
+if f.getBestCmap().get(ord("A")) != "A":
+    raise SystemExit("cmap lost in WOFF2")
+for tag in ("fvar", "gvar", "HVAR", "MVAR", "COLR", "CPAL", "GSUB", "GPOS"):
+    if tag not in f:
+        raise SystemExit(f"table {tag} lost in WOFF2")
+print("ok", len(f.getGlyphOrder()))
+`
+	out, err := exec.Command(python, "-c", script, res.WOFF2Path).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fontTools woff2: %v\n%s", err, out)
+	}
+}
+
 func TestFontToolsVariable(t *testing.T) {
 	python, err := exec.LookPath("python")
 	if err != nil {

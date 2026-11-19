@@ -111,7 +111,7 @@ fontcreator build examples/botanic-display.recipe.yaml --target all --no-open
 
 不支持：阿拉伯文、希伯来文、印度系文字、泰文、竖排、复杂 shaping。
 
-生成的 OpenType 覆盖 `liga`、`kern`、`case`、`frac`、`tnum`、`ss01`、`smcp`、`onum`、`zero`、`sups`、`subs`、`ccmp`、基础 top-center `mark` 锚点、`mkmk` 堆叠标记、recipe 定义的 `calt` 精确序列规则，以及可选生成的 `curs` cursive attachment（`output.cursive: true`，在真实 GPOS type 3 上为小写字母写入 entry/exit 锚点）；可选生成一条 `wght` 可变轴（`fvar` + `gvar`），并写入 `HVAR` 字宽与 `MVAR` 度量变化，CJK/韩文/假名保持静态，不生成额外轴。`openType.color` 生成多字形、多调色板的 COLR/CPAL。不生成 SVG/sbix/CBDT 彩色表、emoji 或 WOFF2；不生成 contextual class、backtrack/lookahead、`cswh` 等高级 GSUB/GPOS；`openType.contextual` 只支持精确序列规则。`learn` 可以解析并报告其他字体中的这些特性。
+生成的 OpenType 覆盖 `liga`、`kern`、`case`、`frac`、`tnum`、`ss01`、`smcp`、`onum`、`zero`、`sups`、`subs`、`ccmp`、基础 top-center `mark` 锚点、`mkmk` 堆叠标记、recipe 定义的 `calt` 精确序列规则，以及可选生成的 `curs` cursive attachment（`output.cursive: true`，在真实 GPOS type 3 上为小写字母写入 entry/exit 锚点）；可选生成一条 `wght` 可变轴（`fvar` + `gvar`），并写入 `HVAR` 字宽与 `MVAR` 度量变化，CJK/韩文/假名保持静态，不生成额外轴。`openType.color` 生成多字形、多调色板的 COLR/CPAL；`output.formats` 可生成真正的 WOFF 2.0（Brotli 压缩）。不生成 SVG/sbix/CBDT 彩色表或 emoji；不生成 contextual class、backtrack/lookahead、`cswh` 等高级 GSUB/GPOS；`openType.contextual` 只支持精确序列规则。`learn` 可以解析并报告其他字体中的这些特性。
 
 ## 产物
 
@@ -130,7 +130,7 @@ dist/
 - **应用场景包**：`apps/` 包含 Photoshop、Illustrator、InDesign、剪映/CapCut、Premiere、After Effects、DaVinci、Final Cut、Figma、Canva、Office、OBS、Blender、Godot、Unity、Unreal 的说明，以及 `caption.srt`/`caption.ass` 字幕样例。桌面软件安装系统字体；Blender/Godot 直接加载 TTF；移动端剪映按版本可能支持导入或需要渲染图替代。
 - **Unity TMP**：`Tools/Fontcreator233/Create TMP Font Assets`、`Create Static TMP Font Assets`、`Wire Fallback Chain`。移动端可用 `--split-cjk 4096`。生成器不启动/测试 Unity。
 - **Unreal**：在 Editor Python 中运行 `unreal/Scripts/fontcreator233_import.py`；API 不支持时打印 CompositeFont 范围。生成器不启动/测试 UE。
-- **Web**：`web/font.css` 全部本地文件；分片字体带 `unicode-range`。不生成 WOFF2。
+- **Web**：`web/font.css` 全部本地文件；分片字体带 `unicode-range`。默认生成 WOFF 2.0（Brotli 压缩），无需外部后处理。
 - **系统**：`system/INSTALL.md` 覆盖 Windows/macOS/Linux。
 
 ![fontcreator233 应用场景包](docs/assets/apps-dark.png)

@@ -267,7 +267,7 @@ func validateOutput(o *Output) error {
 		return fail("output.formats", "must not be empty", o.Formats)
 	}
 	for _, f := range o.Formats {
-		if err := oneOf("output.formats", f, "ttf", "woff"); err != nil {
+		if err := oneOf("output.formats", f, "ttf", "woff", "woff2"); err != nil {
 			return err
 		}
 	}

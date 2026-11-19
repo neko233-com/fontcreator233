@@ -7,7 +7,7 @@ func Default() *Recipe {
 		Meta: Meta{
 			Family:      "New Font",
 			Style:       "Regular",
-			Version:     "0.6.0",
+			Version:     "0.7.0",
 			Designer:    "",
 			Description: "Generated with fontcreator233.",
 			License:     "OFL-1.1",
@@ -45,7 +45,7 @@ func Default() *Recipe {
 			},
 		},
 		Output: Output{
-			Formats:  []string{"ttf", "woff"},
+			Formats:  []string{"ttf", "woff", "woff2"},
 			Targets:  []string{"universal", "web", "system", "unity", "apps"},
 			Specimen: true,
 			Open:     true,

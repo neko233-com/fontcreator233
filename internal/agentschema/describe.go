@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the public CLI contract version.
-const Version = "0.6.0"
+const Version = "0.7.0"
 
 // Describe returns the complete JSON-friendly contract.
 func Describe() map[string]any {
@@ -99,7 +99,7 @@ func Describe() map[string]any {
 			"unsupportedScripts": []string{
 				"Arabic", "Hebrew", "Indic scripts", "Thai", "vertical layout", "complex shaping",
 			},
-			"woff2":       "not generated; WOFF and TTF are generated",
+			"woff2":       "generated as a real WOFF 2.0 file (Brotli, null table transforms) when output.formats includes woff2",
 			"determinism": "byte-identical within one fontcreator233 version, OS/arch, and Go version; jobs=1 and jobs=N match on the same platform",
 		},
 		"workflow": []string{

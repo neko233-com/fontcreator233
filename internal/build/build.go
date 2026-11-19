@@ -66,6 +66,7 @@ type Result struct {
 	RequestedStyle string
 	FontPath       string
 	WOFFPath       string
+	WOFF2Path      string
 	SpecimenPath   string
 	SHA256         string
 	Bytes          int
@@ -278,6 +279,17 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 				return result, err
 			}
 			result.WOFFPath = woffPath
+		}
+		if hasFormat(r, "woff2") {
+			woff2, err := fontbuild.BuildWOFF2(ttf)
+			if err != nil {
+				return result, fmt.Errorf("compile woff2: %w", err)
+			}
+			woff2Path := filepath.Join(o.OutDir, stem+".woff2")
+			if err := os.WriteFile(woff2Path, woff2, 0o644); err != nil {
+				return result, err
+			}
+			result.WOFF2Path = woff2Path
 		}
 		if o.SplitCJK > 0 {
 			split, infos, err := buildSplits(ctx, r, resolvedStyle, glyphs, splitSet, ligatures, kerning, o, stem)
@@ -1400,6 +1412,15 @@ func buildSplits(ctx context.Context, r *recipe.Recipe, resolvedStyle string, gl
 				return nil, nil, err
 			}
 			if err := os.WriteFile(filepath.Join(o.OutDir, fmt.Sprintf("%s-CJK-%02d.woff", stem, idx)), woff, 0o644); err != nil {
+				return nil, nil, err
+			}
+		}
+		if hasFormat(r, "woff2") {
+			woff2, err := fontbuild.BuildWOFF2(data)
+			if err != nil {
+				return nil, nil, err
+			}
+			if err := os.WriteFile(filepath.Join(o.OutDir, fmt.Sprintf("%s-CJK-%02d.woff2", stem, idx)), woff2, 0o644); err != nil {
 				return nil, nil, err
 			}
 		}
