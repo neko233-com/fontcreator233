@@ -95,7 +95,7 @@ func ExportBundle(ctx context.Context, recipePath, outZip string, targets []stri
 	}
 	index := BundleIndex{
 		Schema:    bundleSchema,
-		Generator: "fontcreator233 0.5.0",
+		Generator: "fontcreator233 0.6.0",
 		CreatedAt: bundleTime,
 		Recipe:    "recipe.yaml",
 		Family:    r.Meta.Family,

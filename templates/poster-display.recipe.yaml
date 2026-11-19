@@ -1,0 +1,56 @@
+# Reference template — poster / display.
+# Wide, high-impact display face for headlines and social graphics.
+# Build: fontcreator build templates/poster-display.recipe.yaml --target all
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Wide Display
+  style: Black
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Wide poster lettering with flared terminals and tight tracking."
+  license: OFL-1.1
+  accent: "#FF5B3D"
+  sampleText: "MAKE IT LOUD 0123"
+
+metrics:
+  ascender: 820
+  descender: -190
+  xHeight: 0.54
+  capHeight: 0.74
+  lineGap: 0
+
+style:
+  skeleton: geometric
+  weight: 800
+  width: 118
+  slant: 0
+  contrast: 0.24
+  terminal: flare
+  serif: none
+  serifSize: 0
+  overshoot: 0.02
+  roughness: 0.04
+  jitterRotation: 0
+  tracking: -1.4
+  seed: 777
+
+coverage:
+  generated: [latin, greek]
+  base:
+    cjk: none
+    kana: false
+    hangul: false
+    symbols: true
+
+glyphs:
+  overrides: ""
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, apps]
+  specimen: true
+  open: false
+  variable: true
+  cursive: false
+  splitCJK: 0

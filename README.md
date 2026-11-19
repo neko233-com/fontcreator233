@@ -14,6 +14,10 @@ for Photoshop, 剪映/CapCut, Premiere, Figma, and Office.
 
 ![fontcreator233 specimen](docs/assets/specimen-dark.png)
 
+> **Documentation site:** [Vite+ / React 19 guide](docs-site/README.md) with
+> in-site navigation, live tracking guidance, template gallery, and BMFont docs.
+> Build locally with `cd docs-site && npm install && npm run build`.
+
 ```bash
 fontcreator init --dir work --template geometric --family "Aurora Grotesk"
 fontcreator build work/font.recipe.yaml --out dist --target all
@@ -147,6 +151,20 @@ contrast, serif, and terminals.
 fontcreator build examples/aurora-grotesk.recipe.yaml --target all --no-open
 fontcreator build examples/noir-didone.recipe.yaml --target all --no-open
 fontcreator build examples/botanic-display.recipe.yaml --target all --no-open
+```
+
+### Reference templates
+
+Five domain-oriented recipes under [`templates/`](templates/) are valid out of
+the box: `code-editor` (JetBrains-Mono-inspired screen text), `product-ui`,
+`poster-display`, `editorial-serif`, and `cjk-partner`. They encode design
+traits, not copied fonts. Use `style.tracking` to tune spacing — positive values
+open small text up, negative values tighten display setting; the specimen has a
+live tracking slider for previewing.
+
+```bash
+fontcreator validate templates/code-editor.recipe.yaml --json
+fontcreator build templates/code-editor.recipe.yaml --out dist --target all
 ```
 
 The automated E2E test builds all three with `common` coverage and asserts

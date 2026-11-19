@@ -38,6 +38,11 @@ Thumbs.db
 *.out
 coverage.out
 
+# Docs site (Vite+ / React) generated output
+/docs-site/node_modules/
+/docs-site/dist/
+/docs-site/.vite/
+
 # Explicitly keep embedded source assets and vendored web assets
 !assets/base/*.ttf
 !assets/base/*.txt

@@ -1,0 +1,56 @@
+# Reference template — editorial serif.
+# High-contrast text face for long-form articles and book layouts.
+# Build: fontcreator build templates/editorial-serif.recipe.yaml --target all
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Column Serif
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Bracketed serif for editorial body copy and pull quotes."
+  license: OFL-1.1
+  accent: "#C4553D"
+  sampleText: "Typography is the craft of endowing human language with a durable visual form."
+
+metrics:
+  ascender: 800
+  descender: -210
+  xHeight: 0.50
+  capHeight: 0.70
+  lineGap: 10
+
+style:
+  skeleton: serif
+  weight: 450
+  width: 96
+  slant: 0
+  contrast: 0.76
+  terminal: angled
+  serif: bracketed
+  serifSize: 0.55
+  overshoot: 0.018
+  roughness: 0
+  jitterRotation: 0
+  tracking: 0.2
+  seed: 1701
+
+coverage:
+  generated: [latin, greek, cyrillic]
+  base:
+    cjk: none
+    kana: false
+    hangul: false
+    symbols: true
+
+glyphs:
+  overrides: ""
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, apps]
+  specimen: true
+  open: false
+  variable: true
+  cursive: false
+  splitCJK: 0

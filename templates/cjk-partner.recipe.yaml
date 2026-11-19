@@ -1,0 +1,56 @@
+# Reference template — CJK partner face.
+# Latin companion with embedded CJK base coverage and split CJK output.
+# Build: fontcreator build templates/cjk-partner.recipe.yaml --target all
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Partner Sans
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Latin + CJK companion for bilingual product and documentation."
+  license: OFL-1.1
+  accent: "#2F8F6B"
+  sampleText: "字体创造器 Partner Sans 0123 — Hamburgefonstiv"
+
+metrics:
+  ascender: 810
+  descender: -210
+  xHeight: 0.52
+  capHeight: 0.72
+  lineGap: 0
+
+style:
+  skeleton: humanist
+  weight: 400
+  width: 100
+  slant: 0
+  contrast: 0.06
+  terminal: round
+  serif: none
+  serifSize: 0
+  overshoot: 0.014
+  roughness: 0
+  jitterRotation: 0
+  tracking: 0.6
+  seed: 4096
+
+coverage:
+  generated: [latin, greek, cyrillic]
+  base:
+    cjk: common
+    kana: true
+    hangul: true
+    symbols: true
+
+glyphs:
+  overrides: ""
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, apps]
+  specimen: true
+  open: false
+  variable: true
+  cursive: false
+  splitCJK: 4096

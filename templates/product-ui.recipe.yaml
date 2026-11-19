@@ -1,0 +1,56 @@
+# Reference template — product / dashboard UI.
+# Neutral neo-grotesk for interfaces, tables, and navigation.
+# Build: fontcreator build templates/product-ui.recipe.yaml --target all
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Interface Sans
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Quiet, legible UI type for dashboards and product surfaces."
+  license: OFL-1.1
+  accent: "#4F7DFF"
+  sampleText: "Dashboard 0123 — Save changes · 94% complete"
+
+metrics:
+  ascender: 800
+  descender: -200
+  xHeight: 0.53
+  capHeight: 0.71
+  lineGap: 0
+
+style:
+  skeleton: humanist
+  weight: 500
+  width: 100
+  slant: 0
+  contrast: 0.05
+  terminal: angled
+  serif: none
+  serifSize: 0
+  overshoot: 0.012
+  roughness: 0
+  jitterRotation: 0
+  tracking: 0.4
+  seed: 210
+
+coverage:
+  generated: [latin, greek, cyrillic]
+  base:
+    cjk: sample
+    kana: false
+    hangul: false
+    symbols: true
+
+glyphs:
+  overrides: ""
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, apps]
+  specimen: true
+  open: false
+  variable: true
+  cursive: false
+  splitCJK: 0

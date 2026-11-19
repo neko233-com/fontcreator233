@@ -1,0 +1,71 @@
+# Reference template — code / editor UI.
+# Inspired by the design traits of programming fonts (high x-height, open
+# apertures, even rhythm, restrained contrast). No external font is embedded.
+# Build: fontcreator build templates/code-editor.recipe.yaml --target all
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Stack Grotesk
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Readable screen text for editors, terminals, and code review."
+  license: OFL-1.1
+  accent: "#7AA2F7"
+  sampleText: "const fn = () => value <= 42; // 0123456789"
+
+metrics:
+  ascender: 800
+  descender: -200
+  xHeight: 0.55
+  capHeight: 0.72
+  lineGap: 20
+
+style:
+  skeleton: geometric
+  weight: 450
+  width: 102
+  slant: 0
+  contrast: 0.08
+  terminal: round
+  serif: none
+  serifSize: 0
+  overshoot: 0.01
+  roughness: 0
+  jitterRotation: 0
+  tracking: 1.2
+  seed: 1301
+
+coverage:
+  generated: [latin, greek, cyrillic]
+  base:
+    cjk: none
+    kana: false
+    hangul: false
+    symbols: true
+
+glyphs:
+  overrides: "examples/glyphs"
+
+openType:
+  contextual:
+    - feature: calt
+      input: "->"
+      target: "→"
+    - feature: calt
+      input: "<-"
+      target: "←"
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, bmfont]
+  specimen: true
+  open: false
+  variable: true
+  cursive: false
+  bmfont:
+    size: 18
+    padding: 2
+    atlasSize: 512
+    charset: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+  splitCJK: 0
