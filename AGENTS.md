@@ -91,10 +91,13 @@ your parameter changes, not noise.
 
 | Platform | Arch | Artifact |
 |---|---|---|
-| Windows | amd64 | `.tar.gz` (portable) + `.msi` (installer, WiX 5.0.2) |
-| macOS | amd64 | `.tar.gz` |
-| macOS | arm64 (Apple Silicon) | `.tar.gz` |
-| Linux | amd64 | `.tar.gz` |
+| Windows | amd64 | `fontcreator233-vX.Y.Z-windows-amd64.tar.gz` + `.msi` (WiX 5.0.2) |
+| macOS | amd64 | `fontcreator233-vX.Y.Z-darwin-amd64.tar.gz` |
+| macOS | arm64 (Apple Silicon) | `fontcreator233-vX.Y.Z-darwin-arm64.tar.gz` |
+| Linux | amd64 | `fontcreator233-vX.Y.Z-linux-amd64.tar.gz` |
+
+Artifact suffixes come from Go's `GOOS-GOARCH` (`darwin`, not `macos`) so they match
+`runtime.GOOS` in `fontcreator update`.
 
 **Windows is the only platform that ships an MSI.** macOS/Linux ship portable tarballs.
 Three architectures is the full matrix — do **not** add Linux arm64, 32-bit, or
