@@ -1,6 +1,7 @@
 # fontcreator233
 
 [![CI](https://github.com/neko233-com/fontcreator233/actions/workflows/ci.yml/badge.svg)](https://github.com/neko233-com/fontcreator233/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/neko233-com/fontcreator233?color=5B8CFF)](https://github.com/neko233-com/fontcreator233/releases/latest)
 [![Go 1.27+](https://img.shields.io/badge/Go-1.27%2B-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/code-MIT-black.svg)](LICENSE)
 [![Fonts: OFL-1.1](https://img.shields.io/badge/fonts-OFL--1.1-5B8CFF.svg)](assets/base/OFL.txt)
@@ -61,12 +62,36 @@ Just Go, an OFL base font, and a recipe.
 
 ## Install
 
+**One-line installer** — detects the platform, probes mirrors, verifies SHA-256,
+installs and adds the binary to `PATH`:
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.sh | bash
+```
+
+```powershell
+# Windows (portable, no admin)
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.ps1 | iex"
+```
+
+Windows MSI (recommended, needs admin) — download `fontcreator233-v*-windows-amd64.msi`
+from the [latest release](https://github.com/neko233-com/fontcreator233/releases/latest)
+and run it, or:
+
+```powershell
+irm https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.ps1 -OutFile install.ps1
+powershell -File install.ps1 -UseMSI
+```
+
+**With Go:**
+
 ```bash
 go install github.com/neko233-com/fontcreator233@latest
 fontcreator version
 ```
 
-Or build from source:
+**From source:**
 
 ```bash
 git clone https://github.com/neko233-com/fontcreator233
@@ -74,7 +99,19 @@ cd fontcreator233
 go build -o fontcreator .
 ```
 
-Requires Go 1.27+. Windows, macOS, and Linux. `CGO_ENABLED=0` is supported.
+Requires Go 1.27+ when building from source. Prebuilt binaries cover Windows
+amd64 (`.msi` + `.tar.gz`), macOS amd64/arm64, and Linux amd64.
+`CGO_ENABLED=0` is supported.
+
+### Update
+
+The binary updates itself — it probes GitHub plus three mirrors, verifies the
+published SHA-256, then replaces the running executable:
+
+```bash
+fontcreator update --check   # report whether a newer release exists
+fontcreator update           # download, verify, replace
+```
 
 ## The agent loop
 
@@ -229,6 +266,8 @@ Schema.
 
 ## Globalization
 
+![Multilingual coverage](docs/assets/coverage-dark.png)
+
 | Script | Source |
 |---|---|
 | Latin, Latin-1/Extended, Vietnamese | parametric + NFD composition |
@@ -318,6 +357,12 @@ editable type tester with size/leading/tracking, an OpenType feature playground
 (liga, kern, frac, case, tnum, ss01, smcp, onum, zero, sups, subs, ccmp, mark,
 mkmk), scale waterfall, multilingual coverage cards, an app/caption/poster
 preview, and a virtualized glyph grid with search and script filters.
+
+Type is set to be read, not just displayed: the tester opens at leading **1.18**
+and tracking **0**, nothing is rendered with the negative tracking the UI uses for
+its own chrome, and Chinese/Japanese/Korean blocks get a 1.7 line box with strict
+line breaking. Generated outlines keep a 3% UPM sidebearing and kerning is clamped,
+so glyphs never touch.
 
 ![OpenType feature playground](docs/assets/opentype-dark.png)
 
