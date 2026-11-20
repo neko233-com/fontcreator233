@@ -22,6 +22,24 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $RepoRoot
 
+# PowerShell 5 treats native stderr as a terminating error under "Stop", and git/gh/tar
+# routinely write progress there. Run native commands with "Continue" and gate on exit code.
+function Invoke-Native {
+    param([scriptblock]$Block, [string]$What)
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { & $Block } finally { $ErrorActionPreference = $prev }
+    if ($LASTEXITCODE -ne 0) { throw "$What failed (exit $LASTEXITCODE)" }
+}
+
+function Test-Native {
+    param([scriptblock]$Block)
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { & $Block *> $null } finally { $ErrorActionPreference = $prev }
+    return ($LASTEXITCODE -eq 0)
+}
+
 if ($Version -notmatch '^v\d+\.\d+\.\d+$') {
     throw "Version must look like v1.2.3 (got '$Version')"
 }
@@ -43,12 +61,10 @@ if ($existingTag -and -not $NoTag) {
 }
 
 if (-not $NoUpload) {
-    $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    & gh auth status *> $null
-    $ghOk = ($LASTEXITCODE -eq 0)
-    $ErrorActionPreference = $prevEap
-    if (-not $ghOk) { Write-Host "gh is not authenticated (run: gh auth login)" -ForegroundColor Red; exit 1 }
+    if (-not (Test-Native { gh auth status })) {
+        Write-Host "gh is not authenticated (run: gh auth login)" -ForegroundColor Red
+        exit 1
+    }
 }
 
 $ShortSha = (& git rev-parse --short HEAD).Trim()
@@ -74,8 +90,7 @@ Write-Host "  ok" -ForegroundColor Green
 # ---------------------------------------------------------------- 2 tests
 if (-not $SkipTest) {
     Write-Host "`n[2/7] Tests" -ForegroundColor Cyan
-    & go test ./... -count=1
-    if ($LASTEXITCODE -ne 0) { Write-Host "  tests failed" -ForegroundColor Red; exit 1 }
+    Invoke-Native { go test ./... -count=1 } "go test"
     Write-Host "  ok" -ForegroundColor Green
 } else {
     Write-Host "`n[2/7] Tests — SKIP" -ForegroundColor Yellow
@@ -108,16 +123,14 @@ foreach ($t in $Targets) {
     $env:GOOS = $t.os
     $env:GOARCH = $t.arch
     $outBin = Join-Path $pkgDir $t.bin
-    & go build -ldflags $Ldflags -trimpath -o $outBin .
-    if ($LASTEXITCODE -ne 0) { throw "build failed for $($t.os)/$($t.arch)" }
+    Invoke-Native { go build -ldflags $Ldflags -trimpath -o $outBin . } "build $($t.os)/$($t.arch)"
 
     Copy-Item LICENSE   $pkgDir\ -ErrorAction SilentlyContinue
     Copy-Item NOTICE.md $pkgDir\ -ErrorAction SilentlyContinue
     Copy-Item README.md $pkgDir\ -ErrorAction SilentlyContinue
 
     $tgz = Join-Path $OutDir "$name.tar.gz"
-    & tar.exe -czf $tgz -C $OutDir $name
-    if ($LASTEXITCODE -ne 0) { throw "tar failed for $name" }
+    Invoke-Native { tar.exe -czf $tgz -C $OutDir $name } "tar $name"
 
     $hash = (Get-FileHash $tgz -Algorithm SHA256).Hash.ToLower()
     "$hash  $name.tar.gz" | Out-File -Encoding ascii "$tgz.sha256"
@@ -152,10 +165,8 @@ Get-ChildItem $OutDir -File | Sort-Object Name | ForEach-Object {
 # ---------------------------------------------------------------- 6 tag
 if (-not $NoTag) {
     Write-Host "`n[6/7] Tag" -ForegroundColor Cyan
-    & git tag -a $Version -m "fontcreator233 $Version"
-    if ($LASTEXITCODE -ne 0) { throw "git tag failed" }
-    & git push origin "refs/tags/$Version"
-    if ($LASTEXITCODE -ne 0) { throw "git push tag failed" }
+    Invoke-Native { git tag -a $Version -m "fontcreator233 $Version" } "git tag"
+    Invoke-Native { git push origin "refs/tags/$Version" } "git push tag"
     Write-Host "  pushed $Version" -ForegroundColor Green
 } else {
     Write-Host "`n[6/7] Tag — SKIP" -ForegroundColor Yellow
@@ -200,19 +211,12 @@ sha256sum -c fontcreator233-$Version-*.tar.gz.sha256
         $notes = $tmpNotes
     }
 
-    $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    & gh release view $Version *> $null
-    $releaseExists = ($LASTEXITCODE -eq 0)
-    $ErrorActionPreference = $prevEap
-
-    if ($releaseExists) {
+    if (Test-Native { gh release view $Version }) {
         Write-Host "  release exists — uploading with --clobber"
-        & gh release upload $Version $Assets --clobber
+        Invoke-Native { gh release upload $Version $Assets --clobber } "gh release upload"
     } else {
-        & gh release create $Version $Assets --title "fontcreator233 $Version" --notes-file $notes
+        Invoke-Native { gh release create $Version $Assets --title "fontcreator233 $Version" --notes-file $notes } "gh release create"
     }
-    if ($LASTEXITCODE -ne 0) { throw "gh release publish failed" }
     if ($tmpNotes) { Remove-Item $tmpNotes -Force -ErrorAction SilentlyContinue }
 
     Write-Host "  published: https://github.com/neko233-com/fontcreator233/releases/tag/$Version" -ForegroundColor Green
