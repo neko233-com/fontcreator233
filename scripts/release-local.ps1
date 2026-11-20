@@ -78,7 +78,8 @@ if ($existingTag -and -not $NoTag) {
 }
 
 if (-not $NoUpload) {
-    if (-not (Test-Native { gh auth status })) {
+    # `gh auth token` reads local config only; `gh auth status` hits the network and is flaky.
+    if (-not (Test-Native { gh auth token })) {
         Write-Host "gh is not authenticated (run: gh auth login)" -ForegroundColor Red
         exit 1
     }
