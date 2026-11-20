@@ -1,6 +1,7 @@
 # build-msi.ps1 — WiX v7 MSI builder
 # Builds an MSI installer from a prepared fontcreator233 package directory.
-# Requires: wix tool (dotnet tool install --global wix)
+# Requires: WiX 5.0.2 (last freely-licensed release; v6+/v7 require the paid OSMF EULA)
+#   dotnet tool install --global wix --version 5.0.2
 # Usage:
 #   .\scripts\build-msi.ps1 -Source dist\fontcreator233-v0.9.0-windows-amd64 -Version v0.9.0 -Arch x64 -Out dist\fontcreator233-v0.9.0-x64.msi
 
@@ -39,14 +40,34 @@ Write-Host "  output:   $Out"
 # WiX architecture mapping: x64 -> x64, arm64 -> arm64
 $wixArch = if ($Arch -eq "arm64") { "arm64" } else { "x64" }
 
-& wix build $WxsPath `
+# Resolve a WiX 5 binary. WiX 6/7 refuse to build until the paid OSMF EULA is accepted,
+# so fall back to a pinned 5.0.2 install under %TEMP% when needed.
+$WixExe = "wix"
+$verOut = (& wix --version 2>&1) -join " "
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  wix not found — installing 5.0.2 ..." -ForegroundColor Yellow
+    dotnet tool install --global wix --version 5.0.2 | Out-Null
+} elseif ($verOut -match 'version\s+([6-9])\.') {
+    Write-Host "  detected WiX v$($Matches[1]) (paid OSMF EULA) — using pinned 5.0.2 instead" -ForegroundColor Yellow
+    $pinned = Join-Path $env:TEMP "wix-5.0.2"
+    if (-not (Test-Path (Join-Path $pinned "wix.exe"))) {
+        dotnet tool install wix --version 5.0.2 --tool-path $pinned | Out-Null
+    }
+    $WixExe = Join-Path $pinned "wix.exe"
+}
+
+& $WixExe build $WxsPath `
     -d "Version=$MsiVersion" `
     -d "Source=$SourceDir" `
     -d "Out=$Out" `
     -arch $wixArch `
-    -out $Out
+    -out $Out `
+    -pdbtype none
 
 if ($LASTEXITCODE -ne 0) { throw "wix build failed (exit $LASTEXITCODE)" }
+
+# WiX 5 may emit a .wixpdb next to the output; it is not a release artifact.
+Remove-Item ([System.IO.Path]::ChangeExtension($Out, ".wixpdb")) -Force -ErrorAction SilentlyContinue
 
 $size = [math]::Round((Get-Item $Out).Length / 1MB, 2)
 $hash = (Get-FileHash $Out -Algorithm SHA256).Hash.ToLower()

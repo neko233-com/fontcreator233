@@ -91,7 +91,7 @@ your parameter changes, not noise.
 
 | Platform | Arch | Artifact |
 |---|---|---|
-| Windows | amd64 | `.zip` (portable) + `.msi` (installer, WiX v7) |
+| Windows | amd64 | `.tar.gz` (portable) + `.msi` (installer, WiX 5.0.2) |
 | macOS | amd64 | `.tar.gz` |
 | macOS | arm64 (Apple Silicon) | `.tar.gz` |
 | Linux | amd64 | `.tar.gz` |
@@ -120,8 +120,9 @@ go build -ldflags "-s -w \
 1. **GitHub Release** is triggered by a tagged push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 2. `.github/workflows/release.yml` builds all 3 platforms with the above ldflags,
    produces `.tar.gz` + `.sha256` per platform, and a `.msi` on Windows.
-3. A Windows MSI is built with WiX v7 (`dotnet tool install --global wix`) from
-   `scripts/installer/fontcreator.wxs` (schema v4 `<Package>`, NOT `<Product>`).
+3. A Windows MSI is built with **WiX 5.0.2** (`dotnet tool install --global wix --version 5.0.2`)
+   from `scripts/installer/fontcreator.wxs` (schema v4 `<Package>`, NOT `<Product>`).
+   Do **not** bump to WiX 6/7: those require the paid OSMF EULA and fail unattended CI builds.
 4. Smoke tests: GitHub release API lookup → SHA256 verify → init → validate →
    build universal + inspect.
 5. `.github/workflows/ci.yml` runs `go fmt`, `go vet`, `go test` on push/PR
@@ -130,12 +131,14 @@ go build -ldflags "-s -w \
 ### Manual release (local Windows)
 
 ```powershell
-.\scripts\build-release.ps1 -Version v0.9.0        # zip only
-.\scripts\build-release.ps1 -Version v0.9.0 -WithMSI   # zip + msi
+.\scripts\build-release.ps1 -Version v0.9.0        # tar.gz only
+.\scripts\build-release.ps1 -Version v0.9.0 -WithMSI   # tar.gz + msi
 ```
 
-Output: `dist/fontcreator233-v0.9.0-windows-amd64.zip` + `.sha256` (+ `.msi`).
-No dotnet required for the zip; `-WithMSI` requires `dotnet tool install --global wix`.
+Output: `dist/fontcreator233-v0.9.0-windows-amd64.tar.gz` + `.sha256` (+ `.msi`).
+No dotnet required for the tarball; `-WithMSI` requires
+`dotnet tool install --global wix --version 5.0.2` (the script auto-pins 5.0.2 if it
+detects a v6/v7 install).
 
 ### Update flow
 

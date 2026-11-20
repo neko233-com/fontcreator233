@@ -79,18 +79,20 @@ Copy-Item LICENSE $PkgDir\ 2>$null
 Copy-Item NOTICE.md $PkgDir\ 2>$null
 Copy-Item README.md $PkgDir\ 2>$null
 
-$ZipPath = Join-Path $OutDir "$PkgName.zip"
-if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
-Compress-Archive -Path "$PkgDir\*" -DestinationPath $ZipPath
+# Package as .tar.gz with the directory wrapped, matching the CI release layout.
+$TgzPath = Join-Path $OutDir "$PkgName.tar.gz"
+if (Test-Path $TgzPath) { Remove-Item $TgzPath -Force }
+& tar.exe -czf $TgzPath -C $OutDir $PkgName
+if ($LASTEXITCODE -ne 0) { throw "tar failed (exit $LASTEXITCODE)" }
 
-$Hash = (Get-FileHash $ZipPath -Algorithm SHA256).Hash.ToLower()
-"$Hash  $PkgName.zip" | Out-File -Encoding ascii (Join-Path $OutDir "$PkgName.zip.sha256")
+$Hash = (Get-FileHash $TgzPath -Algorithm SHA256).Hash.ToLower()
+"$Hash  $PkgName.tar.gz" | Out-File -Encoding ascii (Join-Path $OutDir "$PkgName.tar.gz.sha256")
 
 Write-Host "Done." -ForegroundColor Green
-Write-Host "  $PkgName.zip — $([math]::Round((Get-Item $ZipPath).Length / 1MB, 2)) MB"
+Write-Host "  $PkgName.tar.gz — $([math]::Round((Get-Item $TgzPath).Length / 1MB, 2)) MB"
 Write-Host "  SHA256: $Hash"
 Write-Host ""
-Write-Host "  Verify: Get-FileHash $PkgName.zip -Algorithm SHA256"
+Write-Host "  Verify: Get-FileHash $PkgName.tar.gz -Algorithm SHA256"
 
 # ---- optional MSI ----
 if ($WithMSI) {

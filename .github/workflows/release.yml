@@ -67,8 +67,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          dotnet tool install --global wix || true
-          wix eula accept || true
+          # Pin WiX 5.0.2: last freely-licensed release (v6+/v7 require the paid OSMF EULA).
+          dotnet tool install --global wix --version 5.0.2
           PKG="fontcreator233-${{ steps.meta.outputs.tag }}-windows-amd64"
           MsiVersion="${{ steps.meta.outputs.tag }}"
           MsiVersion="${MsiVersion#v}"
@@ -78,38 +78,50 @@ jobs:
             -d "Out=dist/${PKG}.msi" \
             -arch x64 \
             -out "dist/${PKG}.msi" \
-            --acceptEula
+            -pdbtype none
+          rm -f "dist/${PKG}.wixpdb"
           sha256sum "dist/${PKG}.msi" > "dist/${PKG}.msi.sha256"
 
       - uses: actions/upload-artifact@v4
         with:
           name: fontcreator233-${{ steps.meta.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}
-          path: dist/
+          path: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+            dist/*.msi
+            dist/*.msi.sha256
+          if-no-files-found: error
           retention-days: 7
 
-  smoke:
-    name: smoke test (linux via docker)
+  verify:
+    name: verify artifacts
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.27.x"
-      - name: Download windows artifact (contains all tarballs + msi)
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: fontcreator233-${{ github.ref_name }}-windows-latest-amd64
-          path: dist
+          path: staging
       - name: Verify checksums
         run: |
+          mkdir -p dist
+          find staging -type f \( -name "*.tar.gz" -o -name "*.msi" -o -name "*.sha256" \) -exec cp {} dist/ \;
           cd dist
-          for f in *.tar.gz; do sha256sum -c "${f}.sha256"; done
-          for f in *.msi;   do sha256sum -c "${f}.sha256"; done
-          ls -la
+          fail=0
+          for f in *.tar.gz *.msi; do
+            [ -e "$f" ] || continue
+            if [ -f "${f}.sha256" ]; then
+              sha256sum -c "${f}.sha256" || fail=1
+            else
+              echo "missing checksum for $f"; fail=1
+            fi
+          done
+          echo "--- artifacts ---"
+          ls -lh
+          exit $fail
 
   release:
-    needs: [build, smoke]
+    needs: [build, verify]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -119,9 +131,8 @@ jobs:
       - name: Collect assets
         run: |
           mkdir -p dist
-          cp release-assets/**/*.tar.gz   dist/ 2>/dev/null || true
-          cp release-assets/**/*.sha256  dist/ 2>/dev/null || true
-          ls -la dist/
+          find release-assets -type f \( -name "*.tar.gz" -o -name "*.msi" -o -name "*.sha256" \) -exec cp {} dist/ \;
+          ls -lh dist/
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -134,15 +145,27 @@ jobs:
 
             ### Install
             ```bash
-            # Linux / macOS (arm64 or amd64)
-            tar -xzf fontcreator233-${{ github.ref_name }}-$(uname -s | tr 'A-Z' 'a-z')-$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/').tar.gz
-            ./fontcreator233-${{ github.ref_name }}-*/fontcreator version
+            # macOS / Linux one-liner
+            curl -fsSL https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.sh | bash
 
-            # Windows
-            # Option A — MSI installer (recommended):
-            #   winget install fontcreator233 OR double-click the .msi
-            # Option B — portable zip:
-            #   Extract fontcreator233-${{ github.ref_name }}-windows-amd64.tar.gz, run fontcreator.exe
+            # Windows one-liner (portable)
+            powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.ps1 | iex"
+
+            # Windows MSI (recommended, needs admin)
+            #   double-click fontcreator233-${{ github.ref_name }}-windows-amd64.msi
+            ```
+
+            ### Manual download
+            ```bash
+            # macOS / Linux — pick your platform: macos-amd64 | macos-arm64 | windows-amd64
+            tar -xzf fontcreator233-${{ github.ref_name }}-macos-arm64.tar.gz
+            ./fontcreator233-${{ github.ref_name }}-macos-arm64/fontcreator version
+            ```
+
+            ### Update
+            ```bash
+            fontcreator update --check   # see if newer exists
+            fontcreator update           # download + verify + replace
             ```
 
             ### Quick start

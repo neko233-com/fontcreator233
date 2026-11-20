@@ -61,11 +61,9 @@ $archive = "fontcreator233-$Version-$archOut"
 if ($UseMSI) {
     Write-Host "  mode:      MSI installer"
     $assetFile = "$archive.msi"
-    $ext = ".msi"
 } else {
-    Write-Host "  mode:      portable zip"
-    $assetFile = "$archive.zip"
-    $ext = ".zip"
+    Write-Host "  mode:      portable tar.gz"
+    $assetFile = "$archive.tar.gz"
 }
 
 # --- find reachable mirror ---
@@ -109,19 +107,22 @@ if ($UseMSI) {
     Start-Process msiexec.exe -ArgumentList "/i `"$dl`" /qn" -Wait
     Write-Host "  done. fontcreator.exe is now in Program Files; refresh PATH or open a new shell." -ForegroundColor Green
 } else {
-    # portable zip
+    # portable tar.gz (tar.exe ships with Windows 10 1803+)
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    $stage = Join-Path $InstallDir "_new"
+    New-Item -ItemType Directory -Path $stage -Force | Out-Null
     Write-Host "  extracting to $InstallDir ..."
-    Expand-Archive -Path $dl -DestinationPath (Join-Path $InstallDir "_new") -Force
-    # move files up one level (zip wraps in fontcreator233-XXX/)
-    Get-ChildItem (Join-Path $InstallDir "_new") | ForEach-Object {
-        if ($_.PSIsContainer -and $_.Name -like "fontcreator233-*") {
-            Get-ChildItem $_.FullName | ForEach-Object {
-                Move-Item $_.FullName $InstallDir -Force
-            }
+    & tar.exe -xzf $dl -C $stage
+    if ($LASTEXITCODE -ne 0) { throw "tar extraction failed (exit $LASTEXITCODE)" }
+    # flatten fontcreator233-XXX/ into InstallDir
+    Get-ChildItem $stage | ForEach-Object {
+        if ($_.PSIsContainer) {
+            Get-ChildItem $_.FullName | ForEach-Object { Move-Item $_.FullName $InstallDir -Force }
+        } else {
+            Move-Item $_.FullName $InstallDir -Force
         }
     }
-    Remove-Item (Join-Path $InstallDir "_new") -Recurse -Force
+    Remove-Item $stage -Recurse -Force
 
     # add to PATH if not present
     $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
