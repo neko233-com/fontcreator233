@@ -205,13 +205,13 @@ button { cursor: pointer; }
   font-weight: 620;
   text-wrap: balance;
 }
-.hero h1 span { display: block; color: var(--muted); font-weight: 420; }
+.hero h1 span { display: block; color: var(--ink); opacity: .68; font-weight: 420; }
 .lede {
   max-width: 620px;
   margin: 0;
   color: var(--muted);
   font-size: clamp(15px, 1.35vw, 19px);
-  line-height: 1.55;
+  line-height: 1.62;
   text-wrap: pretty;
 }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
@@ -304,8 +304,8 @@ button { cursor: pointer; }
   display: grid;
   place-items: center;
   font-size: clamp(160px, 21vw, 300px);
-  line-height: .92;
-  letter-spacing: -.06em;
+  line-height: .98;
+  letter-spacing: normal;
   font-weight: 500;
   padding: 30px 0 18px;
 }
@@ -358,13 +358,13 @@ button { cursor: pointer; }
 .hint { color: var(--muted); font-size: 11px; }
 .tester-text {
   min-height: 1.1em;
-  padding: 4px 0 22px;
+  padding: 4px 0 16px;
   border-bottom: 1px dashed var(--line-strong);
   outline: none;
-  font-size: 112px;
-  line-height: 1.15;
-  letter-spacing: -.02em;
-  overflow-wrap: anywhere;
+  font-size: clamp(56px, 8vw, 112px);
+  line-height: 1.18;
+  letter-spacing: normal;
+  overflow-wrap: break-word;
   transition: border-color .18s;
 }
 .tester-text:focus { border-bottom-color: var(--accent); }
@@ -373,7 +373,7 @@ button { cursor: pointer; }
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   gap: 18px;
   align-items: end;
-  margin-top: 22px;
+  margin-top: 14px;
 }
 .control { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; color: var(--muted); font-size: 11px; }
 .control input[type=range] { width: 100%; accent-color: var(--accent); }
@@ -386,9 +386,10 @@ button { cursor: pointer; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 11px;
+  padding: 7px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  background: var(--panel-solid);
   color: var(--ink);
   font-size: 12px;
   cursor: pointer;
@@ -402,15 +403,15 @@ button { cursor: pointer; }
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   font-size: clamp(58px, 9vw, 126px);
-  line-height: 1.08;
-  letter-spacing: -.03em;
+  line-height: 1.12;
+  letter-spacing: normal;
   font-feature-settings: "liga" 1, "kern" 1;
 }
-.feature-demo .feature-pair { display: block; margin-top: 18px; color: var(--muted); font-size: .34em; letter-spacing: -.03em; }
+.feature-demo .feature-pair { display: block; margin-top: 18px; color: var(--muted); font-size: .34em; letter-spacing: normal; }
 .feature-code { margin-top: 18px; }
 .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 22px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .feature-row { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--panel-solid); }
-.feature-sample { font-size: 34px; line-height: 1.1; letter-spacing: -.04em; }
+.feature-sample { font-size: 34px; line-height: 1.15; letter-spacing: normal; }
 .color-sample { font-size: 40px; line-height: 1; }
 .feature-label { color: var(--muted); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .04em; }
 .feature-label b { color: var(--ink); font-weight: 500; }
@@ -423,29 +424,29 @@ button { cursor: pointer; }
 .variable-readout { color: var(--muted); font-family: "Geist Mono", monospace; font-size: 10px; letter-spacing: .04em; }
 .variable-readout b { color: var(--ink); font-weight: 500; }
 .variable-panel input[type="range"] { width: 100%; margin: 18px 0 8px; accent-color: var(--accent); }
-.variable-sample { margin: 8px 0 12px; font-size: clamp(56px, 8vw, 104px); line-height: 1.08; letter-spacing: -.03em; }
+.variable-sample { margin: 8px 0 12px; font-size: clamp(56px, 8vw, 104px); line-height: 1.12; letter-spacing: normal; }
 .variable-range { display: flex; justify-content: space-between; color: var(--faint); font-size: 9px; letter-spacing: .04em; }
 
 .scale-list { border-top: 1px solid var(--line); }
 .scale-row {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);
-  gap: 24px;
+  gap: 20px;
   align-items: baseline;
-  padding: 18px 8px;
+  padding: 13px 8px;
   border-bottom: 1px solid var(--line);
   transition: background .18s, padding .18s;
 }
 .scale-row:hover { background: var(--soft); padding-left: 14px; }
 .scale-row span:last-child {
   font-size: var(--size);
-  line-height: 1.15;
-  letter-spacing: -.02em;
+  line-height: 1.12;
+  letter-spacing: normal;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.scale-meta { color: var(--faint); font-size: 9px; letter-spacing: .08em; }
+.scale-meta { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
 
 .coverage-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; max-width: 50%; }
 .coverage-chips span {
@@ -473,8 +474,14 @@ button { cursor: pointer; }
 .lang-card:hover { border-color: var(--line-strong); transform: translateY(-2px); background: var(--panel-solid); }
 .lang-card-wide { grid-column: span 2; }
 .lang-head { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
-.lang-card p { margin: 22px 0 12px; font-size: clamp(26px, 3vw, 40px); line-height: 1.15; letter-spacing: -.015em; }
-.lang-sub { margin-top: auto; color: var(--muted); font-size: 16px; line-height: 1.3; }
+.lang-card p { margin: 22px 0 12px; font-size: clamp(26px, 3vw, 40px); line-height: 1.18; letter-spacing: normal; }
+/* CJK needs a taller line box and slightly wider spacing than Latin at the same size. */
+.lang-card p[lang="zh-CN"], .lang-card p[lang="zh"], .lang-card p[lang="ja"], .lang-card p[lang="ko"] {
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1.62;
+  letter-spacing: .02em;
+}
+.lang-sub { margin-top: auto; color: var(--muted); font-size: 16px; line-height: 1.45; }
 
 .format-row { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 20px; }
 .format-pill {
@@ -512,9 +519,9 @@ button { cursor: pointer; }
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.app-card h3 { margin: 16px 0 8px; font-size: 18px; line-height: 1.05; letter-spacing: -.035em; font-weight: 560; }
-.app-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.app-foot { margin-top: auto; padding-top: 16px; color: var(--faint); font-family: "Geist Mono", monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
+.app-card h3 { margin: 16px 0 8px; font-size: 20px; line-height: 1.12; letter-spacing: normal; font-weight: 600; }
+.app-card p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.app-foot { margin-top: auto; padding-top: 16px; color: var(--muted); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
 .apps-workflow { display: grid; grid-template-columns: 1.12fr .88fr; gap: 12px; margin-top: 12px; }
 .caption-frame {
   position: relative;
@@ -554,7 +561,7 @@ button { cursor: pointer; }
 }
 .caption-frame-body { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; flex: 1; padding: 22px 4px; }
 .caption-kicker { color: var(--accent); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
-.caption-line { max-width: 620px; margin: 14px 0 0; font-size: clamp(32px, 4.2vw, 58px); line-height: 1.12; letter-spacing: -.03em; color: #fff; text-wrap: balance; }
+.caption-line { max-width: 620px; margin: 14px 0 0; font-size: clamp(32px, 4.2vw, 58px); line-height: 1.16; letter-spacing: normal; color: #fff; text-wrap: balance; }
 .caption-sub { margin: 14px 0 0; color: rgba(255,255,255,.6); font-size: clamp(17px, 2vw, 24px); letter-spacing: .04em; }
 .caption-safe {
   position: absolute;
@@ -577,7 +584,7 @@ button { cursor: pointer; }
   overflow: hidden;
 }
 .poster-kicker { color: rgba(16,16,16,.55); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
-.poster-title { flex: 1; display: flex; flex-direction: column; justify-content: center; margin: 14px 0 18px; font-size: clamp(64px, 7.8vw, 116px); line-height: 1.02; letter-spacing: -.05em; font-weight: 560; }
+.poster-title { flex: 1; display: flex; flex-direction: column; justify-content: center; margin: 14px 0 18px; font-size: clamp(64px, 7.8vw, 116px); line-height: 1.08; letter-spacing: normal; font-weight: 560; }
 .poster-foot { color: rgba(16,16,16,.55); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
 .apps-note { max-width: 780px; margin: 20px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 
@@ -667,7 +674,7 @@ button { cursor: pointer; }
     var(--panel);
   overflow: hidden;
 }
-.outro-glyph { font-size: clamp(150px, 20vw, 280px); line-height: .95; letter-spacing: -.06em; color: var(--ink); }
+.outro-glyph { font-size: clamp(150px, 20vw, 280px); line-height: 1; letter-spacing: normal; color: var(--ink); }
 .outro-copy h2 { margin: 12px 0 12px; font-size: clamp(30px, 4vw, 54px); line-height: 1.08; letter-spacing: -.04em; font-weight: 560; text-wrap: balance; }
 .outro-copy p { max-width: 560px; margin: 0; color: var(--muted); font-size: 15px; }
 
@@ -751,15 +758,55 @@ button { cursor: pointer; }
   .glyph-scroll { height: 520px; }
   .footer { flex-direction: column; align-items: flex-start; }
 }
-/* The generated face ships its own sidebearings. Any tracking applied on top of it
-   (the UI styles above use negative values for Geist) makes real text collide, so
-   every element rendering the specimen font resets to normal spacing. */
+/* The generated face ships its own sidebearings. Tracking applied on top of it makes
+   real text collide, so every element rendering the specimen font starts at normal
+   spacing. Deliberately not !important: the tester slider must still be able to
+   override it inline. */
 .specimen-font,
 .specimen-font * {
-  letter-spacing: normal !important;
+  letter-spacing: normal;
   font-kerning: normal;
   font-feature-settings: "kern" 1;
 }
+
+/* Chinese/Japanese/Korean set wider and need a taller line box than Latin at the same
+   size, plus strict line breaking so punctuation never opens a line. */
+.specimen-font[lang="zh-CN"],
+.specimen-font[lang="zh"],
+.specimen-font[lang="ja"],
+.specimen-font[lang="ko"] {
+  letter-spacing: .02em;
+  line-height: 1.7;
+  line-break: strict;
+  word-break: normal;
+}
+
+/* The full SHA-256 is available in the hero meta row; the footer only needs a hint. */
+.footer .mono {
+  max-width: min(100%, 340px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meta-row dd.mono { word-break: break-all; }
+
+/* Lift the smallest labels out of 8-9px so the page stays legible at 100% zoom. */
+.feature-toggle code,
+.feature-label,
+.variable-range,
+.app-index,
+.app-foot,
+.caption-kicker,
+.poster-kicker,
+.poster-foot,
+.lang-head,
+.lang-sub,
+.coverage-chips span,
+.format-pill,
+.glyph-cell .cp { font-size: 10px; }
+.app-index,
+.variable-range { color: var(--muted); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }

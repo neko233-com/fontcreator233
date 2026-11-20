@@ -261,8 +261,8 @@
     if (tracking) tracking.addEventListener("input", applyTester);
     if (reset) reset.addEventListener("click", function () {
       if (size) size.value = "112";
-      if (leading) leading.value = "104";
-      if (tracking) tracking.value = "-2";
+      if (leading) leading.value = "118";
+      if (tracking) tracking.value = "0";
       applyTester();
     });
     applyTester();
