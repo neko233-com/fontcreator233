@@ -751,6 +751,15 @@ button { cursor: pointer; }
   .glyph-scroll { height: 520px; }
   .footer { flex-direction: column; align-items: flex-start; }
 }
+/* The generated face ships its own sidebearings. Any tracking applied on top of it
+   (the UI styles above use negative values for Geist) makes real text collide, so
+   every element rendering the specimen font resets to normal spacing. */
+.specimen-font,
+.specimen-font * {
+  letter-spacing: normal !important;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1;
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }

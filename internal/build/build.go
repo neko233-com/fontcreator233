@@ -113,6 +113,11 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 	if err != nil {
 		return result, err
 	}
+	// Skeleton strokes are centred on coordinates like x=60 while the stroke itself is
+	// ~84 units wide, so diagonals ended up ~18 units from the advance edge and 'W'
+	// overflowed its advance outright. Only generated outlines are touched: derived
+	// CJK/Hangul glyphs intentionally fill the em box and must keep their metrics.
+	normalizeSidebearings(gen, spacingFloor)
 	rep.Event(ui.Event{Kind: ui.EvPhase, Phase: "derive"})
 	derived, stats, deriveWarnings, err := buildDerived(ctx, r, params, o.Jobs, rep)
 	if err != nil {
@@ -1363,6 +1368,52 @@ func makeFractions(glyphs map[rune]fontbuild.Glyph) ([]fontbuild.Glyph, []fontbu
 	return out, ligs
 }
 
+// spacingFloor is the smallest allowed distance between an outline edge and its
+// advance edge, in font units. The build always uses 1000 UPM, so this is 3%.
+const spacingFloor = 30.0
+
+// kerningFloor is the smallest allowed gap between two outlines after kerning is
+// applied (2% of UPM).
+const kerningFloor = 20.0
+
+// normalizeSidebearings widens advances and shifts outlines right so every glyph
+// keeps at least floor units of clearance on both sides. Only violations are
+// touched, so well-spaced glyphs keep byte-identical metrics.
+func normalizeSidebearings(glyphs map[rune]fontbuild.Glyph, floor float64) {
+	for rn, g := range glyphs {
+		if rn == ' ' || g.Advance <= 0 || len(g.Path) == 0 {
+			continue
+		}
+		b := g.Path.Bounds()
+		if b.Width() <= 0 && b.Height() <= 0 {
+			continue
+		}
+		shift := 0.0
+		if b.MinX < floor {
+			shift = floor - b.MinX
+			g.Path = g.Path.Transformed(geom.Translate(shift, 0))
+		}
+		adv := float64(g.Advance)
+		if need := b.MaxX + shift + floor; need > adv {
+			adv = need
+		}
+		g.Advance = int(math.Round(adv))
+		glyphs[rn] = g
+	}
+}
+
+// pairGap is the untouched distance between the two outlines when typeset.
+func pairGap(left, right fontbuild.Glyph) float64 {
+	gap := float64(left.Advance)
+	if len(left.Path) > 0 {
+		gap = float64(left.Advance) - left.Path.Bounds().MaxX
+	}
+	if len(right.Path) > 0 {
+		gap += right.Path.Bounds().MinX
+	}
+	return gap
+}
+
 func makeKerning(glyphs map[rune]fontbuild.Glyph, weight int) []fontbuild.KernPair {
 	type pair struct {
 		left, right rune
@@ -1385,15 +1436,26 @@ func makeKerning(glyphs map[rune]fontbuild.Glyph, weight int) []fontbuild.KernPa
 	}
 	var out []fontbuild.KernPair
 	for _, p := range pairs {
-		if _, ok := glyphs[p.left]; !ok {
+		gl, ok := glyphs[p.left]
+		if !ok {
 			continue
 		}
-		if _, ok := glyphs[p.right]; !ok {
+		gr, ok := glyphs[p.right]
+		if !ok {
 			continue
+		}
+		value := float64(p.value) * scale
+		// The table values assume generous sidebearings. Clamp them so a pair can
+		// never be pulled closer than kerningFloor, which is what made "AV" collide.
+		if allowance := pairGap(gl, gr) - kerningFloor; value < -allowance {
+			value = -allowance
+		}
+		if value > 0 {
+			value = 0
 		}
 		out = append(out, fontbuild.KernPair{
 			Left: glyphName(p.left), Right: glyphName(p.right),
-			Value: int16(math.Round(float64(p.value) * scale)),
+			Value: int16(math.Round(value)),
 		})
 	}
 	return out
