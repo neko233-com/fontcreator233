@@ -76,6 +76,14 @@ if ($existingTag -and -not $NoTag) {
     Write-Host "Tag $Version already exists — pick a new version." -ForegroundColor Red
     exit 1
 }
+if ($existingTag -and $NoTag) {
+    $tagCommit = (& git rev-parse "$Version^{commit}" 2>$null).Trim()
+    $headCommit = (& git rev-parse HEAD).Trim()
+    if ($tagCommit -ne $headCommit) {
+        Write-Host "Tag $Version points at $tagCommit but HEAD is $headCommit." -ForegroundColor Yellow
+        Write-Host "  Run: git tag -f -a $Version -m 'fontcreator233 $Version'; git push origin refs/tags/$Version --force" -ForegroundColor Yellow
+    }
+}
 
 if (-not $NoUpload) {
     # `gh auth token` reads local config only; `gh auth status` hits the network and is flaky.
