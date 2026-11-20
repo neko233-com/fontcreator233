@@ -118,30 +118,47 @@ go build -ldflags "-s -w \
 `fontcreator version --json` emits the full BuildInfo:
 `version`, `commit`, `buildDate`, `goVersion`, `os`, `arch`.
 
-### Automated release
+### Release — local only, no GitHub Actions
 
-1. **GitHub Release** is triggered by a tagged push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-2. `.github/workflows/release.yml` builds all 3 platforms with the above ldflags,
-   produces `.tar.gz` + `.sha256` per platform, and a `.msi` on Windows.
-3. A Windows MSI is built with **WiX 5.0.2** (`dotnet tool install --global wix --version 5.0.2`)
-   from `scripts/installer/fontcreator.wxs` (schema v4 `<Package>`, NOT `<Product>`).
-   Do **not** bump to WiX 6/7: those require the paid OSMF EULA and fail unattended CI builds.
-4. Smoke tests: GitHub release API lookup → SHA256 verify → init → validate →
-   build universal + inspect.
-5. `.github/workflows/ci.yml` runs `go fmt`, `go vet`, `go test` on push/PR
-   across ubuntu/windows/macos.
+**There is no release workflow.** `.github/workflows/` must not contain anything that
+publishes releases; publishing is done from a developer machine so the artifacts are
+built and inspected before they go public. `ci.yml` only runs format/vet/test.
 
-### Manual release (local Windows)
+One command does everything — cross-compile 3 platforms, build the MSI, create and
+push a new tag, publish the release:
 
 ```powershell
-.\scripts\build-release.ps1 -Version v0.9.0        # tar.gz only
+.\scripts\release-local.ps1 -Version v0.10.6
+.\scripts\release-local.ps1 -Version v0.10.6 -SkipTest   # skip go test
+.\scripts\release-local.ps1 -Version v0.10.6 -NoUpload   # package + tag only
+.\scripts\release-local.ps1 -Version v0.10.6 -NoTag      # rebuild assets only
+```
+
+It refuses to run on a dirty working tree or an existing tag, and only uploads after
+`gofmt`, `go vet`, and (unless `-SkipTest`) `go test ./...` pass.
+
+Produced and uploaded assets:
+
+```
+fontcreator233-vX.Y.Z-windows-amd64.tar.gz  (+ .sha256)
+fontcreator233-vX.Y.Z-windows-amd64.msi     (+ .sha256)
+fontcreator233-vX.Y.Z-darwin-amd64.tar.gz   (+ .sha256)
+fontcreator233-vX.Y.Z-darwin-arm64.tar.gz   (+ .sha256)
+```
+
+A Windows MSI is built with **WiX 5.0.2** (`dotnet tool install --global wix --version 5.0.2`)
+from `scripts/installer/fontcreator.wxs` (schema v4 `<Package>`, NOT `<Product>`).
+Do **not** bump to WiX 6/7: those require the paid OSMF EULA. `build-msi.ps1`
+auto-pins 5.0.2 under `%TEMP%` when it detects a v6/v7 install.
+
+### Quick local bake (Windows only, no tag/upload)
+
+```powershell
+.\scripts\build-release.ps1 -Version v0.9.0            # tar.gz only
 .\scripts\build-release.ps1 -Version v0.9.0 -WithMSI   # tar.gz + msi
 ```
 
-Output: `dist/fontcreator233-v0.9.0-windows-amd64.tar.gz` + `.sha256` (+ `.msi`).
-No dotnet required for the tarball; `-WithMSI` requires
-`dotnet tool install --global wix --version 5.0.2` (the script auto-pins 5.0.2 if it
-detects a v6/v7 install).
+Use this for a fast sanity build; use `release-local.ps1` to actually publish.
 
 ### Update flow
 
