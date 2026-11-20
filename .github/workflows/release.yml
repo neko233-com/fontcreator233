@@ -64,17 +64,18 @@ jobs:
 
       - name: Build MSI (windows only)
         if: runner.os == 'Windows'
+        shell: bash
         run: |
           dotnet tool install --global wix || true
           PKG="fontcreator233-${{ steps.meta.outputs.tag }}-windows-amd64"
           MsiVersion="${{ steps.meta.outputs.tag }}"
           MsiVersion="${MsiVersion#v}"
-          wix build scripts/installer/fontcreator.wxs `
-            -d "Version=${MsiVersion}" `
-            -d "Source=dist\\${PKG}" `
-            -d "Out=dist\\${PKG}.msi" `
-            -arch x64 `
-            -out "dist\\${PKG}.msi"
+          wix build scripts/installer/fontcreator.wxs \
+            -d "Version=${MsiVersion}" \
+            -d "Source=dist/${PKG}" \
+            -d "Out=dist/${PKG}.msi" \
+            -arch x64 \
+            -out "dist/${PKG}.msi"
           sha256sum "dist/${PKG}.msi" > "dist/${PKG}.msi.sha256"
 
       - uses: actions/upload-artifact@v4
