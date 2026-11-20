@@ -200,8 +200,8 @@ button { cursor: pointer; }
 .hero h1 {
   margin: 20px 0 22px;
   font-size: clamp(56px, 8.4vw, 124px);
-  line-height: .88;
-  letter-spacing: -.075em;
+  line-height: 1.05;
+  letter-spacing: -.04em;
   font-weight: 620;
   text-wrap: balance;
 }
@@ -304,8 +304,8 @@ button { cursor: pointer; }
   display: grid;
   place-items: center;
   font-size: clamp(160px, 21vw, 300px);
-  line-height: .72;
-  letter-spacing: -.10em;
+  line-height: .92;
+  letter-spacing: -.06em;
   font-weight: 500;
   padding: 30px 0 18px;
 }
@@ -325,7 +325,7 @@ button { cursor: pointer; }
   gap: 48px;
   color: var(--muted);
   font-size: 22px;
-  letter-spacing: .01em;
+  letter-spacing: .02em;
 }
 
 .panel {
@@ -350,8 +350,8 @@ button { cursor: pointer; }
 .panel-head h2 {
   margin: 8px 0 0;
   font-size: clamp(26px, 3vw, 40px);
-  line-height: 1.02;
-  letter-spacing: -.045em;
+  line-height: 1.15;
+  letter-spacing: -.03em;
   font-weight: 560;
   text-wrap: balance;
 }
@@ -362,8 +362,8 @@ button { cursor: pointer; }
   border-bottom: 1px dashed var(--line-strong);
   outline: none;
   font-size: 112px;
-  line-height: 1.04;
-  letter-spacing: -.04em;
+  line-height: 1.15;
+  letter-spacing: -.02em;
   overflow-wrap: anywhere;
   transition: border-color .18s;
 }
@@ -402,8 +402,8 @@ button { cursor: pointer; }
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   font-size: clamp(58px, 9vw, 126px);
-  line-height: .86;
-  letter-spacing: -.055em;
+  line-height: 1.08;
+  letter-spacing: -.03em;
   font-feature-settings: "liga" 1, "kern" 1;
 }
 .feature-demo .feature-pair { display: block; margin-top: 18px; color: var(--muted); font-size: .34em; letter-spacing: -.03em; }
@@ -423,7 +423,7 @@ button { cursor: pointer; }
 .variable-readout { color: var(--muted); font-family: "Geist Mono", monospace; font-size: 10px; letter-spacing: .04em; }
 .variable-readout b { color: var(--ink); font-weight: 500; }
 .variable-panel input[type="range"] { width: 100%; margin: 18px 0 8px; accent-color: var(--accent); }
-.variable-sample { margin: 8px 0 12px; font-size: clamp(56px, 8vw, 104px); line-height: .9; letter-spacing: -.055em; }
+.variable-sample { margin: 8px 0 12px; font-size: clamp(56px, 8vw, 104px); line-height: 1.08; letter-spacing: -.03em; }
 .variable-range { display: flex; justify-content: space-between; color: var(--faint); font-size: 9px; letter-spacing: .04em; }
 
 .scale-list { border-top: 1px solid var(--line); }
@@ -439,8 +439,8 @@ button { cursor: pointer; }
 .scale-row:hover { background: var(--soft); padding-left: 14px; }
 .scale-row span:last-child {
   font-size: var(--size);
-  line-height: 1.04;
-  letter-spacing: -.03em;
+  line-height: 1.15;
+  letter-spacing: -.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -473,7 +473,7 @@ button { cursor: pointer; }
 .lang-card:hover { border-color: var(--line-strong); transform: translateY(-2px); background: var(--panel-solid); }
 .lang-card-wide { grid-column: span 2; }
 .lang-head { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
-.lang-card p { margin: 22px 0 12px; font-size: clamp(26px, 3vw, 40px); line-height: 1.06; letter-spacing: -.03em; }
+.lang-card p { margin: 22px 0 12px; font-size: clamp(26px, 3vw, 40px); line-height: 1.15; letter-spacing: -.015em; }
 .lang-sub { margin-top: auto; color: var(--muted); font-size: 16px; line-height: 1.3; }
 
 .format-row { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 20px; }
@@ -554,7 +554,7 @@ button { cursor: pointer; }
 }
 .caption-frame-body { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; flex: 1; padding: 22px 4px; }
 .caption-kicker { color: var(--accent); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
-.caption-line { max-width: 620px; margin: 14px 0 0; font-size: clamp(32px, 4.2vw, 58px); line-height: .96; letter-spacing: -.05em; color: #fff; text-wrap: balance; }
+.caption-line { max-width: 620px; margin: 14px 0 0; font-size: clamp(32px, 4.2vw, 58px); line-height: 1.12; letter-spacing: -.03em; color: #fff; text-wrap: balance; }
 .caption-sub { margin: 14px 0 0; color: rgba(255,255,255,.6); font-size: clamp(17px, 2vw, 24px); letter-spacing: .04em; }
 .caption-safe {
   position: absolute;
@@ -577,7 +577,7 @@ button { cursor: pointer; }
   overflow: hidden;
 }
 .poster-kicker { color: rgba(16,16,16,.55); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
-.poster-title { flex: 1; display: flex; flex-direction: column; justify-content: center; margin: 14px 0 18px; font-size: clamp(64px, 7.8vw, 116px); line-height: .78; letter-spacing: -.08em; font-weight: 560; }
+.poster-title { flex: 1; display: flex; flex-direction: column; justify-content: center; margin: 14px 0 18px; font-size: clamp(64px, 7.8vw, 116px); line-height: 1.02; letter-spacing: -.05em; font-weight: 560; }
 .poster-foot { color: rgba(16,16,16,.55); font-family: "Geist Mono", monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
 .apps-note { max-width: 780px; margin: 20px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 
@@ -667,8 +667,8 @@ button { cursor: pointer; }
     var(--panel);
   overflow: hidden;
 }
-.outro-glyph { font-size: clamp(150px, 20vw, 280px); line-height: .72; letter-spacing: -.1em; color: var(--ink); }
-.outro-copy h2 { margin: 12px 0 12px; font-size: clamp(30px, 4vw, 54px); line-height: .98; letter-spacing: -.055em; font-weight: 560; text-wrap: balance; }
+.outro-glyph { font-size: clamp(150px, 20vw, 280px); line-height: .95; letter-spacing: -.06em; color: var(--ink); }
+.outro-copy h2 { margin: 12px 0 12px; font-size: clamp(30px, 4vw, 54px); line-height: 1.08; letter-spacing: -.04em; font-weight: 560; text-wrap: balance; }
 .outro-copy p { max-width: 560px; margin: 0; color: var(--muted); font-size: 15px; }
 
 .footer {

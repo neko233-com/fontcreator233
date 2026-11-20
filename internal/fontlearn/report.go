@@ -65,6 +65,19 @@ type GlyphStats struct {
 	EmptyOutlines int `json:"emptyOutlines"`
 }
 
+// OutlineAnalysis holds inferred style signals from outline sampling.
+type OutlineAnalysis struct {
+	Samples      int     `json:"samples"`
+	Contrast     float64 `json:"contrast"`     // 0 uniform .. 0.9+ Didone/hairline
+	Serif        string  `json:"serif"`        // none|slab|bracketed|hairline
+	Terminal     string  `json:"terminal"`     // flat|round|angled|flare
+	Skeleton     string  `json:"skeleton"`     // geometric|humanist|serif
+	MeanStem     float64 `json:"meanStem"`     // average stem width in UPM
+	StemCV       float64 `json:"stemCV"`       // coefficient of variation of stems
+	EndOvershoot float64 `json:"endOvershoot"` // (end-width / mid-width) - 1, >=0 means flare/serif
+	Done         bool    `json:"done"`
+}
+
 // CmapSubtable describes one cmap record.
 type CmapSubtable struct {
 	Platform   uint16 `json:"platform"`
@@ -102,6 +115,7 @@ type Report struct {
 	HasColor      bool            `json:"hasColor"`
 	HasVariable   bool            `json:"hasVariable"`
 	GlyphStats    GlyphStats      `json:"glyphStats"`
+	Outline       OutlineAnalysis `json:"outline,omitempty"`
 	Coverage      map[string]int  `json:"coverage"`
 	CoverageTotal int             `json:"coverageTotal"`
 	Warnings      []string        `json:"warnings,omitempty"`
@@ -182,6 +196,12 @@ func Analyze(filename string, data []byte) (Report, error) {
 	}
 	scanGlyphs(f, &buf, &r)
 	r.Suggested = suggest(&r)
+	// Outline analysis needs the same sfnt.Font handle; reuse buf state.
+	// Skip when UPM or xHeight/ascender are missing from the input font.
+	if r.UnitsPerEm > 0 && r.XHeight > 0 && r.Ascender > 0 {
+		r.Outline = analyzeOutline(f, &buf, r.UnitsPerEm, r.XHeight, r.CapHeight, r.Ascender)
+		r.Suggested = suggest(&r) // re-evaluate with outline hints
+	}
 	if r.Family == "" {
 		r.Warnings = append(r.Warnings, "name table has no family name")
 	}
@@ -582,7 +602,17 @@ func suggest(r *Report) Suggested {
 		s.Serif = "hairline"
 		s.Skeleton = "serif"
 	}
-	s.Note = "Inferred from metrics only; inspect the reference for skeleton, contrast, serif, and terminals."
+	if r.Outline.Done {
+		s.Skeleton = r.Outline.Skeleton
+		s.Serif = r.Outline.Serif
+		// s.Contrast is not a Suggested field; we add a Note instead.
+		// Terminal also lives in outline; we surface it via Note.
+		s.Note = fmt.Sprintf("Stem mean=%.0f CV=%.2f → contrast=%.2f, serif=%s, terminal=%s, skeleton=%s.",
+			r.Outline.MeanStem, r.Outline.StemCV, r.Outline.Contrast,
+			r.Outline.Serif, r.Outline.Terminal, r.Outline.Skeleton)
+	} else {
+		s.Note = "Inferred from metrics only; inspect the reference for skeleton, contrast, serif, and terminals."
+	}
 	return s
 }
 
@@ -649,6 +679,185 @@ func Axes(data []byte) []Axis {
 		}
 	}
 	return nil
+}
+
+// Target glyphs for outline style sampling — uppercase for stem width,
+// lowercase a/g for skeleton hint.
+var latinTargetGlyphs = []rune{
+	'H', 'I', 'M', 'N', 'U', 'h', 'n', 'o', 'O', 'l', 't', 'E', 'F',
+}
+
+type lineSeg struct{ x1, y1, x2, y2 float64 }
+
+// collectEndpoints gathers every outline endpoint as (x, y). TrueType uses
+// quadratic Bézier with Args[0] = endpoint, Args[1] = control; CFF uses cubic
+// with Args[2] = endpoint, Args[0]/Args[1] = controls. We emit both Args[0]
+// and Args[1] for every segment to be robust across formats, then let the
+// per-glyph normalizer dedupe naturally.
+func collectEndpoints(f *sfnt.Font, buf *sfnt.Buffer, gid sfnt.GlyphIndex) [][2]float64 {
+	outline, err := f.LoadGlyph(buf, gid, fixed.Int26_6(f.UnitsPerEm()), nil)
+	if err != nil || len(outline) == 0 {
+		return nil
+	}
+	var pts [][2]float64
+	for _, seg := range outline {
+		pts = append(pts, [2]float64{float64(seg.Args[0].X) / 64.0, float64(seg.Args[0].Y) / 64.0})
+		pts = append(pts, [2]float64{float64(seg.Args[1].X) / 64.0, float64(seg.Args[1].Y) / 64.0})
+	}
+	return pts
+}
+
+func normalizePoints(pts [][2]float64) [][2]float64 {
+	if len(pts) < 4 {
+		return nil
+	}
+	xMin, xMax := pts[0][0], pts[0][0]
+	yMin, yMax := pts[0][1], pts[0][1]
+	for _, p := range pts[1:] {
+		if p[0] < xMin {
+			xMin = p[0]
+		}
+		if p[0] > xMax {
+			xMax = p[0]
+		}
+		if p[1] < yMin {
+			yMin = p[1]
+		}
+		if p[1] > yMax {
+			yMax = p[1]
+		}
+	}
+	xRange := xMax - xMin
+	yRange := yMax - yMin
+	if xRange < 0.01 || yRange < 0.01 {
+		return nil
+	}
+	out := make([][2]float64, len(pts))
+	for i, p := range pts {
+		out[i] = [2]float64{(p[0] - xMin) / xRange, (p[1] - yMin) / yRange}
+	}
+	return out
+}
+
+func stemsAtY(normPts [][2]float64, yCenter, yTolerance float64) []float64 {
+	var xs []float64
+	for _, p := range normPts {
+		if math.Abs(p[1]-yCenter) <= yTolerance {
+			xs = append(xs, p[0])
+		}
+	}
+	sort.Float64s(xs)
+	if len(xs) < 2 {
+		return nil
+	}
+	var widths []float64
+	// Pair adjacent sorted x values (outer contours vs inner contours).
+	for i := 0; i+1 < len(xs); i += 2 {
+		w := xs[i+1] - xs[i]
+		if w > 0.001 {
+			widths = append(widths, w)
+		}
+	}
+	return widths
+}
+
+func analyzeOutline(f *sfnt.Font, buf *sfnt.Buffer, upm, xHeight, capHeight, ascender int) OutlineAnalysis {
+	var allStems, endStems []float64
+	var sampled int
+	for _, r := range latinTargetGlyphs {
+		gid, err := f.GlyphIndex(buf, r)
+		if err != nil || gid == 0 {
+			continue
+		}
+		raw := collectEndpoints(f, buf, gid)
+		norm := normalizePoints(raw)
+		if len(norm) < 6 {
+			continue
+		}
+		sampled++
+		// Mid-stem: ~70% of glyph height (body of lowercase/uppercase).
+		midStem := stemsAtY(norm, 0.70, 0.08)
+		allStems = append(allStems, midStem...)
+		// End-stem: near top (where serif/hairline overshoots sit).
+		topStem := stemsAtY(norm, 0.92, 0.06)
+		endStems = append(endStems, topStem...)
+		// Baseline side.
+		botStem := stemsAtY(norm, 0.08, 0.06)
+		endStems = append(endStems, botStem...)
+	}
+	oa := OutlineAnalysis{Samples: sampled, Done: sampled > 0}
+	if len(allStems) < 3 {
+		return oa
+	}
+	mean, std := stats(allStems)
+	oa.MeanStem = mean
+	if mean > 0 {
+		oa.StemCV = std / mean
+		cv := math.Min(oa.StemCV, 2.0)
+		oa.Contrast = cv / 2.2
+		if oa.Contrast > 0.95 {
+			oa.Contrast = 0.95
+		}
+	}
+	if len(endStems) >= 2 {
+		eMean, _ := stats(endStems)
+		if mean > 0 {
+			oa.EndOvershoot = eMean/mean - 1
+			if oa.EndOvershoot < 0 {
+				oa.EndOvershoot = 0
+			}
+		}
+	}
+	switch {
+	case oa.EndOvershoot > 0.55:
+		oa.Serif = "bracketed"
+	case oa.EndOvershoot > 0.30:
+		oa.Serif = "slab"
+	case oa.EndOvershoot > 0.10:
+		oa.Serif = "hairline"
+	default:
+		oa.Serif = "none"
+	}
+	switch {
+	case oa.Contrast > 0.45 && oa.EndOvershoot < 0.10:
+		oa.Terminal = "flat"
+	case oa.Contrast > 0.45 && oa.EndOvershoot > 0.10:
+		oa.Terminal = "angled"
+	case oa.Contrast < 0.20 && oa.EndOvershoot < 0.05:
+		oa.Terminal = "round"
+	default:
+		oa.Terminal = "flare"
+	}
+	switch {
+	case oa.Serif != "none":
+		oa.Skeleton = "serif"
+	case oa.Contrast > 0.35:
+		oa.Skeleton = "humanist"
+	default:
+		oa.Skeleton = "geometric"
+	}
+	return oa
+}
+
+func stats(xs []float64) (mean, std float64) {
+	if len(xs) == 0 {
+		return 0, 0
+	}
+	var sum float64
+	for _, x := range xs {
+		sum += x
+	}
+	mean = sum / float64(len(xs))
+	if len(xs) < 2 {
+		return mean, 0
+	}
+	var varSum float64
+	for _, x := range xs {
+		d := x - mean
+		varSum += d * d
+	}
+	std = math.Sqrt(varSum / float64(len(xs)-1))
+	return mean, std
 }
 
 // Markdown renders a human-readable learning report.

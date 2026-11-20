@@ -29,9 +29,15 @@ jobs:
       - name: Vet
         run: go vet ./...
       - name: Test
-        run: go test ./...
+        run: go test ./... -count=1
       - name: Build
-        run: go build ./...
+        shell: bash
+        run: |
+          LDFLAGS="-s -w -X github.com/neko233-com/fontcreator233/internal/agentschema.Version=ci -X github.com/neko233-com/fontcreator233/internal/agentschema.Commit=$(git rev-parse --short HEAD) -X github.com/neko233-com/fontcreator233/internal/agentschema.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          CGO_ENABLED=0 go build -ldflags "$LDFLAGS" -trimpath -o fontcreator .
+          ./fontcreator version --json
+          ./fontcreator describe --json > /dev/null
+          echo "-- binary smoke ok --"
 
   race:
     name: race (ubuntu)
@@ -45,8 +51,61 @@ jobs:
       - name: Race tests
         run: CGO_ENABLED=1 go test -race ./internal/parallel ./internal/workspace
 
-  artifacts:
-    name: three styles + artifacts
+  smoke-binary:
+    name: build + smoke (ubuntu)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+      - name: Resolve metadata
+        id: meta
+        shell: bash
+        run: |
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "version=ci-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - name: Build release binary
+        shell: bash
+        run: |
+          LDFLAGS="-s -w -X github.com/neko233-com/fontcreator233/internal/agentschema.Version=${{ steps.meta.outputs.version }} -X github.com/neko233-com/fontcreator233/internal/agentschema.Commit=${{ steps.meta.outputs.short_sha }} -X github.com/neko233-com/fontcreator233/internal/agentschema.BuildDate=${{ steps.meta.outputs.build_date }}"
+          CGO_ENABLED=0 go build -ldflags "$LDFLAGS" -trimpath -o fontcreator .
+      - name: Package
+        shell: bash
+        run: |
+          PKG="fontcreator233-linux-amd64-${{ steps.meta.outputs.short_sha }}"
+          mkdir -p "dist/${PKG}"
+          cp fontcreator dist/${PKG}/
+          cp LICENSE NOTICE.md README.md dist/${PKG}/ 2>/dev/null || true
+          cd dist && tar -czf "${PKG}.tar.gz" "${PKG}" && sha256sum "${PKG}.tar.gz" > "${PKG}.tar.gz.sha256"
+          echo "---- checksums ----"
+          cat "${PKG}.tar.gz.sha256"
+      - name: Smoke tests
+        shell: bash
+        run: |
+          ./fontcreator version --json
+          ./fontcreator describe --json > /dev/null
+          ./fontcreator schema --json > /dev/null
+          ./fontcreator init --dir /tmp/fc-smoke --template geometric --family "CI Smoke" > /dev/null
+          ./fontcreator validate /tmp/fc-smoke/font.recipe.yaml --json > /dev/null
+          ./fontcreator build /tmp/fc-smoke/font.recipe.yaml --out /tmp/fc-dist --target universal,bmfont --no-open --json > /tmp/build.json
+          test -f /tmp/fc-dist/CISmoke-Regular.ttf
+          test -f /tmp/fc-dist/CISmoke-Regular.fnt
+          test -f /tmp/fc-dist/CISmoke-Regular.woff2
+          ./fontcreator inspect /tmp/fc-dist/CISmoke-Regular.ttf --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['glyphs']>0, d"
+          echo "-- all smoke tests passed --"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fontcreator233-linux-amd64
+          path: dist/
+          retention-days: 14
+          if-no-files-found: error
+
+  three-styles:
+    name: three styles + validate
     needs: test
     runs-on: ubuntu-latest
     steps:

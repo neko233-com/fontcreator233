@@ -290,6 +290,38 @@ func validateOutput(o *Output) error {
 		if b.AtlasSize != 0 && (b.AtlasSize < 64 || b.AtlasSize > 4096) {
 			return fail("output.bmfont.atlasSize", "must be between 64 and 4096", b.AtlasSize)
 		}
+		if b.Style != nil {
+			s := b.Style
+			if s.RenderMode != "" {
+				if err := oneOf("output.bmfont.style.renderMode", s.RenderMode, "default", "SDF", "MSDF", "MTSDF"); err != nil {
+					return err
+				}
+			}
+			if s.StrokePosition != "" {
+				if err := oneOf("output.bmfont.style.strokePosition", s.StrokePosition, "inner", "middle", "outer"); err != nil {
+					return err
+				}
+			}
+			if s.StrokeCap != "" {
+				if err := oneOf("output.bmfont.style.strokeCap", s.StrokeCap, "butt", "round", "square"); err != nil {
+					return err
+				}
+			}
+			if s.StrokeJoin != "" {
+				if err := oneOf("output.bmfont.style.strokeJoin", s.StrokeJoin, "miter", "round", "bevel"); err != nil {
+					return err
+				}
+			}
+			if s.StrokeWidth < 0 || s.StrokeWidth > 64 {
+				return fail("output.bmfont.style.strokeWidth", "must be 0..64", s.StrokeWidth)
+			}
+			if s.DropShadowBlur < 0 || s.DropShadowBlur > 64 {
+				return fail("output.bmfont.style.dropShadowBlur", "must be 0..64", s.DropShadowBlur)
+			}
+			if s.InnerShadowBlur < 0 || s.InnerShadowBlur > 64 {
+				return fail("output.bmfont.style.innerShadowBlur", "must be 0..64", s.InnerShadowBlur)
+			}
+		}
 	}
 	if o.SplitCJK < 0 {
 		return fail("output.splitCJK", "must be >= 0", o.SplitCJK)

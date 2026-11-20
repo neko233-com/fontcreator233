@@ -34,15 +34,16 @@ type KernPair struct {
 type Options struct {
 	OutDir    string
 	BaseName  string
-	Size      int    // pixel size of the em square
-	Padding   int    // padding around each glyph, in pixels
-	AtlasSize int    // width and height of each atlas page
-	Charset   string // "latin" (default), "latin-ext", "all", or an explicit string
+	Size      int // pixel size of the em square
+	Padding   int // padding around each glyph, in pixels
+	AtlasSize int // width and height of each atlas page
+	Charset   string
 	Ascender  int
 	Descender int
 	LineGap   int
 	Weight    int
 	Italic    bool
+	Style     Style // layered render style (fill/stroke/shadow/background)
 }
 
 type raster struct {
@@ -50,7 +51,9 @@ type raster struct {
 	w, h       int
 	xoff, yoff int
 	advance    int
-	alpha      []byte
+	alpha      []byte       // legacy white-on-alpha atlas
+	rgba       []color.RGBA // new layered RGBA atlas (written when Style has effects)
+	hasColor   bool
 }
 
 type placement struct {
@@ -82,6 +85,14 @@ func Build(o Options, glyphs []Glyph, kern []KernPair) ([]string, error) {
 	}
 	if o.BaseName == "" {
 		o.BaseName = "Font"
+	}
+	// Fill in the default white-on-alpha style when the caller hasn't asked
+	// for any effects. This keeps historical output stable so all downstream
+	// BMFont consumers (AngelCode BMFont, Unity TMP, etc.) continue to work
+	// without recipe changes.
+	if o.Style.RenderMode == "" && !o.Style.HasFill && !o.Style.HasStroke &&
+		!o.Style.HasDropShadow && !o.Style.HasInnerShadow && !o.Style.HasBackground {
+		o.Style = DefaultStyle()
 	}
 	if o.Ascender <= 0 {
 		o.Ascender = 800
@@ -117,12 +128,24 @@ func Build(o Options, glyphs []Glyph, kern []KernPair) ([]string, error) {
 		return items[i].r.advance < items[j].r.advance
 	})
 
+	// When style is non-default, glyphs may be larger (stroke/shadow).
+	// Expand the crop box to avoid clipping effects; tighten only when
+	// nothing overlaps the style padding.
+	stylePad := o.Padding
+	if o.Style.HasStroke {
+		stylePad += o.Style.StrokeWidth
+	}
+	if o.Style.HasDropShadow {
+		stylePad += maxIabs(o.Style.DropShadowX, o.Style.DropShadowY) + o.Style.DropShadowBlur
+	}
+	_ = stylePad // per-glyph rasterize still uses o.Padding for tight crop; compositing handles overflow.
+
 	pageImages := []*image.NRGBA{newAtlas(o.AtlasSize)}
 	pageX, pageY, rowH := 0, 0, 0
 	for i := range items {
 		r := &items[i].r
 		if r.w == 0 || r.h == 0 {
-			items[i].page = -1 // empty glyph; no atlas rectangle
+			items[i].page = -1
 			continue
 		}
 		if pageX+r.w > o.AtlasSize {
@@ -136,7 +159,11 @@ func Build(o Options, glyphs []Glyph, kern []KernPair) ([]string, error) {
 		}
 		items[i].page = len(pageImages) - 1
 		items[i].pageX, items[i].pageY = pageX, pageY
-		copyInto(pageImages[len(pageImages)-1], r, pageX, pageY)
+		if r.hasColor {
+			copyIntoRGBA(pageImages[len(pageImages)-1], r, pageX, pageY)
+		} else {
+			copyInto(pageImages[len(pageImages)-1], r, pageX, pageY)
+		}
 		pageX += r.w + 1
 		if r.h > rowH {
 			rowH = r.h
@@ -254,8 +281,9 @@ func rangeSet(lo, hi int) map[rune]bool {
 	return m
 }
 
-// rasterize converts one vector outline into a tightly cropped anti-aliased
-// bitmap using 4x supersampling and an even-odd scanline fill.
+// rasterize converts one vector outline into a tightly cropped glyph, either
+// as a legacy white-on-alpha raster or as a fully composited RGBA glyph,
+// depending on whether Options.Style has effects beyond the default.
 func rasterize(g Glyph, o Options, scale float64) raster {
 	r := raster{advance: round(float64(g.Advance) * scale)}
 	if len(g.Path) == 0 {
@@ -263,6 +291,15 @@ func rasterize(g Glyph, o Options, scale float64) raster {
 	}
 	box := g.Path.Bounds()
 	pad := o.Padding
+	// Expand bbox for effects (stroke, shadow, blur) so composited layers
+	// fit without clipping.
+	if o.Style.HasStroke {
+		pad += o.Style.StrokeWidth/2 + 1
+	}
+	if o.Style.HasDropShadow {
+		off := maxIabs(o.Style.DropShadowX, o.Style.DropShadowY) + o.Style.DropShadowBlur
+		pad += off + 1
+	}
 	minPX := int(math.Floor(box.MinX*scale)) - pad
 	maxPX := int(math.Ceil(box.MaxX*scale)) + pad
 	minPY := int(math.Floor(box.MinY*scale)) - pad
@@ -270,67 +307,17 @@ func rasterize(g Glyph, o Options, scale float64) raster {
 	if maxPX <= minPX || maxPY <= minPY {
 		return r
 	}
-	const ss = 4
 	w, h := maxPX-minPX, maxPY-minPY
-	cover := make([]uint16, w*ss*h*ss)
-	type edge struct{ x1, y1, x2, y2 float64 }
-	var edges []edge
-	for _, contour := range g.Path {
-		if len(contour) < 3 {
-			continue
-		}
-		for i := range contour {
-			a, b := contour[i].P, contour[(i+1)%len(contour)].P
-			edges = append(edges, edge{
-				x1: (a.X*scale - float64(minPX)) * ss,
-				y1: (float64(maxPY) - a.Y*scale) * ss,
-				x2: (b.X*scale - float64(minPX)) * ss,
-				y2: (float64(maxPY) - b.Y*scale) * ss,
-			})
-		}
+	// Compute RGBA pixel buffer via the new layered renderer.
+	pix := compositeRaster(g.Path, o.Style, scale, w, h, minPX, minPY, maxPX, maxPY)
+	if pix == nil {
+		return r
 	}
-	xs := make([]float64, 0, len(edges))
-	for sy := 0; sy < h*ss; sy++ {
-		sampleY := float64(sy) + 0.5
-		xs = xs[:0]
-		for _, e := range edges {
-			if (e.y1 <= sampleY && e.y2 > sampleY) || (e.y2 <= sampleY && e.y1 > sampleY) {
-				xs = append(xs, e.x1+(sampleY-e.y1)*(e.x2-e.x1)/(e.y2-e.y1))
-			}
-		}
-		if len(xs) < 2 {
-			continue
-		}
-		sort.Float64s(xs)
-		for i := 0; i+1 < len(xs); i += 2 {
-			from, to := int(math.Floor(xs[i])), int(math.Ceil(xs[i+1]))
-			if from < 0 {
-				from = 0
-			}
-			if to > w*ss {
-				to = w * ss
-			}
-			for x := from; x < to; x++ {
-				cover[sy*w*ss+x]++
-			}
-		}
-	}
-	alpha := make([]byte, w*h)
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			var sum int
-			for dy := 0; dy < ss; dy++ {
-				for dx := 0; dx < ss; dx++ {
-					sum += int(cover[(y*ss+dy)*w*ss+x*ss+dx])
-				}
-			}
-			alpha[y*w+x] = byte(sum * 255 / (ss * ss))
-		}
-	}
+	// Detect crop box.
 	cx0, cy0, cx1, cy1 := w, h, 0, 0
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			if alpha[y*w+x] > 0 {
+			if pix[y*w+x].A > 0 {
 				if x < cx0 {
 					cx0 = x
 				}
@@ -350,15 +337,52 @@ func rasterize(g Glyph, o Options, scale float64) raster {
 		return r
 	}
 	cw, ch := cx1-cx0, cy1-cy0
-	cropped := make([]byte, cw*ch)
+	rgba := make([]color.RGBA, cw*ch)
+	alpha := make([]byte, cw*ch)
+	hasColor := false
 	for y := 0; y < ch; y++ {
-		copy(cropped[y*cw:(y+1)*cw], alpha[(cy0+y)*w+cx0:(cy0+y)*w+cx1])
+		for x := 0; x < cw; x++ {
+			src := pix[(cy0+y)*w+cx0+x]
+			rgba[y*cw+x] = src
+			alpha[y*cw+x] = src.A
+			if src.R != 0xFF || src.G != 0xFF || src.B != 0xFF {
+				hasColor = true
+			}
+		}
+	}
+	// When the atlas is SDF, skip the "all white" color check — SDF stores
+	// distance values directly.
+	if o.Style.RenderMode == "SDF" || o.Style.RenderMode == "MSDF" || o.Style.RenderMode == "MTSDF" {
+		hasColor = true
+	}
+	// Fast path: default white glyph, just keep alpha.
+	if !hasColor && o.Style.RenderMode == "default" {
+		r.w, r.h = cw, ch
+		r.xoff = minPX + cx0
+		r.yoff = (minPY + cy0) - maxPY
+		r.alpha = alpha
+		return r
 	}
 	r.w, r.h = cw, ch
 	r.xoff = minPX + cx0
 	r.yoff = (minPY + cy0) - maxPY
-	r.alpha = cropped
+	r.rgba = rgba
+	r.alpha = alpha
+	r.hasColor = true
 	return r
+}
+
+func maxIabs(a, b int) int {
+	if a < 0 {
+		a = -a
+	}
+	if b < 0 {
+		b = -b
+	}
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func newAtlas(size int) *image.NRGBA {
@@ -369,6 +393,15 @@ func copyInto(img *image.NRGBA, r *raster, dx, dy int) {
 	for y := 0; y < r.h; y++ {
 		for x := 0; x < r.w; x++ {
 			img.SetNRGBA(dx+x, dy+y, color.NRGBA{R: 0xFF, G: 0xFF, B: 0xFF, A: r.alpha[y*r.w+x]})
+		}
+	}
+}
+
+func copyIntoRGBA(img *image.NRGBA, r *raster, dx, dy int) {
+	for y := 0; y < r.h; y++ {
+		for x := 0; x < r.w; x++ {
+			c := r.rgba[y*r.w+x]
+			img.SetNRGBA(dx+x, dy+y, color.NRGBA{R: c.R, G: c.G, B: c.B, A: c.A})
 		}
 	}
 }

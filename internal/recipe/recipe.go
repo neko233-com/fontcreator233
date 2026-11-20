@@ -136,6 +136,31 @@ type BMFontConfig struct {
 	Padding   int    `yaml:"padding" json:"padding"`
 	AtlasSize int    `yaml:"atlasSize" json:"atlasSize"`
 	Charset   string `yaml:"charset" json:"charset"`
+	// Style: optional visual treatment modelled after SnowB Bitmap Font.
+	Style *BMFontStyle `yaml:"style" json:"style,omitempty"`
+}
+
+// BMFontStyle describes layered render effects applied to every glyph before
+// it enters the atlas page. The Z order (bottom → top) is: Background →
+// DropShadow → InnerShadow → Fill → Stroke. All colors accept hex "#RRGGBB"
+// or "#RRGGBBAA"; empty string skips that layer.
+type BMFontStyle struct {
+	RenderMode       string `yaml:"renderMode" json:"renderMode"`           // default | SDF | MSDF | MTSDF
+	FillColor        string `yaml:"fill" json:"fill"`                       // default "#FFFFFF"
+	StrokeColor      string `yaml:"stroke" json:"stroke"`                   // default "" (off)
+	StrokeWidth      int    `yaml:"strokeWidth" json:"strokeWidth"`         // px, default 0
+	StrokePosition   string `yaml:"strokePosition" json:"strokePosition"`   // inner | middle | outer
+	StrokeCap        string `yaml:"strokeCap" json:"strokeCap"`             // butt | round | square
+	StrokeJoin       string `yaml:"strokeJoin" json:"strokeJoin"`           // miter | round | bevel
+	DropShadowColor  string `yaml:"dropShadow" json:"dropShadow"`           // default "" (off)
+	DropShadowX      int    `yaml:"dropShadowX" json:"dropShadowX"`         // px
+	DropShadowY      int    `yaml:"dropShadowY" json:"dropShadowY"`         // px
+	DropShadowBlur   int    `yaml:"dropShadowBlur" json:"dropShadowBlur"`   // px
+	InnerShadowColor string `yaml:"innerShadow" json:"innerShadow"`         // default "" (off)
+	InnerShadowX     int    `yaml:"innerShadowX" json:"innerShadowX"`       // px
+	InnerShadowY     int    `yaml:"innerShadowY" json:"innerShadowY"`       // px
+	InnerShadowBlur  int    `yaml:"innerShadowBlur" json:"innerShadowBlur"` // px
+	BackgroundColor  string `yaml:"background" json:"background"`           // default "" (transparent)
 }
 
 // TMP is the default Unity TextMeshPro font asset configuration.

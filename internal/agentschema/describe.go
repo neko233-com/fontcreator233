@@ -2,6 +2,7 @@
 package agentschema
 
 import (
+	"runtime"
 	"sort"
 	"strings"
 
@@ -9,8 +10,40 @@ import (
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 )
 
-// Version is the public CLI contract version.
-const Version = "0.9.0"
+// DefaultVersion is the public CLI contract version used when no ldflags
+// override is supplied at build time (dev builds, `go run .`, etc.).
+const DefaultVersion = "0.9.0"
+
+// These variables are set via -ldflags at release-build time:
+//
+//	go build -ldflags "-X github.com/neko233-com/fontcreator233/internal/agentschema.Version=v0.9.0 ..."
+var (
+	Version   = DefaultVersion
+	Commit    = "dev"
+	BuildDate = "unknown"
+)
+
+// BuildInfo describes the current binary.
+type BuildInfo struct {
+	Version   string `json:"version"`
+	Commit    string `json:"commit"`
+	BuildDate string `json:"buildDate"`
+	GoVersion string `json:"goVersion"`
+	OS        string `json:"os"`
+	Arch      string `json:"arch"`
+}
+
+// Info returns the build-time metadata for the current binary.
+func Info() BuildInfo {
+	return BuildInfo{
+		Version:   Version,
+		Commit:    Commit,
+		BuildDate: BuildDate,
+		GoVersion: runtime.Version(),
+		OS:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
+	}
+}
 
 // Describe returns the complete JSON-friendly contract.
 func Describe() map[string]any {
@@ -168,7 +201,7 @@ func Markdown() string {
 		b.WriteString("- **" + k + "**: " + platforms[k].(string) + "\n")
 	}
 	b.WriteString("\n## Limits\n\n")
-	b.WriteString("- unitsPerEm: 1000\n- No Arabic/Hebrew/Indic/Thai/complex shaping\n- WOFF2 is not generated\n- Unity/UE packages are generated, not tested against their Editors\n")
+	b.WriteString("- unitsPerEm: 1000\n- No Arabic/Hebrew/Indic/Thai/complex shaping\n- Unity/UE packages are generated, not tested against their Editors\n")
 	b.WriteString("\nRun `fontcreator schema` for the full recipe JSON Schema.\n")
 	return b.String()
 }

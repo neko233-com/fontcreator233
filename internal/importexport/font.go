@@ -248,8 +248,8 @@ func profileRecipe(p Profile, extractGlyphs bool) *recipe.Recipe {
 	if extractGlyphs {
 		r.Glyphs.Overrides = "glyphs"
 	}
-	r.Output.Formats = []string{"ttf"}
-	r.Output.Targets = []string{"universal"}
+	r.Output.Formats = []string{"ttf", "woff", "woff2"}
+	r.Output.Targets = []string{"universal", "web", "system", "unity", "apps"}
 	r.Output.Specimen = true
 	r.Output.Open = false
 	return r

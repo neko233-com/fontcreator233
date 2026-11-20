@@ -92,19 +92,21 @@ func ParseSVG(data []byte, source string) (Override, error) {
 		return Override{}, fmt.Errorf("%s: SVG path is empty", source)
 	}
 	advance := 0
+	explicitAdvance := false
 	if doc.DataAdvance != "" {
 		n, err := strconv.Atoi(strings.TrimSpace(doc.DataAdvance))
-		if err != nil || n <= 0 {
+		if err != nil || n < 0 {
 			return Override{}, fmt.Errorf("%s: invalid data-advance %q", source, doc.DataAdvance)
 		}
 		advance = n
+		explicitAdvance = true
 	} else if doc.Width != "" {
 		w, err := strconv.ParseFloat(strings.TrimSuffix(strings.TrimSpace(doc.Width), "px"), 64)
 		if err == nil && w > 0 {
 			advance = int(math.Round(w))
 		}
 	}
-	if advance <= 0 {
+	if advance <= 0 && !explicitAdvance {
 		b := path.Bounds()
 		advance = int(math.Round(b.MaxX - b.MinX + 100))
 	}

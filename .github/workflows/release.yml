@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Override version tag"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, arch: amd64, ext: ".exe" }
+          - { os: macos-latest,   arch: amd64, ext: ""      }
+          - { os: macos-latest,   arch: arm64, ext: ""      }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+
+      - name: Resolve version metadata
+        id: meta
+        run: |
+          echo "tag=${GITHUB_REF_NAME}"    >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Format + Vet + Test
+        shell: bash
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test ./... -count=1
+
+      - name: Build binary
+        shell: bash
+        run: |
+          GOOS_VAL="$(go env GOOS)"
+          BIN="fontcreator${{ matrix.ext }}"
+          PKG="fontcreator233-${{ steps.meta.outputs.tag }}-${GOOS_VAL}-${{ matrix.arch }}"
+          mkdir -p "dist/${PKG}"
+          LDFLAGS="-s -w -X github.com/neko233-com/fontcreator233/internal/agentschema.Version=${{ steps.meta.outputs.tag }} -X github.com/neko233-com/fontcreator233/internal/agentschema.Commit=${{ steps.meta.outputs.short_sha }} -X github.com/neko233-com/fontcreator233/internal/agentschema.BuildDate=${{ steps.meta.outputs.build_date }}"
+          CGO_ENABLED=0 go build -ldflags "$LDFLAGS" -trimpath -o "dist/${PKG}/${BIN}" .
+          cp LICENSE NOTICE.md README.md "dist/${PKG}/" 2>/dev/null || true
+          cd dist && tar -czf "${PKG}.tar.gz" "${PKG}" && sha256sum "${PKG}.tar.gz" > "${PKG}.tar.gz.sha256"
+
+      - name: Build MSI (windows only)
+        if: runner.os == 'Windows'
+        run: |
+          dotnet tool install --global wix || true
+          PKG="fontcreator233-${{ steps.meta.outputs.tag }}-windows-amd64"
+          MsiVersion="${{ steps.meta.outputs.tag }}"
+          MsiVersion="${MsiVersion#v}"
+          wix build scripts/installer/fontcreator.wxs `
+            -d "Version=${MsiVersion}" `
+            -d "Source=dist\\${PKG}" `
+            -d "Out=dist\\${PKG}.msi" `
+            -arch x64 `
+            -out "dist\\${PKG}.msi"
+          sha256sum "dist/${PKG}.msi" > "dist/${PKG}.msi.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fontcreator233-${{ steps.meta.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/
+          retention-days: 7
+
+  smoke:
+    name: smoke test (linux via docker)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+      - name: Download windows artifact (contains all tarballs + msi)
+        uses: actions/download-artifact@v4
+        with:
+          name: fontcreator233-${{ github.ref_name }}-windows-latest-amd64
+          path: dist
+      - name: Verify checksums
+        run: |
+          cd dist
+          for f in *.tar.gz; do sha256sum -c "${f}.sha256"; done
+          for f in *.msi;   do sha256sum -c "${f}.sha256"; done
+          ls -la
+
+  release:
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+      - name: Collect assets
+        run: |
+          mkdir -p dist
+          cp release-assets/**/*.tar.gz   dist/ 2>/dev/null || true
+          cp release-assets/**/*.sha256  dist/ 2>/dev/null || true
+          ls -la dist/
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: fontcreator233 ${{ github.ref_name }}
+          body: |
+            ## fontcreator233 ${{ github.ref_name }}
+
+            Deterministic, offline, agent-native font creator.
+
+            ### Install
+            ```bash
+            # Linux / macOS (arm64 or amd64)
+            tar -xzf fontcreator233-${{ github.ref_name }}-$(uname -s | tr 'A-Z' 'a-z')-$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/').tar.gz
+            ./fontcreator233-${{ github.ref_name }}-*/fontcreator version
+
+            # Windows
+            # Option A — MSI installer (recommended):
+            #   winget install fontcreator233 OR double-click the .msi
+            # Option B — portable zip:
+            #   Extract fontcreator233-${{ github.ref_name }}-windows-amd64.tar.gz, run fontcreator.exe
+            ```
+
+            ### Quick start
+            ```bash
+            fontcreator init --dir work --template geometric --family "My Typeface"
+            fontcreator build work/font.recipe.yaml --out dist --target all
+            fontcreator specimen dist/MyTypeface-Regular.ttf --open
+            ```
+
+            ### Checksums
+            `sha256sum -c fontcreator233-*.tar.gz.sha256`
+          files: dist/*
+          draft: false
+          prerelease: false

@@ -131,13 +131,15 @@ glyphs:
   overrides: ""
 
 output:
-  formats: [ttf, woff]
+  formats: [ttf, woff, woff2]
   targets: [universal, web, system, unity, apps]
   specimen: true
   open: true
   variable: true
   cursive: true
   splitCJK: 0
+  # set splitCJK to a positive integer to chunk CJK glyphs into sub-fonts
+  # of roughly that many glyphs each (e.g. 2000 → ~10 chunks for common CJK)
   tmp:
     population: dynamic
     samplingPointSize: 90

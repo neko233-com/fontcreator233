@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <?if $(var.Version) ?><?else ?><?error Version required: -dVersion=0.9.0 ?><?endif ?>
+  <?if $(var.Source)   ?><?else ?><?error Source dir required: -dSource=<path> ?><?endif ?>
+  <?if $(var.Out)      ?><?else ?><?error Output path required: -dOut=<path> ?><?endif ?>
+
+  <?define UpgradeCode  = "1A2B3C4D-5E6F-7890-ABCD-EF1234567890" ?>
+  <?define Manufacturer = "neko233" ?>
+  <?define ProductName  = "fontcreator233" ?>
+
+  <Package
+    Name="$(var.ProductName)"
+    Manufacturer="$(var.Manufacturer)"
+    Language="1033"
+    Version="$(var.Version)"
+    UpgradeCode="$(var.UpgradeCode)"
+    Scope="perMachine">
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <MajorUpgrade
+      Schedule="afterInstallValidate"
+      DowngradeErrorMessage="A newer version of fontcreator233 is already installed."
+      MigrateFeatures="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="$(var.ProductName)">
+        <Component Id="MainBinary" Guid="2B3C4D5E-6F78-90AB-CDEF-1234567890AB">
+          <File Id="FontcreatorExe" Source="$(var.Source)\fontcreator.exe" KeyPath="yes" Checksum="yes" />
+          <File Id="LICENSE" Source="$(var.Source)\LICENSE" />
+          <File Id="NOTICE" Source="$(var.Source)\NOTICE.md" />
+          <File Id="README" Source="$(var.Source)\README.md" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Component Id="PathComponent" Guid="3C4D5E6F-7890-ABCD-EF12-34567890ABCD">
+      <Environment Id="PATH_ENV" Name="PATH" Action="set" Part="all" Value="[INSTALLFOLDER]" />
+      <RegistryValue Id="PATH_KEY" Root="HKCU" Key="Software\neko233\fontcreator233" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+    </Component>
+
+    <Feature Id="MainFeature" Title="fontcreator233" Level="1">
+      <ComponentRef Id="MainBinary" />
+      <ComponentRef Id="PathComponent" />
+    </Feature>
+
+  </Package>
+
+</Wix>

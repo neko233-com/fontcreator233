@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/neko233-com/fontcreator233/assets"
+	"github.com/neko233-com/fontcreator233/internal/agentschema"
 	"github.com/neko233-com/fontcreator233/internal/integration"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 )
@@ -211,7 +212,7 @@ func expandTargets(in []string) ([]string, error) {
 func buildManifest(o Options) (*integration.Manifest, error) {
 	m := &integration.Manifest{
 		Schema:         "fontcreator233/integration/v1",
-		Generator:      "fontcreator233 0.9.0",
+		Generator:      "fontcreator233 " + agentschema.Version,
 		Family:         o.Family,
 		Style:          o.Style,
 		RequestedStyle: o.RequestedStyle,

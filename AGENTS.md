@@ -85,6 +85,112 @@ your parameter changes, not noise.
 - Bundle sharing: `fontcreator export bundle recipe --out font.zip` and
   `fontcreator import bundle font.zip --out work/restored`.
 
+## Release & distribution
+
+### Supported platforms
+
+| Platform | Arch | Artifact |
+|---|---|---|
+| Windows | amd64 | `.zip` (portable) + `.msi` (installer, WiX v7) |
+| macOS | amd64 | `.tar.gz` |
+| macOS | arm64 (Apple Silicon) | `.tar.gz` |
+| Linux | amd64 | `.tar.gz` |
+
+**Windows is the only platform that ships an MSI.** macOS/Linux ship portable tarballs.
+Three architectures is the full matrix — do **not** add Linux arm64, 32-bit, or
+BSD/Solaris builds unless explicitly asked.
+
+### Version injection
+
+The binary version is set via `-ldflags` at release-build time:
+
+```bash
+go build -ldflags "-s -w \
+  -X github.com/neko233-com/fontcreator233/internal/agentschema.Version=v0.9.0 \
+  -X github.com/neko233-com/fontcreator233/internal/agentschema.Commit=$(git rev-parse --short HEAD) \
+  -X github.com/neko233-com/fontcreator233/internal/agentschema.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -trimpath -o fontcreator .
+```
+
+`fontcreator version --json` emits the full BuildInfo:
+`version`, `commit`, `buildDate`, `goVersion`, `os`, `arch`.
+
+### Automated release
+
+1. **GitHub Release** is triggered by a tagged push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+2. `.github/workflows/release.yml` builds all 3 platforms with the above ldflags,
+   produces `.tar.gz` + `.sha256` per platform, and a `.msi` on Windows.
+3. A Windows MSI is built with WiX v7 (`dotnet tool install --global wix`) from
+   `scripts/installer/fontcreator.wxs` (schema v4 `<Package>`, NOT `<Product>`).
+4. Smoke tests: GitHub release API lookup → SHA256 verify → init → validate →
+   build universal + inspect.
+5. `.github/workflows/ci.yml` runs `go fmt`, `go vet`, `go test` on push/PR
+   across ubuntu/windows/macos.
+
+### Manual release (local Windows)
+
+```powershell
+.\scripts\build-release.ps1 -Version v0.9.0        # zip only
+.\scripts\build-release.ps1 -Version v0.9.0 -WithMSI   # zip + msi
+```
+
+Output: `dist/fontcreator233-v0.9.0-windows-amd64.zip` + `.sha256` (+ `.msi`).
+No dotnet required for the zip; `-WithMSI` requires `dotnet tool install --global wix`.
+
+### Update flow
+
+Users update with **no external dependency** — the Go binary downloads and
+replaces itself:
+
+```bash
+fontcreator update --check   # only show if newer available
+fontcreator update           # download + verify SHA256 + replace
+```
+
+The update client tries these mirrors **in order**; first reachable wins:
+1. `https://github.com` (primary)
+2. `https://ghproxy.net/https://github.com`
+3. `https://mirror.ghproxy.com/https://github.com`
+4. `https://ghfast.top/https://github.com`
+
+Each mirror also serves the `.sha256` companion file so the client verifies
+checksum before replacing.
+
+### One-click installer scripts
+
+Windows (portable zip, no admin needed):
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.ps1 | iex"
+```
+With MSI (recommended, needs admin):
+```powershell
+powershell -File install.ps1 -UseMSI
+```
+
+macOS / Linux:
+```bash
+curl -fsSL https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.sh | bash
+```
+
+Both scripts auto-detect latest tag, probe mirrors, verify SHA256, extract
+to `$HOME/.local/bin` (or custom path), and add the install dir to PATH.
+
+### What to release and what not
+
+**DO release:** binary artifacts, `.sha256` checksums, MSI on Windows.
+**DO NOT release:** test fixtures, `dist/`, `work/`, `.fontcreator233/`, the
+`assets/` source module, Go build cache, `.exe.new` leftover from partial
+updates.
+
+### MSI design
+
+- `<Package>` (WiX v4+) with `Id="*"` (auto-generate), `UpgradeCode` fixed
+  across all releases so `MajorUpgrade` replaces old versions cleanly.
+- Installs to `%ProgramFiles%\fontcreator233\` as `perMachine`.
+- Adds the install dir to HKLM PATH via `Environment` element.
+- **No Start Menu shortcut** — this is a CLI tool, not a GUI app.
+- **No auto-update registry entry** — update is manual via `fontcreator update`.
+
 ## Guardrails
 
 - Do not claim Arabic, Hebrew, Indic, Thai, vertical layout, or complex

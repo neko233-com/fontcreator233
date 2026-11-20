@@ -92,7 +92,7 @@ func BuildWOFF2(ttf []byte) ([]byte, error) {
 		payload.Write(t.raw)
 	}
 	var compressed bytes.Buffer
-	zw := brotli.NewWriterLevel(&compressed, 11)
+	zw := brotli.NewWriterLevel(&compressed, 6)
 	if _, err := zw.Write(payload.Bytes()); err != nil {
 		return nil, err
 	}

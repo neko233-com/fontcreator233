@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -270,24 +271,40 @@ func Build(ctx context.Context, r *recipe.Recipe, o Options, rep ui.Reporter) (R
 			return result, err
 		}
 		result.FontPath = fontPath
-		if hasFormat(r, "woff") {
-			woff, err := fontbuild.BuildWOFF(ttf)
-			if err != nil {
-				return result, fmt.Errorf("compile woff: %w", err)
-			}
+
+		// Compress WOFF and WOFF2 concurrently — they are fully independent
+		// and together dominate the post-BuildContext serial time.
+		var woffBuf, woff2Buf []byte
+		var woffErr, woff2Err error
+		var wg sync.WaitGroup
+		if hasFormat(r, "woff") && hasFormat(r, "woff2") {
+			wg.Add(2)
+			go func() { defer wg.Done(); woffBuf, woffErr = fontbuild.BuildWOFF(ttf) }()
+			go func() { defer wg.Done(); woff2Buf, woff2Err = fontbuild.BuildWOFF2(ttf) }()
+			wg.Wait()
+		} else if hasFormat(r, "woff") {
+			woffBuf, woffErr = fontbuild.BuildWOFF(ttf)
+		} else if hasFormat(r, "woff2") {
+			woff2Buf, woff2Err = fontbuild.BuildWOFF2(ttf)
+		}
+
+		if woffErr != nil {
+			return result, fmt.Errorf("compile woff: %w", woffErr)
+		}
+		if woff2Err != nil {
+			return result, fmt.Errorf("compile woff2: %w", woff2Err)
+		}
+
+		if woffBuf != nil {
 			woffPath := filepath.Join(o.OutDir, stem+".woff")
-			if err := os.WriteFile(woffPath, woff, 0o644); err != nil {
+			if err := os.WriteFile(woffPath, woffBuf, 0o644); err != nil {
 				return result, err
 			}
 			result.WOFFPath = woffPath
 		}
-		if hasFormat(r, "woff2") {
-			woff2, err := fontbuild.BuildWOFF2(ttf)
-			if err != nil {
-				return result, fmt.Errorf("compile woff2: %w", err)
-			}
+		if woff2Buf != nil {
 			woff2Path := filepath.Join(o.OutDir, stem+".woff2")
-			if err := os.WriteFile(woff2Path, woff2, 0o644); err != nil {
+			if err := os.WriteFile(woff2Path, woff2Buf, 0o644); err != nil {
 				return result, err
 			}
 			result.WOFF2Path = woff2Path
@@ -1178,6 +1195,7 @@ func makeBMFont(outDir string, cfg recipe.BMFontConfig, r *recipe.Recipe, resolv
 		LineGap:   r.Metrics.LineGap,
 		Weight:    r.Style.Weight,
 		Italic:    math.Abs(r.Style.Slant) > 0.01,
+		Style:     bmfont.ApplyStyle(cfg.Style),
 	}, src, pairs)
 }
 

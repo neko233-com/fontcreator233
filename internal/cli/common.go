@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/neko233-com/fontcreator233/internal/agentschema"
 	"golang.org/x/term"
 )
 
@@ -36,7 +37,7 @@ func (a *app) newFlagSet(name string, common *commonFlags) *flag.FlagSet {
 	fs.BoolVar(&common.plain, "plain", false, "plain line progress")
 	fs.BoolVar(&common.quiet, "quiet", false, "suppress non-error output")
 	fs.Usage = func() {
-		fmt.Fprintf(a.io.Err, "fontcreator233 %s\n\nUsage: fontcreator %s [flags] [arguments]\n\nFlags:\n", version, name)
+		fmt.Fprintf(a.io.Err, "fontcreator233 %s\n\nUsage: fontcreator %s [flags] [arguments]\n\nFlags:\n", agentschema.Version, name)
 		fs.PrintDefaults()
 	}
 	return fs

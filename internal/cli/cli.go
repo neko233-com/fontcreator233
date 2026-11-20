@@ -10,11 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/neko233-com/fontcreator233/internal/agentschema"
 )
-
-const version = agentschema.Version
 
 // IO is the injectable command environment.
 type IO struct {
@@ -59,6 +55,8 @@ func Run(args []string, io IO) int {
 	switch cmd {
 	case "version":
 		return a.cmdVersion(rest)
+	case "update":
+		return a.cmdUpdate(rest)
 	case "schema":
 		return a.cmdSchema(rest)
 	case "describe":
@@ -116,6 +114,7 @@ Commands:
   export glyphs|bundle      export glyphs or a bundle
   mcp                       MCP stdio server
   version                   print the version
+  update                    check and install a newer version
 
 Common flags:
   --json --no-open --no-tui --plain --quiet
