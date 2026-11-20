@@ -226,3 +226,6 @@ updates.
 - Unity/UE packages are generated, not tested against their Editors.
 - Generated output (`dist/`, `work/`, `.fontcreator233/`) is git-ignored.
 - Specimen assets are local; never add a CDN to the HTML.
+- `docs/assets/*.png` are README screenshots of the specimen. When the specimen CSS,
+  JS, or the generated metrics change, regenerate them from a fresh build in dark
+  mode at 1760×1100 before releasing — stale screenshots are worse than none.
