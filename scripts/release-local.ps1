@@ -1,13 +1,13 @@
-# fontcreator233 local release — Windows PowerShell 5
+﻿# fontcreator233 local release — Windows PowerShell 5
 #
 # Cross-compiles every supported platform, builds the Windows MSI, creates the git tag,
 # and publishes the GitHub Release. No GitHub Actions involved.
 #
 # Usage:
-#   .\scripts\release-local.ps1 -Version v0.10.6
-#   .\scripts\release-local.ps1 -Version v0.10.6 -SkipTest
-#   .\scripts\release-local.ps1 -Version v0.10.6 -NoUpload     # package + tag only
-#   .\scripts\release-local.ps1 -Version v0.10.6 -NoTag        # rebuild assets only
+#   .\scripts\release-local.ps1 -Version v1.0.0
+#   .\scripts\release-local.ps1 -Version v1.0.0 -SkipTest
+#   .\scripts\release-local.ps1 -Version v1.0.0 -NoUpload     # package + tag only
+#   .\scripts\release-local.ps1 -Version v1.0.0 -NoTag        # rebuild assets only
 
 param(
     [Parameter(Mandatory)][string]$Version,

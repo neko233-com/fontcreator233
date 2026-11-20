@@ -1,8 +1,8 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # fontcreator233 one-click installer for macOS / Linux
 # Usage:
 #   curl -fsSL https://.../install.sh | bash
-#   bash install.sh v0.9.0 /usr/local/bin
+#   bash install.sh v1.0.0 /usr/local/bin
 set -euo pipefail
 
 VERSION="${1:-}"

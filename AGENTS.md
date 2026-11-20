@@ -1,4 +1,4 @@
-# fontcreator233 — agent guide
+﻿# fontcreator233 — agent guide
 
 fontcreator233 is a deterministic, offline font creator. **You** (the agent) read
 the reference image and decide the style. The CLI never calls a vision model.
@@ -109,7 +109,7 @@ The binary version is set via `-ldflags` at release-build time:
 
 ```bash
 go build -ldflags "-s -w \
-  -X github.com/neko233-com/fontcreator233/internal/agentschema.Version=v0.9.0 \
+  -X github.com/neko233-com/fontcreator233/internal/agentschema.Version=v1.0.0 \
   -X github.com/neko233-com/fontcreator233/internal/agentschema.Commit=$(git rev-parse --short HEAD) \
   -X github.com/neko233-com/fontcreator233/internal/agentschema.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -trimpath -o fontcreator .
@@ -128,10 +128,10 @@ One command does everything — cross-compile 3 platforms, build the MSI, create
 push a new tag, publish the release:
 
 ```powershell
-.\scripts\release-local.ps1 -Version v0.10.6
-.\scripts\release-local.ps1 -Version v0.10.6 -SkipTest   # skip go test
-.\scripts\release-local.ps1 -Version v0.10.6 -NoUpload   # package + tag only
-.\scripts\release-local.ps1 -Version v0.10.6 -NoTag      # rebuild assets only
+.\scripts\release-local.ps1 -Version v1.0.0
+.\scripts\release-local.ps1 -Version v1.0.0 -SkipTest   # skip go test
+.\scripts\release-local.ps1 -Version v1.0.0 -NoUpload   # package + tag only
+.\scripts\release-local.ps1 -Version v1.0.0 -NoTag      # rebuild assets only
 ```
 
 It refuses to run on a dirty working tree or an existing tag, and only uploads after
@@ -154,8 +154,8 @@ auto-pins 5.0.2 under `%TEMP%` when it detects a v6/v7 install.
 ### Quick local bake (Windows only, no tag/upload)
 
 ```powershell
-.\scripts\build-release.ps1 -Version v0.9.0            # tar.gz only
-.\scripts\build-release.ps1 -Version v0.9.0 -WithMSI   # tar.gz + msi
+.\scripts\build-release.ps1 -Version v1.0.0            # tar.gz only
+.\scripts\build-release.ps1 -Version v1.0.0 -WithMSI   # tar.gz + msi
 ```
 
 Use this for a fast sanity build; use `release-local.ps1` to actually publish.

@@ -1,13 +1,13 @@
-# build-msi.ps1 — WiX v7 MSI builder
+﻿# build-msi.ps1 — WiX v7 MSI builder
 # Builds an MSI installer from a prepared fontcreator233 package directory.
 # Requires: WiX 5.0.2 (last freely-licensed release; v6+/v7 require the paid OSMF EULA)
 #   dotnet tool install --global wix --version 5.0.2
 # Usage:
-#   .\scripts\build-msi.ps1 -Source dist\fontcreator233-v0.9.0-windows-amd64 -Version v0.9.0 -Arch x64 -Out dist\fontcreator233-v0.9.0-x64.msi
+#   .\scripts\build-msi.ps1 -Source dist\fontcreator233-v1.0.0-windows-amd64 -Version v1.0.0 -Arch x64 -Out dist\fontcreator233-v1.0.0-x64.msi
 
 param(
     [Parameter(Mandatory)][string]$Source,     # dir containing fontcreator.exe + LICENSE + README
-    [Parameter(Mandatory)][string]$Version,     # e.g. "v0.9.0" (leading v stripped for MSI)
+    [Parameter(Mandatory)][string]$Version,     # e.g. "v1.0.0" (leading v stripped for MSI)
     [Parameter(Mandatory)][ValidateSet("x64","arm64")][string]$Arch,
     [string]$Out                                 # output MSI path (default = "$Source\..\fontcreator233-$Version-$Arch.msi")
 )

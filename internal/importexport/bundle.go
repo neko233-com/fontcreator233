@@ -18,6 +18,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/neko233-com/fontcreator233/internal/agentschema"
 	"github.com/neko233-com/fontcreator233/internal/build"
 	"github.com/neko233-com/fontcreator233/internal/recipe"
 	"github.com/neko233-com/fontcreator233/internal/style"
@@ -95,7 +96,7 @@ func ExportBundle(ctx context.Context, recipePath, outZip string, targets []stri
 	}
 	index := BundleIndex{
 		Schema:    bundleSchema,
-		Generator: "fontcreator233 0.9.0",
+		Generator: "fontcreator233 " + agentschema.Version,
 		CreatedAt: bundleTime,
 		Recipe:    "recipe.yaml",
 		Family:    r.Meta.Family,

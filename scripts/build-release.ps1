@@ -1,6 +1,6 @@
-# fontcreator233 local release builder — Windows PowerShell 5
+﻿# fontcreator233 local release builder — Windows PowerShell 5
 # Go build (ldflags) → test → sha256 → zip → report
-# Usage: .\scripts\build-release.ps1 [-Version v0.9.0] [-SkipTest] [-OutDir dist]
+# Usage: .\scripts\build-release.ps1 [-Version v1.0.0] [-SkipTest] [-OutDir dist]
 
 param(
     [string]$Version,
@@ -17,7 +17,7 @@ Set-Location $RepoRoot
 if (-not $Version) {
     $tag = & git describe --tags --exact-match 2>$null
     if ($LASTEXITCODE -eq 0) { $Version = $tag } else {
-        $Version = "v0.9.0-dev"
+        $Version = "v1.0.0-dev"
     }
 }
 $ShortSha = (& git rev-parse --short HEAD) 2>$null; if (-not $ShortSha) { $ShortSha = "nogit" }

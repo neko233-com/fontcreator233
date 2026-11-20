@@ -102,7 +102,7 @@ apiVersion: fontcreator233/v1
 meta:
   family: %q
   style: Regular
-  version: 0.9.0
+  version: 1.0.0
   designer: ""
   description: "Describe the reference and the intended mood."
   license: OFL-1.1

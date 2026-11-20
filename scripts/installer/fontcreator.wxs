@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
 
-  <?if $(var.Version) ?><?else ?><?error Version required: -dVersion=0.9.0 ?><?endif ?>
+  <?if $(var.Version) ?><?else ?><?error Version required: -dVersion=1.0.0 ?><?endif ?>
   <?if $(var.Source)   ?><?else ?><?error Source dir required: -dSource=<path> ?><?endif ?>
   <?if $(var.Out)      ?><?else ?><?error Output path required: -dOut=<path> ?><?endif ?>
 

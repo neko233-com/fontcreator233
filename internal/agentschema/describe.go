@@ -12,11 +12,11 @@ import (
 
 // DefaultVersion is the public CLI contract version used when no ldflags
 // override is supplied at build time (dev builds, `go run .`, etc.).
-const DefaultVersion = "0.9.0"
+const DefaultVersion = "1.0.0"
 
 // These variables are set via -ldflags at release-build time:
 //
-//	go build -ldflags "-X github.com/neko233-com/fontcreator233/internal/agentschema.Version=v0.9.0 ..."
+//	go build -ldflags "-X github.com/neko233-com/fontcreator233/internal/agentschema.Version=v1.0.0 ..."
 var (
 	Version   = DefaultVersion
 	Commit    = "dev"

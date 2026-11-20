@@ -1,9 +1,9 @@
-# fontcreator233 Windows one-click installer
+﻿# fontcreator233 Windows one-click installer
 # Usage (run as admin recommended):
 #   powershell -ExecutionPolicy Bypass -Command "irm https://.../install.ps1 | iex"
-#   powershell -File install.ps1 -Version v0.9.0 -InstallDir C:\tools\fontcreator233 -UseMSI
+#   powershell -File install.ps1 -Version v1.0.0 -InstallDir C:\tools\fontcreator233 -UseMSI
 param(
-    [string]$Version,                         # e.g. "v0.9.0"  — defaults to latest release
+    [string]$Version,                         # e.g. "v1.0.0"  — defaults to latest release
     [string]$InstallDir = "$env:USERPROFILE\.local\bin\fontcreator233",
     [switch]$UseMSI,                          # prefer .msi installer over .zip
     [string[]]$Mirrors = @(                   # tried in order, first reachable wins
