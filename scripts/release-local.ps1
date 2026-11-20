@@ -192,7 +192,7 @@ Get-ChildItem $OutDir -File | Sort-Object Name | ForEach-Object {
 if (-not $NoTag) {
     Write-Host "`n[6/7] Tag" -ForegroundColor Cyan
     Invoke-Native { git tag -a $Version -m "fontcreator233 $Version" } "git tag"
-    Invoke-Native { git push origin "refs/tags/$Version" } "git push tag"
+    Invoke-Retry { git push origin "refs/tags/$Version" } "git push tag"
     Write-Host "  pushed $Version" -ForegroundColor Green
 } else {
     Write-Host "`n[6/7] Tag — SKIP" -ForegroundColor Yellow
