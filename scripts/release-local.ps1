@@ -36,15 +36,19 @@ if ($dirty) {
     exit 1
 }
 
-& git rev-parse --verify "refs/tags/$Version" *> $null
-if ($LASTEXITCODE -eq 0 -and -not $NoTag) {
+$existingTag = (& git tag --list $Version 2>$null)
+if ($existingTag -and -not $NoTag) {
     Write-Host "Tag $Version already exists — pick a new version." -ForegroundColor Red
     exit 1
 }
 
 if (-not $NoUpload) {
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     & gh auth status *> $null
-    if ($LASTEXITCODE -ne 0) { Write-Host "gh is not authenticated (run: gh auth login)" -ForegroundColor Red; exit 1 }
+    $ghOk = ($LASTEXITCODE -eq 0)
+    $ErrorActionPreference = $prevEap
+    if (-not $ghOk) { Write-Host "gh is not authenticated (run: gh auth login)" -ForegroundColor Red; exit 1 }
 }
 
 $ShortSha = (& git rev-parse --short HEAD).Trim()
@@ -196,8 +200,13 @@ sha256sum -c fontcreator233-$Version-*.tar.gz.sha256
         $notes = $tmpNotes
     }
 
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     & gh release view $Version *> $null
-    if ($LASTEXITCODE -eq 0) {
+    $releaseExists = ($LASTEXITCODE -eq 0)
+    $ErrorActionPreference = $prevEap
+
+    if ($releaseExists) {
         Write-Host "  release exists — uploading with --clobber"
         & gh release upload $Version $Assets --clobber
     } else {
