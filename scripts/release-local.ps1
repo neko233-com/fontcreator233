@@ -40,6 +40,23 @@ function Test-Native {
     return ($LASTEXITCODE -eq 0)
 }
 
+# GitHub's API occasionally TLS-times-out on flaky links; retry before giving up.
+function Invoke-Retry {
+    param([scriptblock]$Block, [string]$What, [int]$Attempts = 3)
+    for ($i = 1; $i -le $Attempts; $i++) {
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try { & $Block } finally { $ErrorActionPreference = $prev }
+        if ($LASTEXITCODE -eq 0) { return }
+        if ($i -lt $Attempts) {
+            Write-Host "  $What failed (exit $LASTEXITCODE) — retry $i/$($Attempts - 1) in 5s" -ForegroundColor Yellow
+            Start-Sleep -Seconds 5
+        } else {
+            throw "$What failed (exit $LASTEXITCODE)"
+        }
+    }
+}
+
 if ($Version -notmatch '^v\d+\.\d+\.\d+$') {
     throw "Version must look like v1.2.3 (got '$Version')"
 }
@@ -180,13 +197,13 @@ if (-not $NoUpload) {
     $tmpNotes = $null
     if (-not $notes) {
         $tmpNotes = Join-Path $env:TEMP "fc233-notes-$Version.md"
-        @"
-## fontcreator233 $Version
+        $body = @'
+## fontcreator233 {{VERSION}}
 
 Deterministic, offline, agent-native font creator.
 
 ### Install
-``````bash
+```bash
 # macOS / Linux
 curl -fsSL https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.sh | bash
 
@@ -194,29 +211,35 @@ curl -fsSL https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scr
 powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/neko233-com/fontcreator233/main/scripts/install.ps1 | iex"
 
 # Windows MSI (recommended, needs admin)
-#   double-click fontcreator233-$Version-windows-amd64.msi
-``````
+#   double-click fontcreator233-{{VERSION}}-windows-amd64.msi
+```
 
 ### Update
-``````bash
+```bash
 fontcreator update --check
 fontcreator update
-``````
+```
 
 ### Checksums
-``````bash
-sha256sum -c fontcreator233-$Version-*.tar.gz.sha256
-``````
-"@ | Out-File -Encoding utf8 $tmpNotes
+```bash
+sha256sum -c fontcreator233-{{VERSION}}-*.tar.gz.sha256
+```
+'@
+        $body = $body.Replace('{{VERSION}}', $Version)
+        [System.IO.File]::WriteAllText($tmpNotes, $body, (New-Object System.Text.UTF8Encoding($false)))
         $notes = $tmpNotes
     }
 
+    # Two steps so a network hiccup during asset upload never leaves a half-built release.
     if (Test-Native { gh release view $Version }) {
-        Write-Host "  release exists — uploading with --clobber"
-        Invoke-Native { gh release upload $Version $Assets --clobber } "gh release upload"
+        Write-Host "  release exists — updating notes"
+        Invoke-Retry { gh release edit $Version --notes-file $notes } "gh release edit"
     } else {
-        Invoke-Native { gh release create $Version $Assets --title "fontcreator233 $Version" --notes-file $notes } "gh release create"
+        Invoke-Retry { gh release create $Version --title "fontcreator233 $Version" --notes-file $notes --verify-tag } "gh release create"
     }
+    Write-Host "  uploading $($Assets.Count) assets"
+    Invoke-Retry { gh release upload $Version $Assets --clobber } "gh release upload"
+
     if ($tmpNotes) { Remove-Item $tmpNotes -Force -ErrorAction SilentlyContinue }
 
     Write-Host "  published: https://github.com/neko233-com/fontcreator233/releases/tag/$Version" -ForegroundColor Green
