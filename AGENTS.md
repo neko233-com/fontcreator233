@@ -137,6 +137,30 @@ push a new tag, publish the release:
 It refuses to run on a dirty working tree or an existing tag, and only uploads after
 `gofmt`, `go vet`, and (unless `-SkipTest`) `go test ./...` pass.
 
+### One-word release — `发布`
+
+When the user says `发布`, `发布 release`, `发版`, or `publish`, treat it as full
+authorization for the complete release. Do not ask for confirmation.
+
+1. Read the latest tag with `git tag --sort=-v:refname`; choose the next SemVer:
+   patch for fixes only, minor for new features, major only when asked.
+2. Require a clean working tree. Commit intended changes to `main` first; do not
+   release from a dirty tree.
+3. Write `work/release-notes-vX.Y.Z.md` with highlights, install/update commands,
+   and the static-pack/Alibaba license caveats when relevant.
+4. Run the full local release:
+   `.\scripts\release-local.ps1 -Version vX.Y.Z -NotesFile work\release-notes-vX.Y.Z.md -OutDir work\release-vX.Y.Z`.
+   Do **not** pass `-SkipTest`, `-NoUpload`, or `-NoTag` unless the user explicitly asks.
+5. Never use GitHub Actions for publishing. Do not reuse or force-move an existing tag.
+6. After upload, verify: release is Latest, 8 assets are present, Windows tar and
+   MSI checksums match a downloaded copy, `fontcreator version --json` reports the
+   new version and HEAD commit, and the tag points at HEAD.
+7. Report the release URL, version, tag/commit, asset list, checksum verification,
+   and any remaining caveat.
+
+If packaging/tagging succeeds but upload fails, resume with
+`-NoTag` after checking `gh release view`; do not create a second tag.
+
 Produced and uploaded assets:
 
 ```
