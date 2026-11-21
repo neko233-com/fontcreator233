@@ -78,20 +78,8 @@ func (b *Builder) widthAt(t geom.Point, mul, tParam float64, flare bool) float64
 
 func (b *Builder) expandOpen(s Stroke, pts []geom.Point) geom.Path {
 	n := len(pts)
-	tans := tangents(pts, false)
-	normals := make([]geom.Point, n)
-	widths := make([]float64, n)
 	flare := s.Flare || b.P.Terminal == "flare"
-	for i := 0; i < n; i++ {
-		normals[i] = geom.Point{X: -tans[i].Y, Y: tans[i].X}
-		widths[i] = b.widthAt(tans[i], s.Width, float64(i)/float64(n-1), flare)
-	}
-	left := make([]geom.Point, n)
-	right := make([]geom.Point, n)
-	for i := 0; i < n; i++ {
-		left[i] = pts[i].Add(normals[i].Mul(widths[i] / 2))
-		right[i] = pts[i].Sub(normals[i].Mul(widths[i] / 2))
-	}
+
 	capStart := s.CapStart
 	if capStart == "" {
 		capStart = b.P.Terminal
@@ -108,19 +96,104 @@ func (b *Builder) expandOpen(s Stroke, pts []geom.Point) geom.Path {
 		capEnd = "flat"
 	}
 
+	lengths := arcLengths(pts)
+	total := lengths[n-1]
+	if total <= 0 {
+		return nil
+	}
+	tans := tangents(pts, false)
+	if s.JoinStart || s.JoinEnd {
+		const joinOverlap = 2.0
+		pts = clonePoints(pts)
+		if s.JoinStart {
+			pts[0] = pts[0].Sub(tans[0].Mul(joinOverlap))
+		}
+		if s.JoinEnd {
+			pts[n-1] = pts[n-1].Add(tans[n-1].Mul(joinOverlap))
+		}
+		lengths = arcLengths(pts)
+		total = lengths[n-1]
+		tans = tangents(pts, false)
+	}
+	widths := make([]float64, n)
+	for i := 0; i < n; i++ {
+		t := lengths[i] / total
+		widths[i] = b.widthAt(tans[i], s.Width, t, flare) * taperFactor(t, s.TaperStart, s.TaperEnd)
+	}
+
+	// Round caps are drawn as a half circle that reaches exactly the nominal
+	// skeleton endpoint. Pull the stroke back by the cap radius first so stems
+	// no longer overshoot cap height / x-height by half a stroke width.
+	wStart, wEnd := widths[0], widths[n-1]
+	rStart, rEnd := 0.0, 0.0
+	if capStart == "round" {
+		rStart = wStart / 2
+	}
+	if capEnd == "round" {
+		rEnd = wEnd / 2
+	}
+	if rStart+rEnd > 0 && total > rStart+rEnd+2 {
+		pts = clonePoints(pts)
+		if rStart > 0 {
+			pts[0] = pts[0].Add(tans[0].Mul(rStart))
+		}
+		if rEnd > 0 {
+			pts[n-1] = pts[n-1].Sub(tans[n-1].Mul(rEnd))
+		}
+		lengths = arcLengths(pts)
+		total = lengths[n-1]
+		tans = tangents(pts, false)
+		for i := 0; i < n; i++ {
+			t := lengths[i] / total
+			widths[i] = b.widthAt(tans[i], s.Width, t, flare) * taperFactor(t, s.TaperStart, s.TaperEnd)
+		}
+		if rStart > 0 {
+			widths[0] = wStart
+		}
+		if rEnd > 0 {
+			widths[n-1] = wEnd
+		}
+	}
+
+	normals := make([]geom.Point, n)
+	left := make([]geom.Point, n)
+	right := make([]geom.Point, n)
+	for i := 0; i < n; i++ {
+		normals[i] = geom.Point{X: -tans[i].Y, Y: tans[i].X}
+		left[i] = pts[i].Add(normals[i].Mul(widths[i] / 2))
+		right[i] = pts[i].Sub(normals[i].Mul(widths[i] / 2))
+	}
+	// An angled terminal is a sheared end: one corner stays on the nominal
+	// endpoint, the other is pulled back along the tangent. Keeping the first
+	// corner fixed means angled stems no longer overshoot cap height or dip
+	// below the baseline.
+	const angledSlant = 0.36
+	if capEnd == "angled" {
+		s := widths[n-1] * angledSlant
+		right[n-1] = right[n-1].Sub(tans[n-1].Mul(s))
+	}
+	if capStart == "angled" {
+		s := widths[0] * angledSlant
+		right[0] = right[0].Add(tans[0].Mul(s))
+	}
+
 	var nodes geom.Contour
 	nodes = append(nodes, onCurve(left[0]))
 	for i := 1; i < n; i++ {
 		nodes = append(nodes, onCurve(left[i]))
 	}
-	for _, p := range endCap(pts[n-1], tans[n-1], normals[n-1], widths[n-1], capEnd) {
-		nodes = append(nodes, onCurve(p))
+	if capEnd != "angled" {
+		for _, p := range endCap(pts[n-1], tans[n-1], normals[n-1], widths[n-1], capEnd) {
+			nodes = append(nodes, onCurve(p))
+		}
 	}
 	for i := n - 1; i >= 0; i-- {
 		nodes = append(nodes, onCurve(right[i]))
 	}
-	for _, p := range startCap(pts[0], tans[0], normals[0], widths[0], capStart) {
-		nodes = append(nodes, onCurve(p))
+	if capStart != "angled" {
+		for _, p := range startCap(pts[0], tans[0], normals[0], widths[0], capStart) {
+			nodes = append(nodes, onCurve(p))
+		}
 	}
 	nodes = cleanContour(nodes)
 	if len(nodes) < 3 {
@@ -141,6 +214,33 @@ func (b *Builder) expandOpen(s Stroke, pts []geom.Point) geom.Path {
 	return out
 }
 
+func clonePoints(pts []geom.Point) []geom.Point {
+	out := make([]geom.Point, len(pts))
+	copy(out, pts)
+	return out
+}
+
+func arcLengths(pts []geom.Point) []float64 {
+	out := make([]float64, len(pts))
+	for i := 1; i < len(pts); i++ {
+		out[i] = out[i-1] + pts[i].Sub(pts[i-1]).Len()
+	}
+	return out
+}
+
+// taperFactor narrows the stroke over the first/last 12% of its length.
+func taperFactor(t, start, end float64) float64 {
+	const zone = 0.12
+	f := 1.0
+	if start > 0 && t < zone {
+		f *= 1 - start*math.Pow(1-t/zone, 2)
+	}
+	if end > 0 && t > 1-zone {
+		f *= 1 - end*math.Pow((t-(1-zone))/zone, 2)
+	}
+	return f
+}
+
 func endCap(p, t, n geom.Point, w float64, style string) []geom.Point {
 	switch style {
 	case "round":
@@ -150,8 +250,6 @@ func endCap(p, t, n geom.Point, w float64, style string) []geom.Point {
 			out = append(out, p.Add(n.Mul(math.Cos(phi)*w/2)).Add(t.Mul(math.Sin(phi)*w/2)))
 		}
 		return out
-	case "angled":
-		return []geom.Point{p.Add(t.Mul(w * 0.35))}
 	default:
 		return nil
 	}
@@ -166,44 +264,34 @@ func startCap(p, t, n geom.Point, w float64, style string) []geom.Point {
 			out = append(out, p.Sub(n.Mul(math.Cos(phi)*w/2)).Sub(t.Mul(math.Sin(phi)*w/2)))
 		}
 		return out
-	case "angled":
-		return []geom.Point{p.Sub(t.Mul(w * 0.35))}
 	default:
 		return nil
 	}
 }
 
 func (b *Builder) expandClosed(s Stroke, pts []geom.Point) geom.Path {
-	n := len(pts)
-	tans := tangents(pts, true)
-	left := make([]geom.Point, n)
-	right := make([]geom.Point, n)
-	for i := 0; i < n; i++ {
-		normal := geom.Point{X: -tans[i].Y, Y: tans[i].X}
-		w := b.widthAt(tans[i], s.Width, -1, false)
-		left[i] = pts[i].Add(normal.Mul(w / 2))
-		right[i] = pts[i].Sub(normal.Mul(w / 2))
-	}
-	l := makeContour(left)
-	r := makeContour(right)
-	la := signedArea(l)
-	ra := signedArea(r)
-	if la == 0 || ra == 0 {
-		return nil
-	}
-	var outer, hole geom.Contour
-	if math.Abs(la) >= math.Abs(ra) {
-		outer, hole = l, r
-	} else {
-		outer, hole = r, l
-	}
+	// A closed skeleton (bowl, ring) is the OUTER edge of the ink, not the
+	// centerline. The hole is inset by one full stroke width. Treating it as a
+	// centerline made o/a/g bowls half a stem larger than the x-height and
+	// drop them below the baseline.
+	outer := makeContour(clonePoints(pts))
 	if signedArea(outer) < 0 {
 		reverseContour(outer)
 	}
-	if signedArea(hole) > 0 {
-		reverseContour(hole)
+	pts = pts[:0]
+	for _, n := range outer {
+		pts = append(pts, n.P)
 	}
-	return geom.Path{outer, hole}
+	tans := tangents(pts, true)
+	inner := make(geom.Contour, len(pts))
+	for i := range pts {
+		normal := geom.Point{X: -tans[i].Y, Y: tans[i].X}
+		w := b.widthAt(tans[i], s.Width, -1, false)
+		// With the outer contour forced CCW, (-ty, tx) points inward.
+		inner[i] = onCurve(pts[i].Add(normal.Mul(w)))
+	}
+	reverseContour(inner)
+	return geom.Path{outer, inner}
 }
 
 func (b *Builder) addSerif(p, dir geom.Point, w float64) geom.Path {

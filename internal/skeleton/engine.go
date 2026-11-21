@@ -33,6 +33,15 @@ type Stroke struct {
 	SerifStart bool
 	SerifEnd   bool
 	Flare      bool
+	// TaperStart/TaperEnd shrink the stroke width near the corresponding
+	// endpoint (0 disables, 0.2 means the tip is 80% of the stem width).
+	TaperStart float64
+	TaperEnd   float64
+	// JoinStart/JoinEnd mark endpoints shared with another stroke. The
+	// expander extends those ends slightly so the two outlines overlap instead
+	// of merely abutting (which leaves an anti-aliasing seam).
+	JoinStart bool
+	JoinEnd   bool
 }
 
 // Dot is a filled circular contour.
@@ -104,8 +113,10 @@ func (b *Builder) zoneScale(z Zone) float64 {
 }
 
 func (b *Builder) build(def *Def) (geom.Path, error) {
+	strokes := append([]Stroke(nil), def.Strokes...)
+	flattenJoints(strokes)
 	var out geom.Path
-	for _, s := range def.Strokes {
+	for _, s := range strokes {
 		p, err := b.expand(s)
 		if err != nil {
 			return nil, err
@@ -116,6 +127,80 @@ func (b *Builder) build(def *Def) (geom.Path, error) {
 		out = append(out, geom.Circle(d.X, d.Y, d.R)...)
 	}
 	return out, nil
+}
+
+// flattenJoints turns round caps into flat cuts where two strokes meet.
+// A stroke end can meet another stroke either at that stroke's end (a
+// corner) or along its interior (a T-junction, as in y). Both cases need a
+// flat, overlapping cut: two round ends that share one point only touch
+// tangentially and leave a pinch or a spur.
+func flattenJoints(strokes []Stroke) {
+	type point struct{ x, y int64 }
+	key := func(p geom.Point) point {
+		return point{int64(math.Round(p.X * 100)), int64(math.Round(p.Y * 100))}
+	}
+	ends := map[point]int{}
+	endpoints := make([]struct {
+		a, b point
+		ok   bool
+	}, len(strokes))
+	interior := map[point]map[int]bool{}
+	for i, s := range strokes {
+		if s.Closed || len(s.Cmds) == 0 {
+			continue
+		}
+		pts := geom.Flatten(s.Cmds, 0.3)
+		pts = cleanPoints(pts, false)
+		if len(pts) < 2 {
+			continue
+		}
+		a, b := key(pts[0]), key(pts[len(pts)-1])
+		endpoints[i] = struct {
+			a, b point
+			ok   bool
+		}{a, b, true}
+		ends[a]++
+		ends[b]++
+		for k := 1; k < len(pts)-1; k++ {
+			k := key(pts[k])
+			if interior[k] == nil {
+				interior[k] = map[int]bool{}
+			}
+			interior[k][i] = true
+		}
+	}
+	hasOtherInterior := func(p point, self int) bool {
+		for i := range interior[p] {
+			if i != self {
+				return true
+			}
+		}
+		return false
+	}
+	for i := range strokes {
+		e := endpoints[i]
+		if !e.ok {
+			continue
+		}
+		if ends[e.a] > 1 || hasOtherInterior(e.a, i) {
+			// An explicit cap wins: authors use "round" for a deliberate ball
+			// foot, and flattening it would turn the foot into a hard edge.
+			if strokes[i].CapStart == "" {
+				strokes[i].CapStart = "flat"
+			}
+			if strokes[i].CapStart == "flat" {
+				strokes[i].JoinStart = true
+			}
+		}
+		if ends[e.b] > 1 || hasOtherInterior(e.b, i) {
+			if strokes[i].CapEnd == "" {
+				strokes[i].CapEnd = "flat"
+			}
+			if strokes[i].CapEnd == "flat" {
+				strokes[i].JoinEnd = true
+			}
+		}
+	}
 }
 
 func (b *Builder) jitter(p geom.Path, r rune) geom.Path {
