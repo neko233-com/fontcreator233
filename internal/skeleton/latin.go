@@ -120,7 +120,7 @@ func initLatin() {
 	// Lowercase.
 	add(Def{Rune: 'a', Advance: 556, Zone: ZoneLower, Strokes: []Stroke{
 		ellipse(270, 250, 190, 250),
-		flatTop(vstemPlain(460, 0, 500)),
+		flatBoth(vstemPlain(460, 0, 500)),
 	}})
 	add(Def{Rune: 'b', Advance: 611, Zone: ZoneLower, Strokes: []Stroke{
 		vstem(100, 0, 740),
@@ -135,7 +135,7 @@ func initLatin() {
 	}})
 	add(Def{Rune: 'e', Advance: 556, Zone: ZoneLower, Strokes: []Stroke{
 		sw(0.8, "M 100 250 L 460 250"),
-		flatStart(1, "M 480 360 C 500 470 400 510 290 510 C 160 510 100 400 100 250"),
+		flatStart(1, "M 480 360 C 490 420 400 458 290 458 C 160 458 100 400 100 250"),
 		roundStart(sw(1, "M 500 250 C 500 130 400 42.5 290 42.5 C 160 42.5 100 130 100 250")),
 	}})
 	add(Def{Rune: 'f', Advance: 333, Zone: ZoneLower, Strokes: []Stroke{
@@ -144,13 +144,12 @@ func initLatin() {
 		bar(60, 300, 500),
 	}})
 	add(Def{Rune: 'g', Advance: 611, Zone: ZoneLower, Strokes: []Stroke{
-		ellipse(270, 280, 190, 220),
-		vstemPlain(460, -60, 280),
-		hook(1, "M 460 -60 C 460 -110 430 -140 350 -140"),
+		ellipse(250, 250, 180, 250),
+		flatEnd(1, "M 430 0 C 430 -120 340 -225 220 -210 C 160 -202 120 -190 100 -175"),
 	}})
 	add(Def{Rune: 'h', Advance: 611, Zone: ZoneLower, Strokes: []Stroke{
 		vstem(100, 0, 740),
-		flatStart(1, "M 100 477.5 C 100 490 220 487 300 482.5 C 400 482.5 460 420 460 320 L 460 0"),
+		flatStart(1, "M 100 450 C 100 510 460 430 460 320 L 460 0"),
 	}})
 	add(Def{Rune: 'i', Advance: 278, Zone: ZoneLower, Strokes: []Stroke{
 		vstem(139, 0, 500),
@@ -171,15 +170,11 @@ func initLatin() {
 		vstem(139, 0, 740),
 	}})
 	add(Def{Rune: 'm', Advance: 889, Zone: ZoneLower, Strokes: []Stroke{
-		flatBoth(vstem(100, 0, 465)),
-		flatBoth(vstemPlain(444, 0, 465)),
-		flatBoth(vstemPlain(788, 0, 465)),
-		flatBoth(sw(1, "M 100 430 C 100 475 200 475 260 475 C 340 475 444 390 444 320 L 444 0")),
-		flatBoth(sw(1, "M 444 430 C 444 475 544 475 604 475 C 684 475 788 390 788 320 L 788 0")),
+		flatBoth(sw(1, "M 100 0 L 100 450 C 100 490 444 425 444 320 L 444 0")),
+		flatBoth(sw(1, "M 444 0 L 444 450 C 444 490 788 425 788 320 L 788 0")),
 	}})
 	add(Def{Rune: 'n', Advance: 611, Zone: ZoneLower, Strokes: []Stroke{
-		flatBoth(vstem(100, 0, 465)),
-		flatBoth(sw(1, "M 100 430 C 100 475 200 475 260 475 C 340 475 460 390 460 320 L 460 0")),
+		flatBoth(sw(1, "M 100 0 L 100 450 C 100 490 460 425 460 320 L 460 0")),
 	}})
 	add(Def{Rune: 'o', Advance: 611, Zone: ZoneLower, Strokes: []Stroke{
 		ellipse(305, 250, 205, 250),
@@ -193,8 +188,7 @@ func initLatin() {
 		vstemPlain(500, -200, 500),
 	}})
 	add(Def{Rune: 'r', Advance: 389, Zone: ZoneLower, Strokes: []Stroke{
-		flatBoth(vstem(100, 0, 465)),
-		flatBoth(sw(1, "M 100 430 C 100 475 200 475 260 475 L 300 475")),
+		flatBoth(sw(1, "M 100 0 L 100 450 C 100 510 250 430 310 420")),
 	}})
 	add(Def{Rune: 's', Advance: 500, Zone: ZoneLower, Strokes: []Stroke{
 		sw(1, "M 430 420 C 360 500 120 510 80 410 C 50 330 160 290 280 260 C 400 230 470 180 440 90 C 400 -20 120 -10 60 80"),

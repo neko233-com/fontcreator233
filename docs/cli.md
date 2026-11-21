@@ -90,6 +90,25 @@ fontcreator describe --markdown
 fontcreator schema
 ```
 
+## family templates
+
+`templates/hei`, `templates/song`, `templates/puhuiti`, and `templates/mono`
+ship with static Regular OFL Latin starter packs under `assets/latin/`.
+They are intended as high-quality starting points; change the family name and
+use `glyphs.overrides` with a pack at the weight you need. The packs are
+Regular-only, so set `output.variable: false`.
+
+```bash
+fontcreator validate templates/hei.recipe.yaml --json
+fontcreator build templates/hei.recipe.yaml --out dist --target system --no-open
+fontcreator build templates/mono.recipe.yaml --out dist --target system --no-open
+```
+
+`puhuiti` is a Puhui-style Poppins-derived geometric starter, not the
+Alibaba PuHuiTi font. Alibaba's EULA forbids modifying or redistributing its
+font files; import a licensed copy with `fontcreator import font` if you need
+the real outlines.
+
 ## library
 
 ```bash

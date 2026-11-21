@@ -96,6 +96,38 @@ func TestShouldersHaveNoCapEars(t *testing.T) {
 	}
 }
 
+func TestLowercaseBowlsStayOnMetrics(t *testing.T) {
+	b := builder(t, nil)
+	bounds := func(r rune) (x, y float64) {
+		p, _, _, err := b.Glyph(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p.Bounds().MinY, p.Bounds().MaxY
+	}
+	// g is a single-storey bowl with a long open tail: the bowl must top out at
+	// x-height, not overshoot like a second storey.
+	lo, hi := bounds('g')
+	if hi < 518 || hi > 522 {
+		t.Fatalf("g top = %.2f, want on x-height", hi)
+	}
+	if lo > -200 {
+		t.Fatalf("g bottom = %.2f, want a real descender tail", lo)
+	}
+	// e had a 571-unit top before the upper bowl was lowered: it must stay on
+	// x-height instead of towering over a/o.
+	_, hi = bounds('e')
+	if hi > 521 {
+		t.Fatalf("e top = %.2f, want <= x-height", hi)
+	}
+	// The a stem used to end in a round cap below the baseline. It now shares
+	// the baseline with the bowl.
+	lo, _ = bounds('a')
+	if lo < -1 {
+		t.Fatalf("a bottom = %.2f, want on the baseline", lo)
+	}
+}
+
 func TestJoinedStrokeEndsOverlap(t *testing.T) {
 	b := builder(t, nil)
 	p, _, _, err := b.Glyph('J')

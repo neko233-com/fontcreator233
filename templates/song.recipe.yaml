@@ -1,0 +1,56 @@
+# Reference template — smooth Song / Ming serif.
+# Static OFL Latin starter outlines derived from Noto Serif Regular.
+# Build: fontcreator build templates/song.recipe.yaml --out dist --target system --no-open
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Neko Song
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Book-weight Song serif with bracketed strokes; Latin-only starter, pair it with a Song CJK face for Chinese."
+  license: OFL-1.1
+  accent: "#8A5A44"
+  sampleText: "Hamburgefonstiv 0123 — bracketed serif"
+
+metrics:
+  ascender: 1000
+  descender: -293
+  xHeight: 0.536
+  capHeight: 0.714
+  lineGap: 0
+
+style:
+  skeleton: serif
+  weight: 400
+  width: 100
+  slant: 0
+  contrast: 0.28
+  terminal: flat
+  serif: bracketed
+  serifSize: 0.55
+  overshoot: 0.012
+  roughness: 0
+  jitterRotation: 0
+  tracking: 0
+  seed: 233
+
+coverage:
+  generated: [latin]
+  base:
+    cjk: none
+    kana: false
+    hangul: false
+    symbols: false
+
+glyphs:
+  overrides: ../assets/latin/song
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, apps]
+  specimen: true
+  open: false
+  variable: false
+  cursive: false
+  splitCJK: 0

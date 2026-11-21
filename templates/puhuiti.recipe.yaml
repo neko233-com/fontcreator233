@@ -1,0 +1,58 @@
+# Reference template — Puhui-style modern Hei.
+# Static OFL Latin starter outlines derived from Poppins Regular: single-storey
+# a/g, round shoulders, open apertures. Use the parametric skeleton recipes when
+# you need a different weight or width; this pack is Regular-only.
+# Build: fontcreator build templates/puhuiti.recipe.yaml --out dist --target system --no-open
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Neko Puhui
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Modern geometric Hei with tall x-height, open apertures, and a long-tail g."
+  license: OFL-1.1
+  accent: "#FF6A00"
+  sampleText: "Hamburgefonstiv 天地玄黄 0123"
+
+metrics:
+  ascender: 1000
+  descender: -350
+  xHeight: 0.548
+  capHeight: 0.698
+  lineGap: 0
+
+style:
+  skeleton: geometric
+  weight: 400
+  width: 100
+  slant: 0
+  contrast: 0.02
+  terminal: flat
+  serif: none
+  serifSize: 0
+  overshoot: 0.014
+  roughness: 0
+  jitterRotation: 0
+  tracking: 0
+  seed: 233
+
+coverage:
+  generated: [latin]
+  base:
+    cjk: sample
+    kana: false
+    hangul: false
+    symbols: false
+
+glyphs:
+  overrides: ../assets/latin/puhui
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, apps]
+  specimen: true
+  open: false
+  variable: false
+  cursive: false
+  splitCJK: 0

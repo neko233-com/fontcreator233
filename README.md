@@ -192,20 +192,49 @@ fontcreator build examples/botanic-display.recipe.yaml --target all --no-open
 
 ### Reference templates
 
-Five domain-oriented recipes under [`templates/`](templates/) are valid out of
-the box: `code-editor` (JetBrains-Mono-inspired screen text), `product-ui`,
-`poster-display`, `editorial-serif`, and `cjk-partner`. They encode design
-traits, not copied fonts. Use `style.tracking` to tune spacing — positive values
-open small text up, negative values tighten display setting; the specimen has a
-live tracking slider for previewing.
+Nine domain-oriented recipes under [`templates/`](templates/) are valid out of
+the box: `code-editor` (code-oriented screen text), `product-ui`, `poster-display`,
+`editorial-serif`, `cjk-partner`, plus four family starters: `hei`, `song`,
+`puhuiti`, and `mono`. The first five encode design traits on the parametric
+skeleton. The family starters use static, Regular-only OFL Latin starter packs
+under [`assets/latin/`](assets/latin/); rebuild the same pack at another weight
+only with the parametric recipes. Use `style.tracking` to tune spacing — positive
+values open small text up, negative values tighten display setting; the specimen
+has a live tracking slider for previewing.
+
+| Template | Direction | Latin starter |
+|---|---|---|
+| `hei` | smooth humanist Hei for UI and body copy | Noto Sans Regular (OFL) |
+| `song` | bracketed Song/Ming serif | Noto Serif Regular (OFL) |
+| `puhuiti` | Puhui-style geometric Hei, single-storey a/g | Poppins Regular (OFL) |
+| `mono` | 600-unit coding monospace | JetBrains Mono Regular (OFL) |
+
+`puhuiti` is a style-compatible geometric starter, **not** the Alibaba PuHuiTi
+font. Alibaba's license forbids modifying or redistributing its font files, so
+its outlines are not bundled. If you have a licensed copy, import it and point
+`glyphs.overrides` at the extracted glyphs:
 
 ```bash
-fontcreator validate templates/code-editor.recipe.yaml --json
-fontcreator build templates/code-editor.recipe.yaml --out dist --target all
+fontcreator import font /path/to/AlibabaPuHuiTi-3-55-Regular.ttf \
+  --out work/alibaba --extract-glyphs --unicodes 0020-007E
+# then set glyphs.overrides: ../work/alibaba/glyphs in your recipe
 ```
 
-The automated E2E test builds all three with `common` coverage and asserts
-glyph coverage, styles, determinism, specimen, and every platform package.
+`hei` and `puhuiti` enable the embedded `sample` CJK set, so their specimen can
+show common Chinese. `song` is a Latin-only serif starter: the embedded CJK base
+is a Hei, so pair `song` with a Song CJK face when you need Chinese. `mono`
+stays Latin-only so every ASCII advance remains 600 units.
+
+![Four family starters](docs/assets/families-dark.png)
+
+```bash
+fontcreator validate templates/hei.recipe.yaml --json
+fontcreator build templates/hei.recipe.yaml --out dist --target all
+```
+
+The automated E2E test builds the example styles with `common` coverage and
+asserts glyph coverage, styles, determinism, specimen, and every platform
+package.
 
 ## Recipe
 

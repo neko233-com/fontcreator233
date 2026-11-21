@@ -1,0 +1,56 @@
+# Reference template — smooth Hei / neo-grotesk.
+# Static OFL Latin starter outlines derived from Noto Sans Regular.
+# Build: fontcreator build templates/hei.recipe.yaml --out dist --target system --no-open
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Neko Hei
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Smooth humanist Hei for UI, body copy, and mixed Chinese/Latin setting."
+  license: OFL-1.1
+  accent: "#5B8CFF"
+  sampleText: "Hamburgefonstiv 天地玄黄 0123"
+
+metrics:
+  ascender: 1000
+  descender: -293
+  xHeight: 0.536
+  capHeight: 0.714
+  lineGap: 0
+
+style:
+  skeleton: humanist
+  weight: 400
+  width: 100
+  slant: 0
+  contrast: 0.05
+  terminal: flat
+  serif: none
+  serifSize: 0
+  overshoot: 0.012
+  roughness: 0
+  jitterRotation: 0
+  tracking: 0
+  seed: 233
+
+coverage:
+  generated: [latin]
+  base:
+    cjk: sample
+    kana: false
+    hangul: false
+    symbols: false
+
+glyphs:
+  overrides: ../assets/latin/hei
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, apps]
+  specimen: true
+  open: false
+  variable: false
+  cursive: false
+  splitCJK: 0

@@ -1,0 +1,57 @@
+# Reference template — monospaced coding face.
+# Static OFL Latin starter outlines derived from JetBrains Mono Regular.
+# All ASCII glyphs keep a 600-unit advance; CJK fallback is intentionally off.
+# Build: fontcreator build templates/mono.recipe.yaml --out dist --target system --no-open
+apiVersion: fontcreator233/v1
+
+meta:
+  family: Neko Mono
+  style: Regular
+  version: 1.0.0
+  designer: fontcreator233
+  description: "Monospaced screen face for code, logs, tables, and terminal UI."
+  license: OFL-1.1
+  accent: "#4F7DFF"
+  sampleText: "const g = 0;  =>  { return 42; } 0123"
+
+metrics:
+  ascender: 1000
+  descender: -300
+  xHeight: 0.55
+  capHeight: 0.73
+  lineGap: 0
+
+style:
+  skeleton: geometric
+  weight: 400
+  width: 100
+  slant: 0
+  contrast: 0.02
+  terminal: flat
+  serif: none
+  serifSize: 0
+  overshoot: 0.012
+  roughness: 0
+  jitterRotation: 0
+  tracking: 0
+  seed: 233
+
+coverage:
+  generated: [latin]
+  base:
+    cjk: none
+    kana: false
+    hangul: false
+    symbols: false
+
+glyphs:
+  overrides: ../assets/latin/mono
+
+output:
+  formats: [ttf, woff]
+  targets: [universal, web, system, unity, apps]
+  specimen: true
+  open: false
+  variable: false
+  cursive: false
+  splitCJK: 0
